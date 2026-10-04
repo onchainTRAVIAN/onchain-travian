@@ -1,0 +1,270 @@
+import { and, asc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
+import type { DB, Q } from '../../db/index.js';
+import { buildOrders, creditsLedger, perks, researchOrders, tickerMessages, trainOrders, users } from '../../db/schema.js';
+import { config } from '../../config.js';
+import { RESOURCE_KEYS, sumRes, type Resources } from '../rules/resources.js';
+import type { PerkKind } from '../modifiers.js';
+import { GameError, assertGame } from '../errors.js';
+import { catchUp, capacityFor, setResources, stockOf } from '../engine/state.js';
+import { ownedVillage } from './build.js';
+
+/* ---------- Ledger ---------- */
+
+export function creditBalance(q: Q, userId: number): number {
+  return q.select({ n: sql<number>`coalesce(sum(${creditsLedger.amount}), 0)` }).from(creditsLedger).where(eq(creditsLedger.userId, userId)).get()?.n ?? 0;
+}
+
+/** Add credits once per idempotency key. Returns false if the key was already used. */
+export function grantCredits(q: Q, userId: number, amount: number, reason: string, idemKey: string, now: number): boolean {
+  assertGame(Number.isInteger(amount) && amount !== 0, 'Invalid amount');
+  const r = q.insert(creditsLedger).values({ userId, amount, reason, idemKey, createdAt: now }).onConflictDoNothing().run();
+  return r.changes > 0;
+}
+
+function spend(q: Q, userId: number, cost: number, reason: string, now: number): void {
+  if (cost <= 0) return;
+  const bal = creditBalance(q, userId);
+  if (bal < cost) throw new GameError(`This costs ${cost} credits, you have ${bal}. Top up in the shop.`);
+  q.insert(creditsLedger)
+    .values({ userId, amount: -cost, reason, idemKey: `spend:${userId}:${now}:${Math.random().toString(36).slice(2)}`, createdAt: now })
+    .run();
+}
+
+export function creditHistory(q: Q, userId: number, limit = 30) {
+  return q.select().from(creditsLedger).where(eq(creditsLedger.userId, userId)).orderBy(sql`${creditsLedger.id} desc`).limit(limit).all();
+}
+
+/* ---------- Instant finish ---------- */
+
+/** 2 credits per hour left, minimum 2. */
+export function instantPrice(msLeft: number): number {
+  return Math.max(2, Math.ceil((msLeft / 3_600_000) * 2));
+}
+
+export function finishConstructionNow(db: DB, userId: number, orderId: number, now: number): number {
+  return db.transaction((tx) => {
+    const o = tx.select().from(buildOrders).where(eq(buildOrders.id, orderId)).get();
+    assertGame(o, 'Construction not found');
+    ownedVillage(tx, userId, o.villageId);
+    assertGame(o.finishAt > now, 'Already finished');
+    const price = instantPrice(o.finishAt - now);
+    spend(tx, userId, price, `Instant construction: ${o.building} level ${o.toLevel}`, now);
+    tx.update(buildOrders).set({ finishAt: now }).where(eq(buildOrders.id, orderId)).run();
+    return price;
+  });
+}
+
+export function finishTrainingNow(db: DB, userId: number, orderId: number, now: number): number {
+  return db.transaction((tx) => {
+    const o = tx.select().from(trainOrders).where(eq(trainOrders.id, orderId)).get();
+    assertGame(o, 'Training not found');
+    ownedVillage(tx, userId, o.villageId);
+    catchUp(tx, o.villageId, now);
+    const fresh = tx.select().from(trainOrders).where(eq(trainOrders.id, orderId)).get();
+    assertGame(fresh, 'Already finished');
+    const end = fresh.startAt + fresh.total * fresh.perUnitMs;
+    const price = instantPrice(end - now);
+    spend(tx, userId, price, 'Instant training', now);
+    // Pretend training started long enough ago that every unit is done; later queued batches move up.
+    tx.update(trainOrders).set({ startAt: now - fresh.total * fresh.perUnitMs }).where(eq(trainOrders.id, orderId)).run();
+    const shift = end - now;
+    const later = tx
+      .select()
+      .from(trainOrders)
+      .where(and(eq(trainOrders.villageId, fresh.villageId), eq(trainOrders.building, fresh.building), gt(trainOrders.startAt, fresh.startAt)))
+      .orderBy(asc(trainOrders.startAt))
+      .all();
+    for (const l of later) tx.update(trainOrders).set({ startAt: Math.max(now, l.startAt - shift) }).where(eq(trainOrders.id, l.id)).run();
+    catchUp(tx, o.villageId, now);
+    return price;
+  });
+}
+
+export function finishResearchNow(db: DB, userId: number, orderId: number, now: number): number {
+  return db.transaction((tx) => {
+    const o = tx.select().from(researchOrders).where(eq(researchOrders.id, orderId)).get();
+    assertGame(o, 'Research not found');
+    ownedVillage(tx, userId, o.villageId);
+    const price = instantPrice(o.finishAt - now);
+    spend(tx, userId, price, 'Instant research', now);
+    tx.update(researchOrders).set({ finishAt: now }).where(eq(researchOrders.id, orderId)).run();
+    return price;
+  });
+}
+
+/* ---------- Boosts ---------- */
+
+export interface Product {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  price: number;
+  days: number;
+  perk: PerkKind;
+  value: number;
+}
+
+export const PRODUCTS: Product[] = [
+  { id: 'prod_wood', name: '+25% Wood', icon: '🪵', description: 'All your villages produce 25% more wood.', price: 5, days: 7, perk: 'production_wood', value: 0.25 },
+  { id: 'prod_clay', name: '+25% Clay', icon: '🧱', description: 'All your villages produce 25% more clay.', price: 5, days: 7, perk: 'production_clay', value: 0.25 },
+  { id: 'prod_iron', name: '+25% Iron', icon: '⛓️', description: 'All your villages produce 25% more iron.', price: 5, days: 7, perk: 'production_iron', value: 0.25 },
+  { id: 'prod_crop', name: '+25% Crop', icon: '🌾', description: 'All your villages produce 25% more crop.', price: 5, days: 7, perk: 'production_crop', value: 0.25 },
+  { id: 'build_queue', name: 'Master Builder', icon: '🏗️', description: 'Build two things at once in every village.', price: 10, days: 7, perk: 'build_queue', value: 1 },
+  { id: 'train_speed', name: 'Drill Sergeant', icon: '🎯', description: 'Troops train and research 25% faster.', price: 10, days: 3, perk: 'train_speed', value: 0.25 },
+  { id: 'attack', name: 'War Banner', icon: '🚩', description: '+10% attack strength for all your troops.', price: 15, days: 3, perk: 'attack', value: 0.1 },
+  { id: 'defense', name: 'Stone Walls', icon: '🛡️', description: '+10% defence in all your villages.', price: 15, days: 3, perk: 'defense', value: 0.1 },
+];
+
+export function activeBoosts(q: Q, userId: number, now: number) {
+  return q
+    .select()
+    .from(perks)
+    .where(and(eq(perks.userId, userId), sql`${perks.source} like 'shop:%'`, gt(perks.expiresAt, now)))
+    .all();
+}
+
+/** Buy or extend a boost. Buying again while active adds the duration on top. */
+export function buyBoost(db: DB, userId: number, productId: string, now: number): Product {
+  const p = PRODUCTS.find((x) => x.id === productId);
+  assertGame(p, 'Unknown item');
+  db.transaction((tx) => {
+    spend(tx, userId, p.price, `Boost: ${p.name}`, now);
+    const source = `shop:${p.id}`;
+    const active = tx.select().from(perks).where(and(eq(perks.userId, userId), eq(perks.source, source), gt(perks.expiresAt, now))).get();
+    const ms = p.days * 86_400_000;
+    if (active) tx.update(perks).set({ expiresAt: (active.expiresAt ?? now) + ms }).where(eq(perks.id, active.id)).run();
+    else tx.insert(perks).values({ userId, kind: p.perk, value: p.value, source, expiresAt: now + ms, createdAt: now }).run();
+  });
+  return p;
+}
+
+/* ---------- NPC merchant ---------- */
+
+export const NPC_TRADE_PRICE = 3;
+
+/** Redistribute a village's resources freely (same total), for a fee. */
+export function npcTrade(db: DB, userId: number, villageId: number, target: Resources, now: number): void {
+  db.transaction((tx) => {
+    ownedVillage(tx, userId, villageId);
+    const state = catchUp(tx, villageId, now);
+    assertGame(state, 'Village not found');
+    const have = stockOf(state.village);
+    const cap = capacityFor(state);
+    const clean = { ...target };
+    for (const k of RESOURCE_KEYS) {
+      assertGame(Number.isFinite(clean[k]) && clean[k] >= 0, 'Invalid amounts');
+      clean[k] = Math.floor(clean[k]);
+      assertGame(clean[k] <= cap[k], `Not enough storage for that much ${k}`);
+    }
+    assertGame(sumRes(clean) <= Math.floor(sumRes(have)), 'You can only redistribute what you have');
+    spend(tx, userId, NPC_TRADE_PRICE, 'NPC merchant', now);
+    setResources(tx, villageId, clean);
+  });
+}
+
+/* ---------- News ticker ---------- */
+
+export const TICKER_MAX_LENGTH = 140;
+export const TICKER_MAX_HOURS = 6;
+export const TICKER_BOOK_AHEAD_HOURS = 72;
+const HOUR = 3_600_000;
+
+export function hourStart(t: number): number {
+  return Math.floor(t / HOUR) * HOUR;
+}
+
+/** Messages per hour slot for the next few days (for the booking calendar). */
+export function tickerAvailability(q: Q, now: number, hours = TICKER_BOOK_AHEAD_HOURS): { start: number; used: number; free: number }[] {
+  const from = hourStart(now);
+  const rows = q
+    .select({ startsAt: tickerMessages.startsAt, endsAt: tickerMessages.endsAt })
+    .from(tickerMessages)
+    .where(and(eq(tickerMessages.status, 'scheduled'), gt(tickerMessages.endsAt, from)))
+    .all();
+  const out: { start: number; used: number; free: number }[] = [];
+  for (let i = 0; i < hours; i++) {
+    const start = from + i * HOUR;
+    const used = rows.filter((r) => r.startsAt < start + HOUR && r.endsAt > start).length;
+    out.push({ start, used, free: Math.max(0, config.TICKER_MAX_PER_HOUR - used) });
+  }
+  return out;
+}
+
+export function cleanTickerText(text: string): string {
+  const t = text.replace(/\s+/g, ' ').trim();
+  assertGame(t.length >= 3, 'Write a message (at least 3 characters)');
+  assertGame(t.length <= TICKER_MAX_LENGTH, `At most ${TICKER_MAX_LENGTH} characters`);
+  assertGame(!/(https?:\/\/|www\.|\.(com|net|org|io|xyz|ru)\b)/i.test(t), 'Links are not allowed in the news ticker');
+  return t;
+}
+
+export function bookTicker(db: DB, userId: number, text: string, startsAt: number, hours: number, now: number) {
+  const body = cleanTickerText(text);
+  assertGame(Number.isInteger(hours) && hours >= 1 && hours <= TICKER_MAX_HOURS, `Choose 1 to ${TICKER_MAX_HOURS} hours`);
+  const start = hourStart(startsAt);
+  assertGame(start >= hourStart(now), 'That time has already passed');
+  assertGame(start < hourStart(now) + TICKER_BOOK_AHEAD_HOURS * HOUR, `You can book up to ${TICKER_BOOK_AHEAD_HOURS} hours ahead`);
+  const price = config.TICKER_PRICE_PER_HOUR * hours;
+  return db.transaction((tx) => {
+    const slots = tickerAvailability(tx, now).filter((s) => s.start >= start && s.start < start + hours * HOUR);
+    assertGame(slots.length === hours && slots.every((s) => s.free > 0), 'Some of those hours are fully booked, pick another time');
+    spend(tx, userId, price, `News ticker (${hours} h)`, now);
+    // A slot that has already started only shows for the rest of the hour, so it begins now.
+    return tx
+      .insert(tickerMessages)
+      .values({ userId, body, startsAt: Math.max(start, now), endsAt: start + hours * HOUR, price, createdAt: now })
+      .returning()
+      .get();
+  });
+}
+
+export function activeTicker(q: Q, now: number) {
+  return q
+    .select({ id: tickerMessages.id, body: tickerMessages.body, username: users.username, endsAt: tickerMessages.endsAt })
+    .from(tickerMessages)
+    .leftJoin(users, eq(users.id, tickerMessages.userId))
+    .where(and(eq(tickerMessages.status, 'scheduled'), lte(tickerMessages.startsAt, now), gt(tickerMessages.endsAt, now)))
+    .orderBy(asc(tickerMessages.startsAt))
+    .all();
+}
+
+export function myTickerBookings(q: Q, userId: number, now: number) {
+  return q
+    .select()
+    .from(tickerMessages)
+    .where(and(eq(tickerMessages.userId, userId), gt(tickerMessages.endsAt, now - 86_400_000)))
+    .orderBy(asc(tickerMessages.startsAt))
+    .all();
+}
+
+/** Admin: take a message down and refund the unused hours. */
+export function removeTicker(db: DB, id: number, now: number): void {
+  db.transaction((tx) => {
+    const m = tx.select().from(tickerMessages).where(eq(tickerMessages.id, id)).get();
+    assertGame(m && m.status === 'scheduled', 'Message not found');
+    tx.update(tickerMessages).set({ status: 'removed' }).where(eq(tickerMessages.id, id)).run();
+    if (m.userId !== null && m.endsAt > now) {
+      const total = m.endsAt - m.startsAt;
+      const unused = m.endsAt - Math.max(now, m.startsAt);
+      const refund = Math.floor((m.price * unused) / Math.max(1, total));
+      if (refund > 0) grantCredits(tx, m.userId, refund, 'Ticker message removed (refund)', `ticker-refund:${id}`, now);
+    }
+  });
+}
+
+export function upcomingTicker(q: Q, now: number) {
+  return q
+    .select({ t: tickerMessages, username: users.username })
+    .from(tickerMessages)
+    .leftJoin(users, eq(users.id, tickerMessages.userId))
+    .where(and(inArray(tickerMessages.status, ['scheduled']), gt(tickerMessages.endsAt, now)))
+    .orderBy(asc(tickerMessages.startsAt))
+    .limit(100)
+    .all();
+}
+
+export function starterCredits(q: Q, userId: number, now: number): void {
+  if (config.STARTER_CREDITS > 0) grantCredits(q, userId, config.STARTER_CREDITS, 'Welcome gift', `starter:${userId}`, now);
+}
+

@@ -1,8 +1,11 @@
 import { res, type Resources } from './resources.js';
 import type { Requirement } from './buildings.js';
 
+/** Tribes players can choose. */
 export const TRIBE_IDS = ['legion', 'clans', 'horde'] as const;
-export type TribeId = (typeof TRIBE_IDS)[number];
+export type PlayableTribeId = (typeof TRIBE_IDS)[number];
+/** 'nature' = wild animals living in oases. */
+export type TribeId = PlayableTribeId | 'nature';
 
 export type UnitType = 'inf' | 'cav' | 'scout' | 'ram' | 'catapult' | 'chief' | 'settler';
 export type TrainingBuilding = 'barracks' | 'stable' | 'workshop' | 'residence';
@@ -43,6 +46,11 @@ export interface TribeDef {
   enemyCrannyFactor: number;
   /** Ten units, always in the same slot order: 0-5 combat, 6 ram, 7 catapult, 8 chief, 9 settler. */
   units: UnitDef[];
+  /** Resources one merchant carries, and merchant speed (tiles/hour). */
+  merchantCapacity: number;
+  merchantSpeed: number;
+  /** Loyalty knocked off per surviving chief: [min, max]. */
+  chiefPower: [number, number];
 }
 
 export const UNIT_SLOTS = 10;
@@ -64,6 +72,9 @@ const legion: TribeDef = {
   wallPerLevel: 0.03,
   crannyMultiplier: 1,
   enemyCrannyFactor: 1,
+  merchantCapacity: 500,
+  merchantSpeed: 16,
+  chiefPower: [20, 30],
   units: [
     U({ id: 'legionary', name: 'Legionary', icon: '🛡️', type: 'inf', description: 'Reliable all-round foot soldier.',
       attack: 40, defInf: 35, defCav: 45, speed: 6, carry: 50, upkeep: 1, cost: res(120, 100, 150, 30), trainTime: 1600, building: 'barracks', requires: [] }),
@@ -98,6 +109,9 @@ const clans: TribeDef = {
   wallPerLevel: 0.025,
   crannyMultiplier: 1.5,
   enemyCrannyFactor: 1,
+  merchantCapacity: 750,
+  merchantSpeed: 24,
+  chiefPower: [20, 25],
   units: [
     U({ id: 'spearguard', name: 'Spearguard', icon: '🔱', type: 'inf', description: 'Cheap, sturdy defensive infantry.',
       attack: 15, defInf: 40, defCav: 50, speed: 7, carry: 35, upkeep: 1, cost: res(100, 130, 55, 30), trainTime: 1300, building: 'barracks', requires: [] }),
@@ -132,6 +146,9 @@ const horde: TribeDef = {
   wallPerLevel: 0.02,
   crannyMultiplier: 1,
   enemyCrannyFactor: 0.8,
+  merchantCapacity: 1000,
+  merchantSpeed: 12,
+  chiefPower: [20, 25],
   units: [
     U({ id: 'clubber', name: 'Clubber', icon: '🏏', type: 'inf', description: 'Cheap raider, trains very fast.',
       attack: 40, defInf: 20, defCav: 5, speed: 7, carry: 60, upkeep: 1, cost: res(95, 75, 40, 40), trainTime: 720, building: 'barracks', requires: [] }),
@@ -156,9 +173,41 @@ const horde: TribeDef = {
   ],
 };
 
-export const TRIBES: Record<TribeId, TribeDef> = { legion, clans, horde };
+const A = (id: string, name: string, icon: string, attack: number, defInf: number, defCav: number, upkeep: number): UnitDef =>
+  U({ id, name, icon, type: 'inf', description: 'Wild animal guarding an oasis.', attack, defInf, defCav, speed: 20, carry: 0, upkeep,
+    cost: res(0, 0, 0, 0), trainTime: 1, building: 'barracks', requires: [] });
 
-export function isTribeId(id: string): id is TribeId {
+/** Wild animals that guard oases. Not playable. */
+const nature: TribeDef = {
+  id: 'nature',
+  name: 'Nature',
+  icon: '🐾',
+  tagline: 'Wild animals',
+  description: 'Animals defend unoccupied oases.',
+  strengths: [],
+  wallPerLevel: 0,
+  crannyMultiplier: 1,
+  enemyCrannyFactor: 1,
+  merchantCapacity: 0,
+  merchantSpeed: 1,
+  chiefPower: [0, 0],
+  units: [
+    A('rat', 'Rat', '🐀', 10, 25, 20, 1),
+    A('spider', 'Spider', '🕷️', 20, 35, 40, 1),
+    A('snake', 'Snake', '🐍', 60, 40, 60, 1),
+    A('bat', 'Bat', '🦇', 80, 66, 50, 1),
+    A('boar', 'Wild Boar', '🐗', 50, 70, 33, 2),
+    A('wolf', 'Wolf', '🐺', 100, 80, 70, 2),
+    A('bear', 'Bear', '🐻', 250, 140, 200, 3),
+    A('crocodile', 'Crocodile', '🐊', 450, 380, 240, 3),
+    A('tiger', 'Tiger', '🐅', 200, 170, 250, 3),
+    A('elephant', 'Elephant', '🐘', 600, 440, 520, 5),
+  ],
+};
+
+export const TRIBES: Record<TribeId, TribeDef> = { legion, clans, horde, nature };
+
+export function isTribeId(id: string): id is PlayableTribeId {
   return (TRIBE_IDS as readonly string[]).includes(id);
 }
 
@@ -211,3 +260,30 @@ export function trainTimeMs(u: UnitDef, buildingLevel: number, speedMultiplier: 
   const factor = Math.pow(0.9, Math.max(0, buildingLevel - 1));
   return Math.max(1000, Math.round((u.trainTime * factor) / speedMultiplier) * 1000);
 }
+
+/** Smithy upgrades: +1.5% attack and defence per level, compounding. */
+export function smithyFactor(level: number): number {
+  return Math.pow(1.015, Math.max(0, level));
+}
+
+/** Academy research cost: about 3x the unit cost. */
+export function researchCost(u: UnitDef): Resources {
+  return res(u.cost.wood * 3, u.cost.clay * 3, u.cost.iron * 3, u.cost.crop * 3);
+}
+
+export function researchTimeMs(u: UnitDef, speedMultiplier: number): number {
+  return Math.max(1000, Math.round((u.trainTime * 4) / speedMultiplier) * 1000);
+}
+
+/** Smithy upgrade cost to reach `level`. */
+export function smithyCost(u: UnitDef, level: number): Resources {
+  const k = 1.5 * Math.pow(1.22, level - 1);
+  const r = (n: number) => Math.round((n * k) / 5) * 5;
+  return res(r(u.cost.wood), r(u.cost.clay), r(u.cost.iron), r(u.cost.crop));
+}
+
+export function smithyTimeMs(u: UnitDef, level: number, speedMultiplier: number): number {
+  return Math.max(1000, Math.round((u.trainTime * 2 * Math.pow(1.18, level - 1)) / speedMultiplier) * 1000);
+}
+
+export const SMITHY_MAX = 20;

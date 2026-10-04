@@ -11,6 +11,32 @@ const EnvSchema = z.object({
   TROOP_SPEED: z.coerce.number().positive().max(1000).default(1),
   MAP_RADIUS: z.coerce.number().int().min(5).max(400).default(50),
   PROTECTION_HOURS: z.coerce.number().min(0).max(24 * 30).default(72),
+
+  // Premium / news ticker
+  TICKER_PRICE_PER_HOUR: z.coerce.number().int().min(0).default(20),
+  TICKER_MAX_PER_HOUR: z.coerce.number().int().min(1).max(20).default(3),
+  STARTER_CREDITS: z.coerce.number().int().min(0).default(0),
+
+  // Crypto (all optional: crypto features switch off when unset)
+  CHAIN_ID: z.coerce.number().int().positive().default(31337),
+  CHAIN_NAME: z.string().default('Local Anvil'),
+  RPC_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  PAYMENTS_ADDRESS: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional().or(z.literal('').transform(() => undefined)),
+  TOKEN_ADDRESS: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional().or(z.literal('').transform(() => undefined)),
+  TOKEN_SYMBOL: z.string().default('REALM'),
+  TOKEN_DECIMALS: z.coerce.number().int().min(0).max(36).default(18),
+  /** Credits for 1 ETH. */
+  CREDITS_PER_ETH: z.coerce.number().positive().default(10_000),
+  /** Credits for 1 whole token, before the token bonus. */
+  CREDITS_PER_TOKEN: z.coerce.number().positive().default(1),
+  /** Extra credits when paying with the game token (0.2 = +20%). */
+  TOKEN_BONUS: z.coerce.number().min(0).max(5).default(0.2),
+  CONFIRMATIONS: z.coerce.number().int().min(0).max(100).default(2),
+  INDEXER_START_BLOCK: z.coerce.number().int().min(0).default(0),
+  INDEXER_INTERVAL_SECONDS: z.coerce.number().int().min(2).default(15),
+  HOLDER_SNAPSHOT_HOURS: z.coerce.number().positive().default(6),
+  /** Tier uses the lowest balance across this many recent snapshots (anti flash-buy). */
+  HOLDER_MIN_SNAPSHOTS: z.coerce.number().int().min(1).max(50).default(4),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -20,6 +46,14 @@ if (!parsed.success) {
 }
 
 export const config = parsed.data;
+
+export function cryptoEnabled(): boolean {
+  return !!(config.RPC_URL && config.PAYMENTS_ADDRESS);
+}
+
+export function holderTiersEnabled(): boolean {
+  return !!(config.RPC_URL && config.TOKEN_ADDRESS);
+}
 export type Config = typeof config;
 
 if (config.NODE_ENV === 'production' && config.SESSION_SECRET.startsWith('dev-only')) {

@@ -4,7 +4,10 @@ import { trainOrders } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { BUILDINGS } from '../rules/buildings.js';
 import { RESOURCE_KEYS, res, roundTo5, scaleRes, subRes, type Resources } from '../rules/resources.js';
-import { TRIBES, isSpecialUnit, trainTimeMs, type TrainingBuilding, type UnitDef } from '../rules/units.js';
+import { TRIBES, addUnits, trainTimeMs, type TrainingBuilding, type UnitDef } from '../rules/units.js';
+import { SETTLERS_PER_VILLAGE, expansionSlots } from '../rules/expansion.js';
+import { isResearched } from './research.js';
+import { ownedTroopTotals } from '../engine/state.js';
 import { getModifiers } from '../modifiers.js';
 import { GameError, assertGame } from '../errors.js';
 import { catchUp, levelOf, setResources, stockOf, type VillageState } from '../engine/state.js';
@@ -54,7 +57,12 @@ export function trainOptions(q: Q, state: VillageState, building: TrainingBuildi
       for (const req of unit.requires) {
         if (!reason && levelOf(state, req.building) < req.level) reason = `Requires ${BUILDINGS[req.building].name} level ${req.level}`;
       }
-      if (!reason && isSpecialUnit(unit)) reason = 'Founding and conquering villages arrives in the next update';
+      if (!reason && !isResearched(state, slot)) reason = 'Research this unit in the Academy first';
+      let limit = Infinity;
+      if (!reason && (unit.type === 'settler' || unit.type === 'chief')) {
+        limit = specialUnitRoom(q, state, slot, unit);
+        if (limit <= 0) reason = 'No free expansion slot (Residence level 10/20, Palace 10/15/20)';
+      }
       return {
         slot,
         unit,
@@ -62,9 +70,33 @@ export function trainOptions(q: Q, state: VillageState, building: TrainingBuildi
         timeMs,
         available: !reason,
         reason,
-        maxAffordable: reason ? 0 : maxAffordable(stock, cost),
+        maxAffordable: reason ? 0 : Math.min(limit, maxAffordable(stock, cost)),
       };
     });
+}
+
+/** How many more settlers/chiefs this village may train, given its free expansion slots. */
+function specialUnitRoom(q: Q, state: VillageState, slot: number, unit: UnitDef): number {
+  const free = expansionSlots(levelOf(state, 'residence'), levelOf(state, 'palace')) - state.village.expansions;
+  if (free <= 0) return 0;
+  let existing = ownedTroopTotals(q, state.village.id);
+  for (const o of trainOrdersOf(q, state.village.id)) {
+    const add = new Array<number>(10).fill(0);
+    add[o.unitSlot] = o.total - o.done;
+    existing = addUnits(existing, add);
+  }
+  const have = existing[slot] ?? 0;
+  const settlerSlot = TRIBES[state.tribe].units.findIndex((u) => u.type === 'settler');
+  const chiefSlot = TRIBES[state.tribe].units.findIndex((u) => u.type === 'chief');
+  // Each slot is used by either one chief or one group of settlers.
+  const usedBySettlers = Math.ceil((existing[settlerSlot] ?? 0) / SETTLERS_PER_VILLAGE);
+  const usedByChiefs = existing[chiefSlot] ?? 0;
+  const remaining = free - usedBySettlers - usedByChiefs;
+  if (unit.type === 'settler') {
+    const partial = have % SETTLERS_PER_VILLAGE === 0 ? 0 : SETTLERS_PER_VILLAGE - (have % SETTLERS_PER_VILLAGE);
+    return partial + Math.max(0, remaining) * SETTLERS_PER_VILLAGE;
+  }
+  return Math.max(0, remaining);
 }
 
 export function startTraining(db: DB, userId: number, villageId: number, unitSlot: number, count: number, now: number): TrainOrderRow {
@@ -79,7 +111,7 @@ export function startTraining(db: DB, userId: number, villageId: number, unitSlo
     const option = trainOptions(tx, state, unit.building, now).find((o) => o.slot === unitSlot);
     assertGame(option, 'Unknown unit');
     if (!option.available) throw new GameError(option.reason ?? 'Cannot train this unit');
-    if (count > option.maxAffordable) throw new GameError(option.maxAffordable === 0 ? 'Not enough resources' : `You can afford at most ${option.maxAffordable}`);
+    if (count > option.maxAffordable) throw new GameError(option.maxAffordable === 0 ? 'Not enough resources' : `You can train at most ${option.maxAffordable}`);
 
     // Units of the same building train one after another.
     const queue = trainOrdersOf(tx, villageId).filter((o) => o.building === unit.building);

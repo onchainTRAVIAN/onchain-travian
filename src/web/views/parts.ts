@@ -44,25 +44,40 @@ const KIND_LABEL: Record<MovementView['kind'], string> = {
   reinforce: 'Reinforcement',
   scout: 'Scouting',
   return: 'Returning',
+  settle: 'Settlers',
+  trade: 'Merchants',
+  merchant_return: 'Merchants returning',
 };
+
+function cargo(m: MovementView): string {
+  const parts: string[] = [];
+  if (m.units) {
+    const u = unitsInline(m.tribe, m.units);
+    if (u !== 'none') parts.push(u);
+  }
+  if (m.hero) parts.push('🦸 hero');
+  if (m.merchants > 0) parts.push(`🐫 ${m.merchants} merchant${m.merchants === 1 ? '' : 's'}`);
+  return parts.join(', ');
+}
 
 export function movementList(moves: MovementView[], now: number): SafeHtml {
   if (moves.length === 0) return html`<p class="muted small">No troop movements.</p>`;
   return html`<ul class="list">${moves.map((m) => {
     let icon: string;
     let text: SafeHtml;
+    const link = html`<a href="/map/tile?x=${m.otherX}&amp;y=${m.otherY}">${m.otherName}</a>`;
     if (m.direction === 'in') {
-      const hostile = m.kind !== 'reinforce';
-      icon = hostile ? '🔴' : '🛡️';
+      const hostile = m.kind === 'attack' || m.kind === 'raid' || m.kind === 'scout';
+      icon = hostile ? '🔴' : m.kind === 'trade' ? '🐫' : '🛡️';
       text = hostile
-        ? html`<span class="bad">Incoming ${m.kind === 'scout' ? 'scouts' : 'attack'}</span> from <a href="/map/tile?x=${m.otherX}&amp;y=${m.otherY}">${m.otherName}</a> <span class="sub">${m.ownerName}</span>`
-        : html`Reinforcement from <a href="/map/tile?x=${m.otherX}&amp;y=${m.otherY}">${m.otherName}</a> <span class="sub">${m.units ? unitsInline(m.tribe, m.units) : ''}</span>`;
+        ? html`<span class="bad">Incoming ${m.kind === 'scout' ? 'scouts' : 'attack'}</span> from ${link} <span class="sub">${m.ownerName}</span>`
+        : html`${KIND_LABEL[m.kind]} from ${link} <span class="sub">${cargo(m)}</span>`;
     } else if (m.direction === 'home') {
-      icon = '↩️';
-      text = html`Returning from ${m.otherName} <span class="sub">${m.units ? unitsInline(m.tribe, m.units) : ''}</span>`;
+      icon = m.kind === 'merchant_return' ? '🐫' : '↩️';
+      text = html`${KIND_LABEL[m.kind]} from ${m.otherName} <span class="sub">${cargo(m)}</span>`;
     } else {
-      icon = m.kind === 'reinforce' ? '🛡️' : m.kind === 'scout' ? '🔭' : '⚔️';
-      text = html`${KIND_LABEL[m.kind]} to <a href="/map/tile?x=${m.otherX}&amp;y=${m.otherY}">${m.otherName}</a> <span class="sub">${m.units ? unitsInline(m.tribe, m.units) : ''}</span>`;
+      icon = { reinforce: '🛡️', scout: '🔭', settle: '🧺', trade: '🐫' }[m.kind as string] ?? '⚔️';
+      text = html`${KIND_LABEL[m.kind]} to ${link} <span class="sub">${cargo(m)}</span>`;
     }
     return html`<li><span aria-hidden="true">${icon}</span><span class="grow">${text}</span><span class="right small">${timer(m.arriveAt, now)}</span></li>`;
   })}</ul>`;

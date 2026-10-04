@@ -29,6 +29,12 @@ export interface BattleReportData {
   defensePower: number;
   wall?: { from: number; to: number };
   building?: { name: string; from: number; to: number };
+  /** Heroes that took part. */
+  heroes?: { name: string; side: 'attacker' | 'defender'; health: number; died: boolean; xp: number }[];
+  loyalty?: { from: number; to: number };
+  conquered?: boolean;
+  oasis?: { x: number; y: number; captured: boolean };
+  notes?: string[];
   scout?: {
     success: boolean;
     resources?: Resources;
@@ -53,9 +59,39 @@ export interface ReturnReportData {
   loot: Resources;
 }
 
-export type ReportData = BattleReportData | ReinforceReportData | ReturnReportData;
+export interface TradeReportData {
+  type: 'trade';
+  fromName: string;
+  fromX: number;
+  fromY: number;
+  toName: string;
+  toX: number;
+  toY: number;
+  goods: Resources;
+}
 
-export type ReportKind = 'attack_won' | 'attack_lost' | 'defense_won' | 'defense_lost' | 'scout' | 'reinforce' | 'return';
+export interface SettleReportData {
+  type: 'settle';
+  success: boolean;
+  x: number;
+  y: number;
+  villageName?: string;
+  reason?: string;
+}
+
+export type ReportData = BattleReportData | ReinforceReportData | ReturnReportData | TradeReportData | SettleReportData;
+
+export type ReportKind =
+  | 'attack_won'
+  | 'attack_lost'
+  | 'defense_won'
+  | 'defense_lost'
+  | 'scout'
+  | 'reinforce'
+  | 'return'
+  | 'trade'
+  | 'settle'
+  | 'starvation';
 
 export function addReport(q: Q, userId: number | null, kind: ReportKind, title: string, data: ReportData, now: number): void {
   if (userId === null) return;

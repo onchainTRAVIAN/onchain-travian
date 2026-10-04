@@ -17,6 +17,7 @@ export const TOWN_BUILDING_IDS = [
   'embassy',
   'residence',
   'palace',
+  'heromansion',
   'rally',
   'wall',
 ] as const;
@@ -166,6 +167,12 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     description: 'Seat of your empire. Makes a village your capital.',
     maxLevel: 20, baseCost: res(550, 800, 750, 250), costFactor: 1.28, baseTime: 2200, timeFactor: 1.3, pop: 1, culture: 5,
     requires: [{ building: 'main', level: 5 }, { building: 'embassy', level: 1 }], excludes: ['residence'],
+  }),
+  heromansion: B({
+    id: 'heromansion', name: "Hero's Mansion", icon: '🦸', kind: 'town',
+    description: 'Home of your hero. Level 10, 15 and 20 each let you hold one more oasis.',
+    maxLevel: 20, baseCost: res(700, 670, 700, 240), costFactor: 1.28, baseTime: 1400, timeFactor: 1.3, pop: 1, culture: 1,
+    requires: [{ building: 'main', level: 3 }, { building: 'rally', level: 1 }],
   }),
   rally: B({
     id: 'rally', name: 'Rally Point', icon: '🚩', kind: 'town', fixedSlot: RALLY_SLOT,

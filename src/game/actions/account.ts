@@ -3,9 +3,11 @@ import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
 import { users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
-import type { TribeId } from '../rules/units.js';
+import type { PlayableTribeId } from '../rules/units.js';
 import { GameError, assertGame } from '../errors.js';
 import { createVillage, findSpawnTile } from '../engine/world.js';
+import { ensureHero } from '../engine/hero.js';
+import { starterCredits } from './credits.js';
 
 // Argon2id with OWASP-recommended parameters.
 const ARGON = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
@@ -14,7 +16,7 @@ export type UserRow = typeof users.$inferSelect;
 
 export async function registerPlayer(
   db: DB,
-  input: { username: string; password: string; tribe: TribeId },
+  input: { username: string; password: string; tribe: PlayableTribeId },
   now: number,
 ): Promise<{ userId: number; villageId: number }> {
   const usernameLower = input.username.toLowerCase();
@@ -51,6 +53,8 @@ export async function registerPlayer(
       isCapital: true,
       now,
     });
+    ensureHero(tx, user.id, now);
+    starterCredits(tx, user.id, now);
     return { userId: user.id, villageId };
   });
 }

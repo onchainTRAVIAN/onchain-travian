@@ -24,6 +24,7 @@ export const users = sqliteTable(
     lootTotal: integer('loot_total').notNull().default(0),
     culturePoints: real('culture_points').notNull().default(0),
     cultureAt: integer('culture_at').notNull().default(0),
+    mutedUntil: integer('muted_until').notNull().default(0),
   },
   (t) => [uniqueIndex('users_username_lower_idx').on(t.usernameLower)],
 );
@@ -50,6 +51,9 @@ export const tiles = sqliteTable(
     layout: text('layout'),
     oasis: text('oasis'),
     villageId: integer('village_id'),
+    /** Oases: JSON number[10] of wild animals and when they last regrew. */
+    animals: text('animals'),
+    animalsAt: integer('animals_at'),
   },
   (t) => [primaryKey({ columns: [t.x, t.y] }), index('tiles_village_idx').on(t.villageId)],
 );
@@ -70,6 +74,14 @@ export const villages = sqliteTable(
     resAt: integer('res_at').notNull(),
     pop: integer('pop').notNull().default(0),
     loyalty: real('loyalty').notNull().default(100),
+    /** JSON number[10]: 1 = unit researched in the Academy. */
+    research: text('research').notNull().default('[1,0,0,0,0,0,0,0,0,0]'),
+    /** JSON number[10]: Smithy upgrade level per unit. */
+    smithy: text('smithy').notNull().default('[0,0,0,0,0,0,0,0,0,0]'),
+    /** Villages founded or conquered from here (uses expansion slots). */
+    expansions: integer('expansions').notNull().default(0),
+    /** Village this one was founded from (null for starting villages). */
+    parentId: integer('parent_id'),
     createdAt: integer('created_at').notNull(),
   },
   (t) => [uniqueIndex('villages_xy_idx').on(t.x, t.y), index('villages_user_idx').on(t.userId)],
@@ -131,7 +143,7 @@ export const movements = sqliteTable(
   'movements',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    kind: text('kind', { enum: ['attack', 'raid', 'reinforce', 'scout', 'return'] }).notNull(),
+    kind: text('kind', { enum: ['attack', 'raid', 'reinforce', 'scout', 'return', 'settle', 'trade', 'merchant_return'] }).notNull(),
     fromVillageId: integer('from_village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
     toVillageId: integer('to_village_id').references(() => villages.id, { onDelete: 'set null' }),
     /** Where the troops set out from (for returns: the village they are coming back from). */
@@ -140,8 +152,11 @@ export const movements = sqliteTable(
     toX: integer('to_x').notNull(),
     toY: integer('to_y').notNull(),
     units: text('units').notNull(),
+    /** Loot carried home, or goods carried by merchants. */
     loot: text('loot'),
     catapultTarget: text('catapult_target'),
+    hero: integer('hero', { mode: 'boolean' }).notNull().default(false),
+    merchants: integer('merchants').notNull().default(0),
     departAt: integer('depart_at').notNull(),
     arriveAt: integer('arrive_at').notNull(),
   },
@@ -198,4 +213,200 @@ export const perks = sqliteTable(
     createdAt: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
   },
   (t) => [index('perks_user_idx').on(t.userId)],
+);
+
+export const researchOrders = sqliteTable(
+  'research_orders',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    villageId: integer('village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['academy', 'smithy'] }).notNull(),
+    unitSlot: integer('unit_slot').notNull(),
+    toLevel: integer('to_level').notNull(),
+    startAt: integer('start_at').notNull(),
+    finishAt: integer('finish_at').notNull(),
+  },
+  (t) => [index('research_orders_finish_idx').on(t.finishAt), index('research_orders_village_idx').on(t.villageId)],
+);
+
+export const heroes = sqliteTable(
+  'heroes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    homeVillageId: integer('home_village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    /** Where the hero is now; null while travelling or dead. */
+    locationId: integer('location_id'),
+    status: text('status', { enum: ['home', 'away', 'moving', 'dead', 'reviving'] }).notNull().default('home'),
+    level: integer('level').notNull().default(0),
+    xp: integer('xp').notNull().default(0),
+    health: real('health').notNull().default(100),
+    healthAt: integer('health_at').notNull(),
+    strength: integer('strength').notNull().default(0),
+    offBonus: integer('off_bonus').notNull().default(0),
+    defBonus: integer('def_bonus').notNull().default(0),
+    production: integer('production').notNull().default(0),
+    reviveAt: integer('revive_at'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('heroes_user_idx').on(t.userId)],
+);
+
+export const marketOffers = sqliteTable(
+  'market_offers',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    villageId: integer('village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    offerRes: text('offer_res').notNull(),
+    offerAmount: integer('offer_amount').notNull(),
+    wantRes: text('want_res').notNull(),
+    wantAmount: integer('want_amount').notNull(),
+    merchants: integer('merchants').notNull(),
+    maxHours: integer('max_hours'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('market_offers_village_idx').on(t.villageId)],
+);
+
+export const alliances = sqliteTable(
+  'alliances',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    tag: text('tag').notNull(),
+    tagLower: text('tag_lower').notNull(),
+    description: text('description').notNull().default(''),
+    founderId: integer('founder_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('alliances_tag_idx').on(t.tagLower)],
+);
+
+export const allianceMembers = sqliteTable(
+  'alliance_members',
+  {
+    userId: integer('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+    allianceId: integer('alliance_id').notNull().references(() => alliances.id, { onDelete: 'cascade' }),
+    role: text('role', { enum: ['leader', 'officer', 'member'] }).notNull().default('member'),
+    joinedAt: integer('joined_at').notNull(),
+  },
+  (t) => [index('alliance_members_alliance_idx').on(t.allianceId)],
+);
+
+export const allianceInvites = sqliteTable(
+  'alliance_invites',
+  {
+    allianceId: integer('alliance_id').notNull().references(() => alliances.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    invitedBy: integer('invited_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.allianceId, t.userId] })],
+);
+
+export const allianceDiplomacy = sqliteTable(
+  'alliance_diplomacy',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    fromId: integer('from_id').notNull().references(() => alliances.id, { onDelete: 'cascade' }),
+    toId: integer('to_id').notNull().references(() => alliances.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['confed', 'nap', 'war'] }).notNull(),
+    status: text('status', { enum: ['proposed', 'active'] }).notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('alliance_diplomacy_from_idx').on(t.fromId), index('alliance_diplomacy_to_idx').on(t.toId)],
+);
+
+/** Chat: allianceId null = global chat. */
+export const chatMessages = sqliteTable(
+  'chat_messages',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    allianceId: integer('alliance_id').references(() => alliances.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('chat_channel_idx').on(t.allianceId, t.id)],
+);
+
+/** Append-only credits ledger; a player's balance is the sum of their rows. */
+export const creditsLedger = sqliteTable(
+  'credits_ledger',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    amount: integer('amount').notNull(),
+    reason: text('reason').notNull(),
+    /** Unique key that makes every credit/debit idempotent (e.g. "deposit:0xtx:3"). */
+    idemKey: text('idem_key').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('credits_idem_idx').on(t.idemKey), index('credits_user_idx').on(t.userId)],
+);
+
+/** Paid news-ticker messages shown to every player during their time slot. */
+export const tickerMessages = sqliteTable(
+  'ticker_messages',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+    body: text('body').notNull(),
+    startsAt: integer('starts_at').notNull(),
+    endsAt: integer('ends_at').notNull(),
+    price: integer('price').notNull(),
+    status: text('status', { enum: ['scheduled', 'removed'] }).notNull().default('scheduled'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('ticker_time_idx').on(t.startsAt, t.endsAt)],
+);
+
+export const wallets = sqliteTable(
+  'wallets',
+  {
+    userId: integer('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+    /** Lower-case 0x address. */
+    address: text('address').notNull(),
+    linkedAt: integer('linked_at').notNull(),
+    tier: text('tier'),
+  },
+  (t) => [uniqueIndex('wallets_address_idx').on(t.address)],
+);
+
+export const walletNonces = sqliteTable('wallet_nonces', {
+  nonce: text('nonce').primaryKey(),
+  userId: integer('user_id'),
+  purpose: text('purpose', { enum: ['link', 'login'] }).notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});
+
+export const holderSnapshots = sqliteTable(
+  'holder_snapshots',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    address: text('address').notNull(),
+    /** Raw token units as a decimal string (can exceed 2^53). */
+    balance: text('balance').notNull(),
+    totalSupply: text('total_supply').notNull(),
+    takenAt: integer('taken_at').notNull(),
+  },
+  (t) => [index('holder_snapshots_addr_idx').on(t.address, t.takenAt)],
+);
+
+/** On-chain deposits seen by the indexer (one row per log). */
+export const deposits = sqliteTable(
+  'deposits',
+  {
+    id: text('id').primaryKey(), // txHash:logIndex
+    userId: integer('user_id'),
+    payer: text('payer').notNull(),
+    asset: text('asset').notNull(),
+    amount: text('amount').notNull(),
+    credits: integer('credits').notNull(),
+    blockNumber: integer('block_number').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('deposits_user_idx').on(t.userId)],
 );

@@ -15,6 +15,9 @@ const KIND_ICON: Record<string, string> = {
   scout: '🔭',
   reinforce: '🛡️',
   return: '↩️',
+  trade: '🐫',
+  settle: '🧺',
+  starvation: '💀',
 };
 
 const FILTERS: { key: ReportFilter; label: string }[] = [
@@ -22,6 +25,7 @@ const FILTERS: { key: ReportFilter; label: string }[] = [
   { key: 'attacks', label: 'Attacks' },
   { key: 'defense', label: 'Defence' },
   { key: 'scouting', label: 'Scouting' },
+  { key: 'trade', label: 'Trade' },
   { key: 'other', label: 'Other' },
 ];
 
@@ -88,6 +92,11 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
         <p class="small">City Wall level ${r.scout.wallLevel ?? 0} · Cranny hides ${fmtNum(r.scout.crannyHides ?? 0)} of each</p>
         ${(r.scout.troops ?? []).length === 0 ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units))}`
       : ''}
+    ${r.heroes?.map((h) => html`<p>🦸 ${h.name} (${h.side}): ${h.died ? html`<b class="bad">fell in battle</b>` : html`health ${h.health}%`} · +${fmtNum(h.xp)} XP</p>`)}
+    ${r.loyalty ? html`<p>🎖️ Loyalty: ${r.loyalty.from}% → <b>${r.loyalty.to}%</b></p>` : ''}
+    ${r.conquered ? html`<p class="good"><b>👑 The village was conquered!</b></p>` : ''}
+    ${r.oasis?.captured ? html`<p class="good"><b>🌴 Oasis captured!</b></p>` : ''}
+    ${r.notes?.map((n) => html`<p class="small">ℹ️ ${n}</p>`)}
     ${r.mode !== 'scout' ? html`<p class="small muted">Attack strength ${fmtNum(r.attackPower)} vs defence ${fmtNum(r.defensePower)}</p>` : ''}`;
 }
 
@@ -99,7 +108,17 @@ export function reportView(d: { id: number; title: string; createdAt: number; da
   else if (r.type === 'reinforce')
     body = html`<p><a href="/map/tile?x=${r.from.x}&amp;y=${r.from.y}">${r.from.villageName}</a> (${r.from.username}) reinforced
       <a href="/map/tile?x=${r.to.x}&amp;y=${r.to.y}">${r.to.villageName}</a> (${r.to.username}).</p>${unitsTable(r.from.tribe, r.units, undefined, { hideEmpty: true })}`;
-  else body = html`<p>Troops returned to ${r.villageName}.</p>${unitsTable(r.tribe, r.units, undefined, { hideEmpty: true })}`;
+  else if (r.type === 'trade')
+    body = html`<p><a href="/map/tile?x=${r.fromX}&amp;y=${r.fromY}">${r.fromName}</a> → <a href="/map/tile?x=${r.toX}&amp;y=${r.toY}">${r.toName}</a></p>
+      <div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${RESOURCE_ICON[k]} ${fmtNum(r.goods[k])}</span>`)}</div>`;
+  else if (r.type === 'settle')
+    body = r.success
+      ? html`<p class="good">🧺 Your settlers founded <b>${r.villageName ?? 'a new village'}</b> at <a href="/map/tile?x=${r.x}&amp;y=${r.y}">(${r.x}|${r.y})</a>.</p>`
+      : html`<p class="bad">${r.reason ?? 'It did not work out.'}</p>`;
+  else
+    body = d.title.startsWith('Troops starved')
+      ? html`<p class="bad">Your granary ran empty and these troops deserted from ${r.villageName}:</p>${unitsTable(r.tribe, r.units, undefined, { hideEmpty: true })}`
+      : html`<p>Troops returned to ${r.villageName}.</p>${unitsTable(r.tribe, r.units, undefined, { hideEmpty: true })}`;
   return html`<h1>${d.title}</h1>
     <p class="muted small">${fmtDateTime(d.createdAt)} UTC</p>
     ${body}

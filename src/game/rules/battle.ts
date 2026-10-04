@@ -1,4 +1,4 @@
-import { TRIBES, unitDef, type TribeId, type UnitCounts } from './units.js';
+import { TRIBES, smithyFactor, unitDef, type TribeId, type UnitCounts } from './units.js';
 import { RESOURCE_KEYS, res, sumRes, type Resources } from './resources.js';
 
 export type AttackMode = 'attack' | 'raid';
@@ -6,6 +6,10 @@ export type AttackMode = 'attack' | 'raid';
 export interface ArmyGroup {
   tribe: TribeId;
   units: UnitCounts;
+  /** Smithy upgrade level per unit slot. */
+  smithy?: number[];
+  /** Fighting strength of a hero travelling with this group (0/undefined = no hero). */
+  heroStrength?: number;
 }
 
 export interface BattleInput {
@@ -39,14 +43,15 @@ function isInfantryLike(tribe: TribeId, slot: number): boolean {
 }
 
 export function attackPower(group: ArmyGroup): { inf: number; cav: number } {
-  let inf = 0;
+  let inf = group.heroStrength ?? 0;
   let cav = 0;
   group.units.forEach((n, i) => {
     if (n <= 0) return;
     const u = unitDef(group.tribe, i);
     if (u.type === 'scout') return;
-    if (isInfantryLike(group.tribe, i)) inf += n * u.attack;
-    else cav += n * u.attack;
+    const value = n * u.attack * smithyFactor(group.smithy?.[i] ?? 0);
+    if (isInfantryLike(group.tribe, i)) inf += value;
+    else cav += value;
   });
   return { inf, cav };
 }
@@ -55,10 +60,11 @@ export function defensePower(groups: ArmyGroup[], infShare: number): number {
   const cavShare = 1 - infShare;
   let total = 0;
   for (const g of groups) {
+    total += g.heroStrength ?? 0;
     g.units.forEach((n, i) => {
       if (n <= 0) return;
       const u = unitDef(g.tribe, i);
-      total += n * (u.defInf * infShare + u.defCav * cavShare);
+      total += n * (u.defInf * infShare + u.defCav * cavShare) * smithyFactor(g.smithy?.[i] ?? 0);
     });
   }
   return total;

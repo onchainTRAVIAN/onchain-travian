@@ -17,7 +17,9 @@ export function userVillages(q: Q, userId: number) {
 
 export interface MovementView {
   id: number;
-  kind: 'attack' | 'raid' | 'reinforce' | 'scout' | 'return';
+  kind: (typeof movements.$inferSelect)['kind'];
+  hero: boolean;
+  merchants: number;
   direction: 'out' | 'in' | 'home';
   arriveAt: number;
   departAt: number;
@@ -57,25 +59,25 @@ export function villageMovements(q: Q, villageId: number): MovementView[] {
   const out: MovementView[] = [];
   for (const r of rows) {
     const from = info.get(r.fromVillageId);
-    if (r.kind === 'return') {
+    if (r.kind === 'return' || r.kind === 'merchant_return') {
       if (r.fromVillageId !== villageId) continue;
       out.push({
-        id: r.id, kind: r.kind, direction: 'home', arriveAt: r.arriveAt, departAt: r.departAt,
+        id: r.id, kind: r.kind, hero: r.hero, merchants: r.merchants, direction: 'home', arriveAt: r.arriveAt, departAt: r.departAt,
         units: parseUnits(r.units), tribe: from?.tribe ?? 'legion',
         otherName: `(${r.originX}|${r.originY})`, otherX: r.originX, otherY: r.originY, otherVillageId: null, ownerName: from?.owner ?? '',
       });
     } else if (r.fromVillageId === villageId) {
       const to = r.toVillageId !== null ? info.get(r.toVillageId) : undefined;
       out.push({
-        id: r.id, kind: r.kind, direction: 'out', arriveAt: r.arriveAt, departAt: r.departAt,
+        id: r.id, kind: r.kind, hero: r.hero, merchants: r.merchants, direction: 'out', arriveAt: r.arriveAt, departAt: r.departAt,
         units: parseUnits(r.units), tribe: from?.tribe ?? 'legion',
-        otherName: to?.name ?? `(${r.toX}|${r.toY})`, otherX: r.toX, otherY: r.toY, otherVillageId: r.toVillageId, ownerName: to?.owner ?? '',
+        otherName: to?.name ?? (r.kind === 'settle' ? `new land (${r.toX}|${r.toY})` : `oasis (${r.toX}|${r.toY})`), otherX: r.toX, otherY: r.toY, otherVillageId: r.toVillageId, ownerName: to?.owner ?? '',
       });
     } else {
       // Incoming: hide hostile army composition (you only see that something is coming).
       out.push({
-        id: r.id, kind: r.kind, direction: 'in', arriveAt: r.arriveAt, departAt: r.departAt,
-        units: r.kind === 'reinforce' ? parseUnits(r.units) : null, tribe: from?.tribe ?? 'legion',
+        id: r.id, kind: r.kind, hero: r.hero && r.kind === 'reinforce', merchants: r.merchants, direction: 'in', arriveAt: r.arriveAt, departAt: r.departAt,
+        units: r.kind === 'reinforce' || r.kind === 'trade' ? parseUnits(r.units) : null, tribe: from?.tribe ?? 'legion',
         otherName: from?.name ?? '?', otherX: r.originX, otherY: r.originY, otherVillageId: r.fromVillageId, ownerName: from?.owner ?? '',
       });
     }
@@ -237,7 +239,8 @@ export const REPORT_FILTERS = {
   attacks: ['attack_won', 'attack_lost'],
   defense: ['defense_won', 'defense_lost'],
   scouting: ['scout'],
-  other: ['reinforce', 'return'],
+  trade: ['trade'],
+  other: ['reinforce', 'return', 'settle', 'starvation'],
 } as const;
 export type ReportFilter = keyof typeof REPORT_FILTERS;
 

@@ -13,6 +13,10 @@ import { RESOURCE_KEYS, res, type Resources } from '../rules/resources.js';
 import { addUnits, emptyUnits, TRIBES, upkeepOf, type TribeId, type UnitCounts } from '../rules/units.js';
 import { oasisBonus, type OasisType } from '../rules/map.js';
 import { getModifiers, type Modifiers } from '../modifiers.js';
+import { CULTURE_PER_LEVEL, loyaltyRegenPerHour } from '../rules/expansion.js';
+import { HERO_UPKEEP } from '../rules/hero.js';
+import { heroProductionBonus } from './hero.js';
+import { heroes, reports } from '../../db/schema.js';
 
 export type VillageRow = typeof villages.$inferSelect;
 export type SlotRow = typeof slots.$inferSelect;
@@ -130,7 +134,7 @@ export function oasisBonuses(q: Q, villageId: number): Resources {
 }
 
 /** Gross production per hour (before crop upkeep), including world speed and modifiers. */
-export function grossProduction(state: VillageState, mods: Modifiers, oasis: Resources = res()): Resources {
+export function grossProduction(state: VillageState, mods: Modifiers, oasis: Resources = res(), flatBonus = 0): Resources {
   const out = res();
   for (const s of state.slots) {
     if (!s.building) continue;
@@ -138,7 +142,7 @@ export function grossProduction(state: VillageState, mods: Modifiers, oasis: Res
     if (!def?.produces) continue;
     out[def.produces] += fieldProduction(s.level);
   }
-  for (const k of RESOURCE_KEYS) out[k] = out[k] * config.WORLD_SPEED * (mods.production[k] + oasis[k]);
+  for (const k of RESOURCE_KEYS) out[k] = out[k] * config.WORLD_SPEED * (mods.production[k] + oasis[k]) + flatBonus;
   return out;
 }
 
@@ -154,8 +158,13 @@ export function ownedTroopTotals(q: Q, villageId: number): UnitCounts {
   return total;
 }
 
+function heroUpkeep(q: Q, villageId: number): number {
+  const h = q.select({ status: heroes.status }).from(heroes).where(eq(heroes.homeVillageId, villageId)).get();
+  return h && h.status !== 'dead' && h.status !== 'reviving' ? HERO_UPKEEP : 0;
+}
+
 export function cropUpkeep(q: Q, state: VillageState): number {
-  return (state.village.pop + upkeepOf(state.tribe, ownedTroopTotals(q, state.village.id))) * config.WORLD_SPEED;
+  return (state.village.pop + upkeepOf(state.tribe, ownedTroopTotals(q, state.village.id)) + heroUpkeep(q, state.village.id)) * config.WORLD_SPEED;
 }
 
 export interface Economy {
@@ -167,7 +176,7 @@ export interface Economy {
 
 export function economyOf(q: Q, state: VillageState, now: number): Economy {
   const mods = getModifiers(q, state.userId, now);
-  const gross = grossProduction(state, mods, oasisBonuses(q, state.village.id));
+  const gross = grossProduction(state, mods, oasisBonuses(q, state.village.id), heroProductionBonus(q, state.village.id));
   const upkeep = cropUpkeep(q, state);
   const net = { ...gross, crop: gross.crop - upkeep };
   return { gross, upkeep, net, capacity: capacityFor(state) };
@@ -263,8 +272,13 @@ export function catchUp(q: Q, villageId: number, t: number): VillageState | unde
     const eco = economyOf(q, state, t);
     const hours = (t - state.village.resAt) / 3_600_000;
     const next = accrue(stockOf(state.village), eco.net, eco.capacity, hours);
-    q.update(villages).set({ ...next, resAt: t }).where(eq(villages.id, villageId)).run();
-    state.village = { ...state.village, ...next, resAt: t };
+    const loyalty = Math.min(
+      100,
+      state.village.loyalty + hours * loyaltyRegenPerHour(Math.max(levelOf(state, 'residence'), levelOf(state, 'palace'))) * config.WORLD_SPEED,
+    );
+    q.update(villages).set({ ...next, loyalty, resAt: t }).where(eq(villages.id, villageId)).run();
+    state.village = { ...state.village, ...next, loyalty, resAt: t };
+    if (next.crop <= 0 && eco.net.crop < 0) starve(q, state, -eco.net.crop, t);
   }
   catchUpTraining(q, villageId, t);
   return state;
@@ -279,4 +293,67 @@ export function refreshPopulation(q: Q, villageId: number): number {
   const pop = populationOf({ slots: s });
   q.update(villages).set({ pop }).where(eq(villages.id, villageId)).run();
   return pop;
+}
+
+/**
+ * The granary is empty and the village eats more than it grows: troops at home desert,
+ * most crop-hungry first, until upkeep fits production again.
+ */
+function starve(q: Q, state: VillageState, deficitPerHour: number, t: number): void {
+  let toCut = deficitPerHour / config.WORLD_SPEED;
+  const home = troopsAt(q, state.village.id, state.village.id);
+  const order = home
+    .map((n, i) => ({ i, n, upkeep: TRIBES[state.tribe].units[i]?.upkeep ?? 1 }))
+    .filter((u) => u.n > 0)
+    .sort((a, b) => b.upkeep - a.upkeep);
+  const lost = emptyUnits();
+  for (const u of order) {
+    if (toCut <= 0) break;
+    const kill = Math.min(u.n, Math.ceil(toCut / u.upkeep));
+    lost[u.i] = kill;
+    toCut -= kill * u.upkeep;
+  }
+  if (lost.every((n) => n === 0)) return;
+  setTroopsAt(q, state.village.id, state.village.id, home.map((n, i) => n - (lost[i] ?? 0)));
+  if (state.userId !== null) {
+    q.insert(reports)
+      .values({
+        userId: state.userId,
+        kind: 'starvation',
+        title: `Troops starved in ${state.village.name}`,
+        data: JSON.stringify({ type: 'return', villageName: state.village.name, units: lost, tribe: state.tribe, loot: res() }),
+        createdAt: t,
+      })
+      .run();
+  }
+}
+
+export function parseLevels(json: string | null | undefined): number[] {
+  return parseUnits(json);
+}
+
+/** Culture points per day for a player across all villages. */
+export function culturePerDay(q: Q, userId: number): number {
+  const rows = q
+    .select({ building: slots.building, level: slots.level })
+    .from(slots)
+    .innerJoin(villages, eq(villages.id, slots.villageId))
+    .where(eq(villages.userId, userId))
+    .all();
+  let total = 0;
+  for (const r of rows) {
+    const def = r.building ? buildingDef(r.building) : undefined;
+    if (def) total += def.culture * r.level * CULTURE_PER_LEVEL;
+  }
+  return total * config.WORLD_SPEED;
+}
+
+/** Accrue culture points up to `now`; returns the current total. */
+export function catchUpCulture(q: Q, userId: number, now: number): number {
+  const u = q.select({ cp: users.culturePoints, at: users.cultureAt }).from(users).where(eq(users.id, userId)).get();
+  if (!u) return 0;
+  if (now <= u.at) return u.cp;
+  const cp = u.cp + (culturePerDay(q, userId) * (now - u.at)) / 86_400_000;
+  q.update(users).set({ culturePoints: cp, cultureAt: now }).where(eq(users.id, userId)).run();
+  return cp;
 }

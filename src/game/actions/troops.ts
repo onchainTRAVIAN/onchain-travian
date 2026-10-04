@@ -1,16 +1,20 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
-import { movements, tiles, users, villages } from '../../db/schema.js';
+import { heroes, movements, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { BUILDINGS, TOWN_BUILDING_IDS, type BuildingId } from '../rules/buildings.js';
+import { SETTLERS_PER_VILLAGE } from '../rules/expansion.js';
 import { distance, travelTimeMs, wrapCoord } from '../rules/map.js';
-import { UNIT_SLOTS, isSpecialUnit, slowestSpeed, subUnits, totalUnits, unitDef, type UnitCounts } from '../rules/units.js';
+import { UNIT_SLOTS, subUnits, totalUnits, unitDef, type UnitCounts } from '../rules/units.js';
 import { assertGame } from '../errors.js';
 import { catchUp, levelOf, setTroopsAt, troopsAt } from '../engine/state.js';
-import { sendTroopsHome } from '../engine/events.js';
+import { groupSpeed, sendTroopsHome } from '../engine/movement.js';
+import { heroAtHome } from '../engine/hero.js';
+import { canExpand } from '../engine/expansion.js';
+import { oasisOwner, tileAt } from '../engine/oasis.js';
 import { ownedVillage } from './build.js';
 
-export type MissionKind = 'attack' | 'raid' | 'reinforce' | 'scout';
+export type MissionKind = 'attack' | 'raid' | 'reinforce' | 'scout' | 'settle';
 export type MovementRow = typeof movements.$inferSelect;
 
 export interface SendInput {
@@ -19,86 +23,118 @@ export interface SendInput {
   kind: MissionKind;
   units: UnitCounts;
   catapultTarget?: string | null;
+  hero?: boolean;
 }
 
 export interface SendPreview {
-  targetVillageId: number;
+  targetVillageId: number | null;
   targetName: string;
   targetOwner: string;
+  targetKind: 'village' | 'oasis' | 'valley';
   distance: number;
   travelMs: number;
+  x: number;
+  y: number;
+}
+
+function cleanUnits(units: UnitCounts): UnitCounts {
+  return units.slice(0, UNIT_SLOTS).map((n) => Math.max(0, Math.floor(n)));
 }
 
 /** Validate a mission and compute its travel time without changing anything. */
-export function previewSend(db: Q, userId: number, villageId: number, input: SendInput, now: number): SendPreview {
-  const home = ownedVillage(db, userId, villageId);
-  const me = db.select().from(users).where(eq(users.id, userId)).get();
+export function previewSend(q: Q, userId: number, villageId: number, input: SendInput, now: number): SendPreview {
+  const home = ownedVillage(q, userId, villageId);
+  const me = q.select().from(users).where(eq(users.id, userId)).get();
   assertGame(me, 'Player not found');
-  const state = catchUp(db, villageId, now);
+  const state = catchUp(q, villageId, now);
   assertGame(state, 'Village not found');
   assertGame(levelOf(state, 'rally') >= 1, 'Build a Rally Point first');
 
   const x = wrapCoord(input.x, config.MAP_RADIUS);
   const y = wrapCoord(input.y, config.MAP_RADIUS);
-  const tile = db.select().from(tiles).where(and(eq(tiles.x, x), eq(tiles.y, y))).get();
+  const tile = tileAt(q, x, y);
   assertGame(tile, 'No such place on the map');
-  assertGame(tile.kind === 'field' && tile.villageId !== null, 'There is no village at that location');
-  assertGame(tile.villageId !== villageId, 'Your troops are already there');
-  const target = db
-    .select({ id: villages.id, name: villages.name, userId: villages.userId, username: users.username, protectedUntil: users.protectedUntil })
-    .from(villages)
-    .leftJoin(users, eq(users.id, villages.userId))
-    .where(eq(villages.id, tile.villageId))
-    .get();
-  assertGame(target, 'There is no village at that location');
+  assertGame(tile.villageId !== villageId || tile.kind === 'oasis', 'Your troops are already there');
 
-  const units = input.units.slice(0, UNIT_SLOTS).map((n) => Math.max(0, Math.floor(n)));
-  assertGame(totalUnits(units) > 0, 'Select at least one unit');
-  const home_ = troopsAt(db, villageId, villageId);
-  units.forEach((n, i) => assertGame(n <= (home_[i] ?? 0), `Not enough ${unitDef(me.tribe, i).name}`));
-  units.forEach((n, i) => assertGame(n === 0 || !isSpecialUnit(unitDef(me.tribe, i)), `${unitDef(me.tribe, i).name} cannot be sent yet`));
+  const units = cleanUnits(input.units);
+  const atHome = troopsAt(q, villageId, villageId);
+  units.forEach((n, i) => assertGame(n <= (atHome[i] ?? 0), `Not enough ${unitDef(me.tribe, i).name}`));
 
-  if (input.kind !== 'reinforce') {
-    assertGame(target.userId !== userId, 'You cannot attack your own village');
-    assertGame(
-      target.protectedUntil === null || target.protectedUntil <= now,
-      `${target.username ?? 'This player'} is under beginner protection`,
-    );
+  const withHero = !!input.hero;
+  if (withHero) {
+    assertGame(input.kind !== 'scout' && input.kind !== 'settle', 'The hero cannot join this mission');
+    assertGame(heroAtHome(q, userId, villageId, now), 'Your hero is not available in this village');
+  }
+  assertGame(totalUnits(units) > 0 || withHero, 'Select at least one unit');
+
+  const settlers = units.reduce((s, n, i) => s + (unitDef(me.tribe, i).type === 'settler' ? n : 0), 0);
+  if (input.kind === 'settle') {
+    assertGame(tile.kind === 'field' && tile.villageId === null, 'Settlers need an empty valley');
+    assertGame(settlers === SETTLERS_PER_VILLAGE && totalUnits(units) === settlers, `Send exactly ${SETTLERS_PER_VILLAGE} settlers and nothing else`);
+    const check = canExpand(q, userId, villageId, now);
+    assertGame(check.ok, check.reason ?? 'You cannot found another village yet');
+  } else {
+    assertGame(settlers === 0, 'Settlers can only be sent to found a village');
   }
   if (input.kind === 'scout') {
     units.forEach((n, i) => assertGame(n === 0 || unitDef(me.tribe, i).type === 'scout', 'Only scouts can be sent to spy'));
   }
   if (input.catapultTarget) {
-    assertGame(
-      (TOWN_BUILDING_IDS as readonly string[]).includes(input.catapultTarget),
-      'Unknown catapult target',
-    );
+    assertGame((TOWN_BUILDING_IDS as readonly string[]).includes(input.catapultTarget), 'Unknown catapult target');
+  }
+
+  let targetVillageId: number | null = null;
+  let targetName: string;
+  let targetOwner: string;
+  let targetKind: SendPreview['targetKind'];
+
+  if (tile.kind === 'oasis') {
+    assertGame(input.kind === 'attack' || input.kind === 'raid' || input.kind === 'scout', 'You can only attack, raid or scout an oasis');
+    const owner = oasisOwner(q, tile);
+    assertGame(!owner || owner.userId !== userId, 'This oasis is already yours');
+    targetName = `Oasis (${x}|${y})`;
+    targetOwner = owner ? (q.select({ u: users.username }).from(users).where(eq(users.id, owner.userId ?? 0)).get()?.u ?? 'Nature') : 'Nature';
+    targetKind = 'oasis';
+  } else if (tile.villageId === null) {
+    assertGame(input.kind === 'settle', 'There is no village at that location');
+    targetName = `Valley (${x}|${y})`;
+    targetOwner = '—';
+    targetKind = 'valley';
+  } else {
+    assertGame(input.kind !== 'settle', 'That land is already taken');
+    const target = q
+      .select({ id: villages.id, name: villages.name, userId: villages.userId, username: users.username, protectedUntil: users.protectedUntil })
+      .from(villages)
+      .leftJoin(users, eq(users.id, villages.userId))
+      .where(eq(villages.id, tile.villageId))
+      .get();
+    assertGame(target, 'There is no village at that location');
+    if (input.kind !== 'reinforce') {
+      assertGame(target.userId !== userId, 'You cannot attack your own village');
+      assertGame(target.protectedUntil === null || target.protectedUntil <= now, `${target.username ?? 'This player'} is under beginner protection`);
+    }
+    targetVillageId = target.id;
+    targetName = target.name;
+    targetOwner = target.username ?? 'Nature';
+    targetKind = 'village';
   }
 
   const dist = distance(home.x, home.y, x, y, config.MAP_RADIUS);
-  const travelMs = travelTimeMs(dist, slowestSpeed(me.tribe, units), config.TROOP_SPEED);
-  return {
-    targetVillageId: target.id,
-    targetName: target.name,
-    targetOwner: target.username ?? 'Nature',
-    distance: dist,
-    travelMs,
-  };
+  const travelMs = travelTimeMs(dist, groupSpeed(me.tribe, units, withHero), config.TROOP_SPEED);
+  return { targetVillageId, targetName, targetOwner, targetKind, distance: dist, travelMs, x, y };
 }
 
 export function sendTroops(db: DB, userId: number, villageId: number, input: SendInput, now: number): MovementRow {
   return db.transaction((tx) => {
     const preview = previewSend(tx, userId, villageId, input, now);
     const home = ownedVillage(tx, userId, villageId);
-    const units = input.units.slice(0, UNIT_SLOTS).map((n) => Math.max(0, Math.floor(n)));
+    const units = cleanUnits(input.units);
     setTroopsAt(tx, villageId, villageId, subUnits(troopsAt(tx, villageId, villageId), units));
-
-    // Attacking ends your own beginner protection.
-    if (input.kind !== 'reinforce') {
+    if (input.kind !== 'reinforce' && input.kind !== 'settle' && preview.targetKind === 'village') {
+      // Attacking another player ends your own beginner protection.
       tx.update(users).set({ protectedUntil: now }).where(eq(users.id, userId)).run();
     }
-    const target = tx.select().from(villages).where(eq(villages.id, preview.targetVillageId)).get();
-    assertGame(target, 'Target not found');
+    if (input.hero) tx.update(heroes).set({ status: 'moving', locationId: null }).where(eq(heroes.userId, userId)).run();
     const catapultTarget =
       input.kind === 'attack' && input.catapultTarget && BUILDINGS[input.catapultTarget as BuildingId] ? input.catapultTarget : null;
     return tx
@@ -106,13 +142,14 @@ export function sendTroops(db: DB, userId: number, villageId: number, input: Sen
       .values({
         kind: input.kind,
         fromVillageId: villageId,
-        toVillageId: target.id,
+        toVillageId: preview.targetVillageId,
         originX: home.x,
         originY: home.y,
-        toX: target.x,
-        toY: target.y,
+        toX: preview.x,
+        toY: preview.y,
         units: JSON.stringify(units),
         catapultTarget,
+        hero: !!input.hero,
         departAt: now,
         arriveAt: now + preview.travelMs,
       })
