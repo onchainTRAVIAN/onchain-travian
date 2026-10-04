@@ -1,0 +1,148 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import request from 'supertest';
+import { db } from '../src/db/index.js';
+import { ensureWorld } from '../src/game/engine/world.js';
+import { createApp } from '../src/app.js';
+
+const app = createApp();
+
+function csrfFrom(body: string): string {
+  const m = /name="_csrf" value="([^"]+)"/.exec(body);
+  if (!m?.[1]) throw new Error('no csrf token in page');
+  return m[1];
+}
+
+/** A logged-in browser-like agent. */
+async function newPlayer(name: string, tribe = 'clans') {
+  const agent = request.agent(app);
+  const page = await agent.get('/register');
+  const res = await agent
+    .post('/register')
+    .type('form')
+    .send({ _csrf: csrfFrom(page.text), username: name, password: 'supersecret1', tribe });
+  expect(res.status).toBe(303);
+  expect(res.headers.location).toBe('/fields');
+  return agent;
+}
+
+beforeAll(() => {
+  ensureWorld(db);
+});
+
+describe('public pages', () => {
+  it('landing, login, register, rankings and help render', async () => {
+    for (const path of ['/', '/login', '/register', '/stats', '/help']) {
+      const res = await request(app).get(path);
+      expect(res.status, path).toBe(200);
+      expect(res.headers['content-type']).toMatch(/html/);
+    }
+  });
+
+  it('sets security headers', async () => {
+    const res = await request(app).get('/');
+    expect(res.headers['content-security-policy']).toContain("default-src 'self'");
+    expect(res.headers['x-powered-by']).toBeUndefined();
+  });
+
+  it('game pages redirect to login when logged out', async () => {
+    for (const path of ['/fields', '/village', '/map', '/troops', '/reports', '/messages', '/account']) {
+      const res = await request(app).get(path);
+      expect(res.status, path).toBe(303);
+      expect(res.headers.location).toBe('/login');
+    }
+  });
+
+  it('unknown pages are a friendly 404', async () => {
+    const res = await request(app).get('/nope');
+    expect(res.status).toBe(404);
+    expect(res.text).toContain('Lost in the wilderness');
+  });
+});
+
+describe('account flow', () => {
+  it('rejects posts without a CSRF token', async () => {
+    const res = await request(app).post('/register').type('form').send({ username: 'Mallory', password: 'supersecret1', tribe: 'legion' });
+    expect(res.status).toBe(303);
+    const again = await request(app).get('/stats');
+    expect(again.text).not.toContain('Mallory');
+  });
+
+  it('validates registration input', async () => {
+    const agent = request.agent(app);
+    const page = await agent.get('/register');
+    const res = await agent.post('/register').type('form').send({ _csrf: csrfFrom(page.text), username: 'x', password: 'short', tribe: 'legion' });
+    expect(res.status).toBe(422);
+    expect(res.text).toContain('at least 3 characters');
+  });
+
+  it('registers, shows the village, and escapes user input', async () => {
+    const agent = await newPlayer('Vercingetorix');
+    const fields = await agent.get('/fields');
+    expect(fields.status).toBe(200);
+    expect(fields.text).toContain('Vercingetorix&#39;s village');
+    expect(fields.text).toContain('Woodcutter');
+
+    const account = await agent.get('/account');
+    const rename = await agent.post('/account/rename').type('form').send({ _csrf: csrfFrom(account.text), name: '<script>x</script>' });
+    expect(rename.status).toBe(303);
+    const after = await agent.get('/village');
+    expect(after.text).toContain('&lt;script&gt;x&lt;/script&gt;');
+    expect(after.text).not.toContain('<script>x</script>');
+  });
+
+  it('logs in and out', async () => {
+    await newPlayer('Boudicca', 'legion');
+    const agent = request.agent(app);
+    const page = await agent.get('/login');
+    const bad = await agent.post('/login').type('form').send({ _csrf: csrfFrom(page.text), username: 'Boudicca', password: 'nope-nope' });
+    expect(bad.status).toBe(401);
+    const ok = await agent.post('/login').type('form').send({ _csrf: csrfFrom(bad.text), username: 'boudicca', password: 'supersecret1' });
+    expect(ok.status).toBe(303);
+    const fields = await agent.get('/fields');
+    expect(fields.status).toBe(200);
+    const out = await agent.post('/logout').type('form').send({ _csrf: csrfFrom(fields.text) });
+    expect(out.status).toBe(303);
+    expect((await agent.get('/fields')).status).toBe(303);
+  });
+});
+
+describe('playing through the web', () => {
+  it('upgrades a field and shows it in the construction queue', async () => {
+    const agent = await newPlayer('Hannibal', 'horde');
+    const slot = await agent.get('/slot/1');
+    expect(slot.status).toBe(200);
+    expect(slot.text).toContain('Upgrade to level 1');
+    const res = await agent.post('/build').type('form').send({ _csrf: csrfFrom(slot.text), slot: '1' });
+    expect(res.status).toBe(303);
+    const fields = await agent.get('/fields');
+    expect(fields.text).toContain('under construction');
+    expect(fields.text).toContain('→ level 1');
+  });
+
+  it('shows friendly errors for impossible actions', async () => {
+    const agent = await newPlayer('Spartacus', 'legion');
+    const page = await agent.get('/slot/25');
+    const res = await agent.post('/build').type('form').send({ _csrf: csrfFrom(page.text), slot: '25', building: 'workshop' });
+    expect(res.status).toBe(303);
+    const back = await agent.get(res.headers.location ?? '/village');
+    expect(back.text).toMatch(/Requires/);
+  });
+
+  it('renders map, tile, troops, send form, reports, messages and rankings', async () => {
+    const agent = await newPlayer('Cleopatra', 'clans');
+    for (const path of ['/map', '/map?x=5&y=5', '/map/tile?x=0&y=0', '/troops', '/troops/send', '/reports', '/messages', '/messages/new', '/stats?k=attack', '/village', '/slot/19', '/slot/39', '/slot/40', '/slot/30']) {
+      const res = await agent.get(path);
+      expect(res.status, path).toBe(200);
+    }
+  });
+
+  it('sends a message to another player', async () => {
+    const a = await newPlayer('Caesar', 'legion');
+    await newPlayer('Brennus', 'clans');
+    const form = await a.get('/messages/new?to=Brennus');
+    const res = await a.post('/messages').type('form').send({ _csrf: csrfFrom(form.text), to: 'Brennus', subject: 'Hello', body: 'Peace?' });
+    expect(res.status).toBe(303);
+    const sent = await a.get('/messages?box=out');
+    expect(sent.text).toContain('Hello');
+  });
+});

@@ -1,0 +1,261 @@
+import { and, asc, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
+import type { Q } from '../db/index.js';
+import { messages, movements, reports, tiles, troops, users, villages } from '../db/schema.js';
+import { config } from '../config.js';
+import { distance, wrapCoord } from './rules/map.js';
+import type { TribeId, UnitCounts } from './rules/units.js';
+import { parseUnits } from './engine/state.js';
+
+export function userVillages(q: Q, userId: number) {
+  return q
+    .select({ id: villages.id, name: villages.name, x: villages.x, y: villages.y, pop: villages.pop, isCapital: villages.isCapital })
+    .from(villages)
+    .where(eq(villages.userId, userId))
+    .orderBy(desc(villages.isCapital), asc(villages.id))
+    .all();
+}
+
+export interface MovementView {
+  id: number;
+  kind: 'attack' | 'raid' | 'reinforce' | 'scout' | 'return';
+  direction: 'out' | 'in' | 'home';
+  arriveAt: number;
+  departAt: number;
+  units: UnitCounts | null;
+  tribe: TribeId;
+  otherName: string;
+  otherX: number;
+  otherY: number;
+  otherVillageId: number | null;
+  ownerName: string;
+}
+
+/** Movements relevant to a village: outgoing missions, returns, and anything heading here. */
+export function villageMovements(q: Q, villageId: number): MovementView[] {
+  const rows = q
+    .select()
+    .from(movements)
+    .where(or(eq(movements.fromVillageId, villageId), eq(movements.toVillageId, villageId)))
+    .orderBy(asc(movements.arriveAt))
+    .all();
+  const ids = new Set<number>();
+  for (const r of rows) {
+    ids.add(r.fromVillageId);
+    if (r.toVillageId !== null) ids.add(r.toVillageId);
+  }
+  const info = new Map<number, { name: string; x: number; y: number; tribe: TribeId; owner: string }>();
+  if (ids.size > 0) {
+    for (const v of q
+      .select({ id: villages.id, name: villages.name, x: villages.x, y: villages.y, tribe: users.tribe, owner: users.username })
+      .from(villages)
+      .leftJoin(users, eq(users.id, villages.userId))
+      .where(inArray(villages.id, [...ids]))
+      .all()) {
+      info.set(v.id, { name: v.name, x: v.x, y: v.y, tribe: v.tribe ?? 'legion', owner: v.owner ?? 'Nature' });
+    }
+  }
+  const out: MovementView[] = [];
+  for (const r of rows) {
+    const from = info.get(r.fromVillageId);
+    if (r.kind === 'return') {
+      if (r.fromVillageId !== villageId) continue;
+      out.push({
+        id: r.id, kind: r.kind, direction: 'home', arriveAt: r.arriveAt, departAt: r.departAt,
+        units: parseUnits(r.units), tribe: from?.tribe ?? 'legion',
+        otherName: `(${r.originX}|${r.originY})`, otherX: r.originX, otherY: r.originY, otherVillageId: null, ownerName: from?.owner ?? '',
+      });
+    } else if (r.fromVillageId === villageId) {
+      const to = r.toVillageId !== null ? info.get(r.toVillageId) : undefined;
+      out.push({
+        id: r.id, kind: r.kind, direction: 'out', arriveAt: r.arriveAt, departAt: r.departAt,
+        units: parseUnits(r.units), tribe: from?.tribe ?? 'legion',
+        otherName: to?.name ?? `(${r.toX}|${r.toY})`, otherX: r.toX, otherY: r.toY, otherVillageId: r.toVillageId, ownerName: to?.owner ?? '',
+      });
+    } else {
+      // Incoming: hide hostile army composition (you only see that something is coming).
+      out.push({
+        id: r.id, kind: r.kind, direction: 'in', arriveAt: r.arriveAt, departAt: r.departAt,
+        units: r.kind === 'reinforce' ? parseUnits(r.units) : null, tribe: from?.tribe ?? 'legion',
+        otherName: from?.name ?? '?', otherX: r.originX, otherY: r.originY, otherVillageId: r.fromVillageId, ownerName: from?.owner ?? '',
+      });
+    }
+  }
+  return out;
+}
+
+export interface StationedView {
+  ownerVillageId: number;
+  locationId: number;
+  villageName: string;
+  ownerName: string;
+  x: number;
+  y: number;
+  tribe: TribeId;
+  units: UnitCounts;
+}
+
+/** Foreign troops stationed in this village. */
+export function reinforcementsIn(q: Q, villageId: number): StationedView[] {
+  return q
+    .select({ t: troops, name: villages.name, x: villages.x, y: villages.y, owner: users.username, tribe: users.tribe })
+    .from(troops)
+    .innerJoin(villages, eq(villages.id, troops.ownerVillageId))
+    .leftJoin(users, eq(users.id, villages.userId))
+    .where(and(eq(troops.villageId, villageId), ne(troops.ownerVillageId, villageId)))
+    .all()
+    .map((r) => ({
+      ownerVillageId: r.t.ownerVillageId, locationId: villageId, villageName: r.name, ownerName: r.owner ?? 'Nature',
+      x: r.x, y: r.y, tribe: r.tribe ?? 'legion', units: parseUnits(r.t.units),
+    }));
+}
+
+/** This village's troops stationed elsewhere. */
+export function troopsAway(q: Q, villageId: number): StationedView[] {
+  return q
+    .select({ t: troops, name: villages.name, x: villages.x, y: villages.y, owner: users.username })
+    .from(troops)
+    .innerJoin(villages, eq(villages.id, troops.villageId))
+    .leftJoin(users, eq(users.id, villages.userId))
+    .where(and(eq(troops.ownerVillageId, villageId), ne(troops.villageId, villageId)))
+    .all()
+    .map((r) => ({
+      ownerVillageId: villageId, locationId: r.t.villageId, villageName: r.name, ownerName: r.owner ?? 'Nature',
+      x: r.x, y: r.y, tribe: 'legion' as TribeId, units: parseUnits(r.t.units),
+    }));
+}
+
+export type RankKind = 'population' | 'attack' | 'defense' | 'raid';
+
+export function rankings(q: Q, kind: RankKind, limit: number, offset: number) {
+  const pop = sql<number>`coalesce((select sum(${villages.pop}) from ${villages} where ${villages.userId} = ${users.id}), 0)`;
+  const vcount = sql<number>`(select count(*) from ${villages} where ${villages.userId} = ${users.id})`;
+  const orderCol =
+    kind === 'attack' ? users.offPoints : kind === 'defense' ? users.defPoints : kind === 'raid' ? users.lootTotal : pop;
+  return q
+    .select({
+      id: users.id,
+      username: users.username,
+      tribe: users.tribe,
+      pop,
+      villages: vcount,
+      off: users.offPoints,
+      def: users.defPoints,
+      loot: users.lootTotal,
+    })
+    .from(users)
+    .where(eq(users.banned, false))
+    .orderBy(desc(orderCol), asc(users.id))
+    .limit(limit)
+    .offset(offset)
+    .all();
+}
+
+export function playerCount(q: Q): number {
+  return q.select({ n: sql<number>`count(*)` }).from(users).get()?.n ?? 0;
+}
+
+export function onlineCount(q: Q, now: number): number {
+  return q.select({ n: sql<number>`count(*)` }).from(users).where(sql`${users.lastSeenAt} > ${now - 15 * 60_000}`).get()?.n ?? 0;
+}
+
+export function playerRank(q: Q, userId: number): number {
+  const pop = sql<number>`coalesce((select sum(v.pop) from villages v where v.user_id = u.id), 0)`;
+  const mine = q.select({ p: sql<number>`coalesce(sum(${villages.pop}), 0)` }).from(villages).where(eq(villages.userId, userId)).get()?.p ?? 0;
+  const better = q.get<{ n: number }>(sql`select count(*) as n from users u where u.banned = 0 and (${pop} > ${mine} or (${pop} = ${mine} and u.id < ${userId}))`);
+  return (better?.n ?? 0) + 1;
+}
+
+export interface MapCell {
+  x: number;
+  y: number;
+  kind: 'field' | 'oasis';
+  layout: string | null;
+  oasis: string | null;
+  village: { id: number; name: string; pop: number; userId: number | null; owner: string; tribe: TribeId } | null;
+}
+
+export function mapWindow(q: Q, cx: number, cy: number, radius: number): MapCell[][] {
+  const R = config.MAP_RADIUS;
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (let d = -radius; d <= radius; d++) {
+    xs.push(wrapCoord(cx + d, R));
+    ys.push(wrapCoord(cy + d, R));
+  }
+  const rows = q
+    .select({ tile: tiles, v: villages, owner: users.username, tribe: users.tribe })
+    .from(tiles)
+    .leftJoin(villages, and(eq(villages.id, tiles.villageId), eq(tiles.kind, 'field')))
+    .leftJoin(users, eq(users.id, villages.userId))
+    .where(and(inArray(tiles.x, [...new Set(xs)]), inArray(tiles.y, [...new Set(ys)])))
+    .all();
+  const byKey = new Map(rows.map((r) => [`${r.tile.x}|${r.tile.y}`, r]));
+  // Rows top to bottom = y descending (north at the top).
+  return [...ys].reverse().map((y) =>
+    xs.map((x) => {
+      const r = byKey.get(`${x}|${y}`);
+      return {
+        x,
+        y,
+        kind: r?.tile.kind ?? 'field',
+        layout: r?.tile.layout ?? null,
+        oasis: r?.tile.oasis ?? null,
+        village: r?.v
+          ? { id: r.v.id, name: r.v.name, pop: r.v.pop, userId: r.v.userId, owner: r.owner ?? 'Nature', tribe: r.tribe ?? 'legion' }
+          : null,
+      };
+    }),
+  );
+}
+
+export function tileInfo(q: Q, x: number, y: number) {
+  return q
+    .select({ tile: tiles, v: villages, owner: users.username, ownerId: users.id, tribe: users.tribe, protectedUntil: users.protectedUntil })
+    .from(tiles)
+    .leftJoin(villages, eq(villages.id, tiles.villageId))
+    .leftJoin(users, eq(users.id, villages.userId))
+    .where(and(eq(tiles.x, x), eq(tiles.y, y)))
+    .get();
+}
+
+export function dist(ax: number, ay: number, bx: number, by: number): number {
+  return distance(ax, ay, bx, by, config.MAP_RADIUS);
+}
+
+export function unreadCounts(q: Q, userId: number): { reports: number; messages: number } {
+  const r = q.select({ n: sql<number>`count(*)` }).from(reports).where(and(eq(reports.userId, userId), eq(reports.isRead, false))).get()?.n ?? 0;
+  const m =
+    q.select({ n: sql<number>`count(*)` })
+      .from(messages)
+      .where(and(eq(messages.toUserId, userId), eq(messages.isRead, false), eq(messages.deletedByRecipient, false)))
+      .get()?.n ?? 0;
+  return { reports: r, messages: m };
+}
+
+export const REPORT_FILTERS = {
+  all: [] as string[],
+  attacks: ['attack_won', 'attack_lost'],
+  defense: ['defense_won', 'defense_lost'],
+  scouting: ['scout'],
+  other: ['reinforce', 'return'],
+} as const;
+export type ReportFilter = keyof typeof REPORT_FILTERS;
+
+export function reportList(q: Q, userId: number, filter: ReportFilter, limit: number, offset: number) {
+  const kinds = REPORT_FILTERS[filter];
+  const cond = kinds.length > 0 ? and(eq(reports.userId, userId), inArray(reports.kind, [...kinds])) : eq(reports.userId, userId);
+  return q
+    .select({ id: reports.id, kind: reports.kind, title: reports.title, isRead: reports.isRead, createdAt: reports.createdAt })
+    .from(reports)
+    .where(cond)
+    .orderBy(desc(reports.createdAt), desc(reports.id))
+    .limit(limit)
+    .offset(offset)
+    .all();
+}
+
+export function playerProfile(q: Q, userId: number) {
+  const user = q.select().from(users).where(eq(users.id, userId)).get();
+  if (!user) return undefined;
+  return { user, villages: userVillages(q, userId) };
+}
