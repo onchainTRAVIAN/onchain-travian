@@ -13,20 +13,21 @@ function costWithTime(o: BuildOption, have: Resources): SafeHtml {
   return costLine(
     o.cost,
     have,
-    html`<span>${icon('res/cropuse', 'Crop consumption')}${popAtLevel(o.def, o.nextLevel)}</span><span>${icon('res/clock', 'Duration')}${fmtDuration(o.timeMs)}</span>`,
+    html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${popAtLevel(o.def, o.nextLevel)}</span><span>${icon('res/clock', 'Duration', 18, 12)}${fmtDuration(o.timeMs)}</span>`,
   );
 }
 
 /** Classic "Upgrade to level N." link, or the reason it isn't possible. */
 function buildAction(o: BuildOption, csrf: string, now: number, label: string, buildingId?: string): SafeHtml {
   if (o.canBuild) {
-    return html`<form method="post" action="/build" class="inline">${csrfField(csrf)}
+    return html`<form method="post" action="/build">${csrfField(csrf)}
       <input type="hidden" name="slot" value="${o.slot}">${buildingId ? html`<input type="hidden" name="building" value="${buildingId}">` : ''}
       <button type="submit" class="linkbtn">${label}</button></form>`;
   }
   if (o.reason === 'Not enough resources' && o.waitMs !== undefined) {
-    return html`<span class="none">Enough resources at ${fmtClock(now + o.waitMs).slice(0, 5)} (in <span data-ends="${now + o.waitMs}">${fmtDuration(o.waitMs)}</span>)</span>`;
+    return html`<span class="none">Enough resources today at ${fmtClock(now + o.waitMs).slice(0, 5)}</span>`;
   }
+  if (o.reason === 'Not enough resources') return html`<span class="none">Not enough resources</span>`;
   const text = o.reason === 'Your builders are busy' ? 'The workers are already at work.' : o.reason ?? 'Not possible right now.';
   return html`<span class="none">${text}</span>`;
 }
@@ -36,15 +37,14 @@ function upgradeBox(o: BuildOption, have: Resources, csrf: string, tribe: TribeI
   const nextEffect = effectAt(o.def, o.nextLevel, tribe);
   return html`
     ${nowEffect || nextEffect
-      ? html`<table class="tb effect"><tbody>
+      ? html`<table id="build_value"><tbody>
           ${o.currentLevel > 0 && nowEffect ? html`<tr><th>Current:</th><td>${nowEffect}</td></tr>` : ''}
-          ${!o.maxed && nextEffect ? html`<tr><th>At level ${o.nextLevel}:</th><td>${nextEffect}</td></tr>` : ''}
+          ${!o.maxed && nextEffect ? html`<tr><th>Level ${o.nextLevel}:</th><td>${nextEffect}</td></tr>` : ''}
         </tbody></table>`
       : ''}
     ${o.maxed
       ? html`<p class="none">${o.def.name} is fully upgraded.</p>`
-      : html`<p><b>Costs</b> for upgrading to level ${o.nextLevel}:</p>
-        ${costWithTime(o, have)}
+      : html`<p class="contract"><b>Costs</b> for upgrading to level ${o.nextLevel}:<br>${costWithTime(o, have)}</p>
         <p>${buildAction(o, csrf, now, `Upgrade to level ${o.nextLevel}.`)}</p>`}`;
 }
 
@@ -63,55 +63,58 @@ export interface SlotViewData {
   now: number;
 }
 
+/** Classic training table: one form, a quantity box per unit and a single Train button. */
 function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId, have: Resources, csrf: string, now: number): SafeHtml {
   if (t.options.length === 0) return html``;
-  return html`<table class="tb train"><thead><tr><th>Name</th><th>Quantity</th><th>Max</th></tr></thead><tbody>
+  const anyAvailable = t.options.some((o) => o.available);
+  return html`<form method="post" action="/train" class="block">${csrfField(csrf)}<input type="hidden" name="building" value="${t.building}">
+    <table class="build_details"><thead><tr><th>Name</th><th>Quantity</th><th>Max</th></tr></thead><tbody>
     ${t.options.map(
       (o) => html`<tr id="u${o.slot}">
-        <td><div class="tname">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b> <span class="small muted">(${fmtNum(o.unit.attack)}/${fmtNum(o.unit.defInf)}/${fmtNum(o.unit.defCav)} · speed ${o.unit.speed})</span></div>
-          ${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption')}${o.unit.upkeep}</span><span>${icon('res/clock', 'Duration')}${fmtDuration(o.timeMs)}</span>`)}
-          ${o.available ? '' : html`<div class="small none">${o.reason}</div>`}</td>
-        <td class="center">${o.available
-          ? html`<form method="post" action="/train" id="tf${o.slot}" class="inline">${csrfField(csrf)}<input type="hidden" name="unit" value="${o.slot}"><input type="hidden" name="building" value="${t.building}">
-              <label class="sr" for="n${o.slot}">How many ${o.unit.name}</label>
-              <input id="n${o.slot}" type="number" name="count" min="1" max="${Math.max(1, o.maxAffordable)}" inputmode="numeric" placeholder="0">
-              <button type="submit" class="small"${o.maxAffordable === 0 ? html` disabled` : ''}>Train</button></form>`
-          : '-'}</td>
-        <td class="center">${o.available ? html`<a href="#u${o.slot}" class="fill" data-fill="n${o.slot}" data-value="${o.maxAffordable}">(${fmtNum(o.maxAffordable)})</a>` : ''}</td>
+        <td class="desc">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b>
+          <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span>${icon('res/clock', 'Duration', 18, 12)}${fmtDuration(o.timeMs)}</span>`)}
+          ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>
+        <td class="val">${o.available
+          ? html`<label class="sr" for="t${o.slot}">How many ${o.unit.name}</label><input class="w30" id="t${o.slot}" type="number" name="t${o.slot}" min="0" max="${o.maxAffordable}" inputmode="numeric" value="0">`
+          : html`<span class="none">-</span>`}</td>
+        <td class="max">${o.available ? html`<a href="#u${o.slot}" class="fill" data-fill="t${o.slot}" data-value="${o.maxAffordable}">(${fmtNum(o.maxAffordable)})</a>` : html`<span class="none">(0)</span>`}</td>
       </tr>`,
     )}
-  </tbody></table>
+    </tbody></table>
+    ${anyAvailable ? html`<p><button type="submit">train</button></p>` : ''}
+  </form>
   ${t.queue.length > 0 ? trainingQueue(t.queue, tribe, now, csrf) : ''}`;
 }
 
 export function slotView(d: SlotViewData): SafeHtml {
-  // Empty building site: list what can be built.
+  // Empty building site: classic "Construct new building" list.
   if (!d.def) {
     const ready = d.buildable.filter((o) => !o.reason?.startsWith('Requires'));
     const soon = d.buildable.filter((o) => o.reason?.startsWith('Requires'));
-    return html`<h1>Construct new building</h1>
-      ${ready.length === 0 ? html`<p class="muted">No buildings available for this site right now.</p>` : ''}
+    return html`<div id="build" class="gid0"><h1>Construct new building</h1>
+      ${ready.length === 0 ? html`<p class="none">No buildings available for this building site right now.</p>` : ''}
       ${ready.map(
-        (o) => html`<div class="newbuild">
-          <div class="nbimg">${buildingImg(o.def.id)}</div>
-          <div><h2>${o.def.name}</h2><p class="desc">${o.def.description}</p>
-            <p><b>Costs</b> for construction:</p>${costWithTime(o, d.have)}
-            <p>${buildAction(o, d.csrf, d.now, 'Construct building.', o.def.id)}</p></div>
-        </div>`,
+        (o) => html`<h2>${o.def.name}</h2><table class="new_building"><tbody><tr>
+          <td class="desc">${o.def.description}<br><br><b>Costs</b> for construction:<br>${costWithTime(o, d.have)}<br>
+            ${buildAction(o, d.csrf, d.now, 'Construct building.', o.def.id)}</td>
+          <td class="bimg">${buildingImg(o.def.id)}</td></tr></tbody></table>`,
       )}
       ${soon.length
-        ? html`<h2 class="soonh">Soon available buildings</h2>${soon.map(
-            (o) => html`<div class="newbuild soon"><div class="nbimg">${buildingImg(o.def.id)}</div>
-              <div><h2>${o.def.name}</h2><p class="small">${o.def.description}</p><p class="small none">${o.reason}</p></div></div>`,
+        ? html`<h2 class="none">Soon available buildings</h2>${soon.map(
+            (o) => html`<h2>${o.def.name}</h2><table class="new_building"><tbody><tr>
+              <td class="desc">${o.def.description}<br><span class="requ none">${o.reason}</span></td>
+              <td class="bimg">${buildingImg(o.def.id)}</td></tr></tbody></table>`,
           )}`
-        : ''}`;
+        : ''}</div>`;
   }
 
   const def = d.def;
-  return html`<h1>${def.name} <span class="lvl">${d.level > 0 ? `level ${d.level}` : ''}</span></h1>
-    <div class="bheader"><div class="bimg">${buildingImg(def.id)}</div><p class="desc">${def.description}</p></div>
+  return html`<div id="build" class="gid-${def.id}">
+    <h1>${def.name} <span class="lvl">level ${d.level}</span></h1>
+    <p class="build_desc">${buildingImg(def.id, def.name, true)}${def.description}</p>
     ${d.option ? upgradeBox(d.option, d.have, d.csrf, d.tribe, d.now) : ''}
-    ${d.level > 0 && def.id === 'rally' ? html`<p><a href="/troops">» Troops overview</a> · <a href="/troops/send">» Send troops</a></p>` : ''}
+    ${d.level > 0 && def.id === 'rally' ? html`<p><a href="/troops">» Overview</a> | <a href="/troops/send">» Send troops</a></p>` : ''}
     ${d.level > 0 ? d.panels : ''}
-    ${d.training && d.level > 0 ? trainingPanel(d.training, d.tribe, d.have, d.csrf, d.now) : ''}`;
+    ${d.training && d.level > 0 ? trainingPanel(d.training, d.tribe, d.have, d.csrf, d.now) : ''}
+  </div>`;
 }

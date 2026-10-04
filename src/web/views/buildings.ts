@@ -29,7 +29,7 @@ function researchTable(
     ${list.length === 0 ? html`<tr><td colspan="2" class="muted">There are no units left to research.</td></tr>` : ''}
     ${list.map(
       (o) => html`<tr><td><div class="tname">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b>${kind !== 'academy' ? html` <span class="small muted">(level ${o.level})</span>` : ''}</div>
-        ${costLine(o.cost, have, html`<span>${icon('res/clock', 'Duration')}${fmtDuration(o.timeMs)}</span>`)}</td>
+        ${costLine(o.cost, have, html`<span>${icon('res/clock', 'Duration', 18, 12)}${fmtDuration(o.timeMs)}</span>`)}</td>
         <td class="center">${o.available
           ? html`<form method="post" action="/research">${csrfField(csrf)}<input type="hidden" name="kind" value="${kind}"><input type="hidden" name="unit" value="${o.slot}">
               <button type="submit" class="linkbtn">${kind === 'academy' ? 'Research' : 'Upgrade'}</button></form>`
@@ -41,7 +41,7 @@ function researchTable(
         <td>${unitIcon(tribe, running.unitSlot)} ${opts.find((o) => o.slot === running.unitSlot)?.unit.name ?? ''}${kind !== 'academy' ? html` (level ${running.toLevel})` : ''}</td>
         <td class="num">${timer(running.finishAt, now)}</td>
         <td><form method="post" action="/shop/finish/research">${csrfField(csrf)}<input type="hidden" name="orderId" value="${running.id}">
-          <button type="submit" class="small gold">${icon('res/gold', 'Gold', 12)} ${instantPrice(running.finishAt - now)}</button></form></td></tr></tbody></table>`
+          <button type="submit" class="small gold">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(running.finishAt - now)}</button></form></td></tr></tbody></table>`
     : ''}
   ${done.length ? html`<p class="small muted">Researched: ${done.map((o) => html`${unitIcon(tribe, o.slot)} `)}</p>` : ''}`;
 }
@@ -63,7 +63,7 @@ export function marketPanel(d: {
   y?: number;
 }): SafeHtml {
   const resOptions = (sel: string) => RESOURCE_KEYS.map((k) => html`<option value="${k}"${k === sel ? html` selected` : ''}>${RESOURCE_LABEL[k]}</option>`);
-  const ri = (k: string) => resIcon(k as ResourceKey, 16);
+  const ri = (k: string) => resIcon(k as ResourceKey);
   return html`<h2>Send resources</h2>
     <p>Merchants ${d.merchants.free}/${d.merchants.total} · each merchant can carry <b>${fmtNum(d.merchants.capacity)}</b> resources.</p>
     <form method="post" action="/market/send">
@@ -106,7 +106,7 @@ export function celebrationPanel(opts: CelebrationOption[], running: Celebration
   return html`<table class="tb train"><thead><tr><th>Celebrations</th><th>Action</th></tr></thead><tbody>
     ${opts.map(
       (o) => html`<tr><td><b>${o.name}</b> <span class="small muted">(${fmtNum(o.culturePoints)} culture points)</span>
-        ${costLine(o.cost, have, html`<span>${icon('res/clock', 'Duration')}${fmtDuration(o.timeMs)}</span>`)}</td>
+        ${costLine(o.cost, have, html`<span>${icon('res/clock', 'Duration', 18, 12)}${fmtDuration(o.timeMs)}</span>`)}</td>
         <td class="center">${o.available
           ? html`<form method="post" action="/celebrate">${csrfField(csrf)}<input type="hidden" name="kind" value="${o.kind}"><button type="submit" class="linkbtn">hold</button></form>`
           : html`<span class="small none">${o.reason}</span>`}</td></tr>`,

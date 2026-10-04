@@ -54,46 +54,35 @@ const MISSIONS: { kind: SendInput['kind']; label: string; help: string }[] = [
 
 export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean }): SafeHtml {
   const units = TRIBES[d.tribe].units;
-  const kind = d.values.kind ?? 'raid';
+  const kind = d.values.kind ?? 'attack';
+  // Classic layout: three columns of units (infantry | cavalry | siege & specials).
+  const cols = [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9]];
+  const cell = (i: number) => {
+    const u = units[i];
+    if (!u) return html`<td></td>`;
+    const have = d.home[i] ?? 0;
+    const v = d.values.units?.[i];
+    return html`<td class="nowrap">${unitIcon(d.tribe, i)} <label class="sr" for="u${i}">${u.name}</label><input class="w30" id="u${i}" type="number" name="u${i}" min="0" max="${have}" value="${v && v > 0 ? v : ''}" inputmode="numeric"${have === 0 ? html` disabled` : ''}>
+      ${have > 0 ? html`<a href="#u${i}" class="fill" data-fill="u${i}" data-value="${have}">(${fmtNum(have)})</a>` : html`<span class="none">(0)</span>`}</td>`;
+  };
   return html`<h1>Send troops</h1>
-    <form method="post" action="/troops/send/preview">
+    <form method="post" action="/troops/send/preview" class="block">
       ${csrfField(d.csrf)}
-      <fieldset class="plain"><legend><b>Target</b></legend>
-        <div class="row">
-          <div><label for="x">X</label><input id="x" type="number" name="x" value="${d.values.x ?? ''}" required inputmode="numeric"></div>
-          <div><label for="y">Y</label><input id="y" type="number" name="y" value="${d.values.y ?? ''}" required inputmode="numeric"></div>
-        </div>
-        <p class="small muted">Tip: open a village on the <a href="/map">map</a> and tap "Attack" or "Reinforce" to fill this in.</p>
-      </fieldset>
-      <fieldset class="plain"><legend><b>Mission</b></legend>
-        <div class="choices inline-choices">${MISSIONS.map(
-          (m) => html`<label class="choice"><input type="radio" name="kind" value="${m.kind}"${m.kind === kind ? html` checked` : ''}><strong>${m.label}</strong><div class="small muted">${m.help}</div></label>`,
-        )}</div>
-      </fieldset>
-      <fieldset class="plain"><legend><b>Troops</b></legend>
-        ${d.heroHome
-          ? html`<label class="choice"><input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> 🦸 <b>Hero joins</b> <span class="small muted">— adds fighting strength and gains experience</span></label>`
-          : ''}
-        ${units.every((_, i) => (d.home[i] ?? 0) === 0)
-          ? html`<p class="muted">You have no troops at home. Train some in the <a href="/village">Barracks</a> first.</p>`
-          : units.map((u, i) => {
-              const have = d.home[i] ?? 0;
-              if (have === 0) return '';
-              const v = d.values.units?.[i];
-              return html`<div class="unitrow">
-                <span class="uico" aria-hidden="true">${unitIcon(d.tribe, i, 20)}</span>
-                <label for="u${i}" class="small">${u.name}<br><span class="have"><a href="#u${i}" class="fill" data-fill="u${i}" data-value="${have}">all ${fmtNum(have)}</a></span></label>
-                <input id="u${i}" type="number" name="u${i}" min="0" max="${have}" value="${v && v > 0 ? v : ''}" placeholder="0" inputmode="numeric">
-              </div>`;
-            })}
-      </fieldset>
+      <table id="troops" class="a2b"><tbody>
+        ${[0, 1, 2, 3].map((r) => html`<tr>${cols.map((c) => (c[r] !== undefined ? cell(c[r] as number) : html`<td></td>`))}</tr>`)}
+        ${d.heroHome ? html`<tr><td colspan="3"><label>${unitIcon(d.tribe, 10)} <input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> Hero</label></td></tr>` : ''}
+      </tbody></table>
+      <table class="plain"><tbody><tr>
+        <td>${MISSIONS.map((m) => html`<label class="block"><input type="radio" name="kind" value="${m.kind}"${m.kind === kind ? html` checked` : ''}> ${m.label}</label>`)}</td>
+        <td><b>x</b> <input type="text" name="x" value="${d.values.x ?? ''}" class="w30" required inputmode="numeric">
+          <b>y</b> <input type="text" name="y" value="${d.values.y ?? ''}" class="w30" required inputmode="numeric"></td>
+      </tr></tbody></table>
       ${d.home.some((n, i) => n > 0 && units[i]?.type === 'catapult')
-        ? html`<label for="ct">Catapult target</label>
-          <select id="ct" name="catapultTarget"><option value="">Random building</option>${TOWN_BUILDING_IDS.filter((b) => !WALL_IDS.includes(b) && b !== 'rally').map(
+        ? html`<p>Catapult target: <select name="catapultTarget"><option value="">random</option>${TOWN_BUILDING_IDS.filter((b) => !WALL_IDS.includes(b) && b !== 'rally').map(
             (b) => html`<option value="${b}"${d.values.catapultTarget === b ? html` selected` : ''}>${BUILDINGS[b].name}</option>`,
-          )}</select>`
+          )}</select></p>`
         : ''}
-      <div class="actions"><button type="submit" class="block">Continue →</button></div>
+      <p><button type="submit">OK</button></p>
     </form>`;
 }
 

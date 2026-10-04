@@ -19,50 +19,57 @@ function cellImage(c: MapCell): string {
     if (o.startsWith('iron')) return 'oasis-iron';
     return 'oasis-crop';
   }
-  return c.layout === '1-1-1-15' || c.layout === '3-3-3-9' ? 'valley-rich' : 'valley';
+  if (c.layout === '1-1-1-15' || c.layout === '3-3-3-9') return 'valley-rich';
+  return (c.x * 7 + c.y * 13) % 5 === 0 ? 'grass2' : 'grass';
 }
 
 export function mapView(d: { grid: MapCell[][]; cx: number; cy: number; myId: number; homeX: number; homeY: number; step: number }): SafeHtml {
-  const villages = d.grid.flat().filter((c) => c.village);
+  // grid rows are y descending (north first); columns x ascending.
+  const cells = d.grid.flat();
+  const xs = [...new Set(cells.map((c) => c.x))];
+  const ys = [...new Set(d.grid.map((row) => row[0]?.y ?? 0))].reverse(); // ascending
   const link = (x: number, y: number) => `/map?x=${x}&y=${y}`;
-  const xs = d.grid[0]?.map((c) => c.x) ?? [];
-  const ys = d.grid.map((row) => row[0]?.y ?? 0);
-  return html`<h1>Map <span class="muted">(${d.cx}|${d.cy})</span></h1>
-    <div class="mapwrap">
-      <div class="axis-y">${ys.map((y) => html`<span>${y}</span>`)}</div>
-      <table class="map" aria-label="Map around ${d.cx}|${d.cy}">
-        ${d.grid.map(
-          (row) => html`<tr>${row.map((c) => {
-            const cls = [c.village?.userId === d.myId ? 'mine' : c.village ? 'other' : '', c.x === d.cx && c.y === d.cy ? 'center' : ''].join(' ');
-            const label = c.village
-              ? `${c.village.name} (${c.x}|${c.y}) — Player: ${c.village.owner}, Population: ${c.village.pop}`
-              : c.kind === 'oasis'
-                ? `Unoccupied oasis (${c.x}|${c.y})`
-                : `Abandoned valley (${c.x}|${c.y}) ${c.layout ?? ''}`;
-            return html`<td class="${cls}"><a href="/map/tile?x=${c.x}&amp;y=${c.y}" title="${label}"><img src="/static/img/map/${cellImage(c)}.svg" alt="${label}"></a></td>`;
-          })}</tr>`,
-        )}
-      </table>
-      <div class="axis-x">${xs.map((x) => html`<span>${x}</span>`)}</div>
+  const center = cells.find((c) => c.x === d.cx && c.y === d.cy);
+  const villages = cells.filter((c) => c.village);
+  return html`<h1>Map <span class="lvl">(${d.cx}|${d.cy})</span></h1>
+    <div id="mapc">
+      ${d.grid.map((row) =>
+        row.map((c) => {
+          const ix = xs.indexOf(c.x);
+          const iy = ys.indexOf(c.y);
+          const cls = [`t t${ix}${iy}`, c.village?.userId === d.myId ? 'own' : c.village ? 'other' : '', c.x === d.cx && c.y === d.cy ? 'ctr' : ''].join(' ');
+          const label = c.village
+            ? `${c.village.name} (${c.x}|${c.y}) — Player: ${c.village.owner}, Population: ${c.village.pop}`
+            : c.kind === 'oasis'
+              ? `Unoccupied oasis (${c.x}|${c.y})`
+              : `Abandoned valley (${c.x}|${c.y})`;
+          return html`<a class="${cls}" href="/map/tile?x=${c.x}&amp;y=${c.y}" title="${label}"><img src="/static/img/map/${cellImage(c)}.svg" alt="${label}"></a>`;
+        }),
+      )}
+      ${xs.map((x, k) => html`<div class="ruler mx${k}">${x}</div>`)}
+      ${ys.map((y, k) => html`<div class="ruler my${k}">${y}</div>`)}
+      <a class="ar ar-n" href="${link(d.cx, d.cy + d.step)}" title="North" aria-label="North"></a>
+      <a class="ar ar-e" href="${link(d.cx + d.step, d.cy)}" title="East" aria-label="East"></a>
+      <a class="ar ar-s" href="${link(d.cx, d.cy - d.step)}" title="South" aria-label="South"></a>
+      <a class="ar ar-w" href="${link(d.cx - d.step, d.cy)}" title="West" aria-label="West"></a>
+      <form id="map_coords" method="get" action="/map">
+        <label for="mx">x</label> <input id="mx" type="text" name="x" value="${d.cx}" inputmode="numeric">
+        <label for="my">y</label> <input id="my" type="text" name="y" value="${d.cy}" inputmode="numeric">
+        <button type="submit" class="small">OK</button>
+      </form>
+      <table id="map_info"><thead><tr><th colspan="2">Details:</th></tr></thead><tbody>
+        ${center?.village
+          ? html`<tr><th>Village</th><td>${center.village.name}</td></tr><tr><th>Player</th><td>${center.village.owner}</td></tr><tr><th>Population</th><td>${fmtNum(center.village.pop)}</td></tr>`
+          : html`<tr><th>Field</th><td>${center?.kind === 'oasis' ? 'Oasis' : 'Abandoned valley'}</td></tr>`}
+      </tbody></table>
     </div>
-    <div class="mapnav">
-      <span></span><a class="btn secondary small" href="${link(d.cx, d.cy + d.step)}">▲ north</a><span></span>
-      <a class="btn secondary small" href="${link(d.cx - d.step, d.cy)}">◀ west</a>
-      <a class="btn secondary small" href="${link(d.homeX, d.homeY)}">home</a>
-      <a class="btn secondary small" href="${link(d.cx + d.step, d.cy)}">east ▶</a>
-      <span></span><a class="btn secondary small" href="${link(d.cx, d.cy - d.step)}">▼ south</a><span></span>
-    </div>
-    <form method="get" action="/map" class="actions center-actions">
-      <label for="mx">x</label><input id="mx" type="number" name="x" value="${d.cx}" inputmode="numeric">
-      <label for="my">y</label><input id="my" type="number" name="y" value="${d.cy}" inputmode="numeric">
-      <button type="submit" class="small">OK</button>
-    </form>
-    <table class="tb"><thead><tr><th>Village</th><th>Player</th><th class="num">Population</th><th>Coordinates</th></tr></thead><tbody>
+    <p class="small"><a href="${link(d.homeX, d.homeY)}">» Back to your village</a></p>
+    <table><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
     ${villages.length === 0
-      ? html`<tr><td colspan="4" class="muted">No villages in this area.</td></tr>`
+      ? html`<tr><td colspan="4" class="none center">none</td></tr>`
       : villages.map(
-          (c) => html`<tr><td><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a></td><td>${c.village?.owner} <span class="small muted">${TRIBES[c.village?.tribe ?? 'romans'].name}</span></td>
-            <td class="num">${fmtNum(c.village?.pop ?? 0)}</td><td>(${c.x}|${c.y})</td></tr>`,
+          (c) => html`<tr><td><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a></td><td>${c.village?.owner}</td>
+            <td class="num">${fmtNum(c.village?.pop ?? 0)}</td><td class="center">(${c.x}|${c.y})</td></tr>`,
         )}
     </tbody></table>`;
 }

@@ -1,7 +1,7 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
-import { slots, users } from '../../db/schema.js';
+import { slots, tiles, users } from '../../db/schema.js';
 import { and, eq } from 'drizzle-orm';
 import { buildOption, buildOrdersOf, buildableOnEmptyPlot, cancelBuild, isValidSlot, startBuild, ownedVillage } from '../../game/actions/build.js';
 import { isTrainingSite, startTraining, trainOptions, trainOrdersOf } from '../../game/actions/train.js';
@@ -55,13 +55,15 @@ function villageData(req: Request, page: GamePage, slotsToCheck: number[]): Vill
 villageRouter.get('/fields', (req, res) => {
   const page = loadGamePage(req);
   const slots = Array.from({ length: 18 }, (_, i) => i + 1);
-  sendPage(req, res, 'Resource fields', fieldsView(villageData(req, page, slots)), { nav: 'fields', chrome: page.chrome });
+  const tile = db.select({ layout: tiles.layout }).from(tiles).where(and(eq(tiles.x, page.state.village.x), eq(tiles.y, page.state.village.y))).get();
+  const layout = tile?.layout ?? '4-4-4-6';
+  sendPage(req, res, 'Village overview', fieldsView({ ...villageData(req, page, slots), layout }), { nav: 'fields', chrome: page.chrome });
 });
 
 villageRouter.get('/village', (req, res) => {
   const page = loadGamePage(req);
   const slots = Array.from({ length: 22 }, (_, i) => i + 19);
-  sendPage(req, res, 'Village center', townView(villageData(req, page, slots)), { nav: 'village', chrome: page.chrome });
+  sendPage(req, res, 'Village centre', townView(villageData(req, page, slots)), { nav: 'village', chrome: page.chrome });
 });
 
 villageRouter.get('/slot/:n', (req, res) => {
@@ -172,23 +174,29 @@ villageRouter.post(
   }),
 );
 
+const qty = z.preprocess((v) => (v === '' || v === undefined ? 0 : v), z.coerce.number().int().min(0).max(100_000));
 villageRouter.post(
   '/train',
   formAction(
     z.object({
-      unit: z.coerce.number().int().min(0).max(9),
       building: z.string().max(30).refine(isTrainingSite, 'Invalid building'),
-      count: z.coerce.number({ message: 'Enter how many units to train' }).int('Enter a whole number').min(1, 'Enter how many units to train'),
+      t0: qty, t1: qty, t2: qty, t3: qty, t4: qty, t5: qty, t6: qty, t7: qty, t8: qty, t9: qty,
     }),
     (req, res, data) => {
       const ctx = authed(req);
-      const order = startTraining(db, ctx.user.id, ctx.villageId, data.building as BuildingId, data.unit, data.count, ctx.now);
-      const u = TRIBES[ctx.user.tribe].units[order.unitSlot];
-      setFlash(res, 'ok', `Training ${order.total} × ${u?.name ?? 'units'}.`);
+      const counts = [data.t0, data.t1, data.t2, data.t3, data.t4, data.t5, data.t6, data.t7, data.t8, data.t9];
+      const trained: string[] = [];
+      counts.forEach((n, slot) => {
+        if (n <= 0) return;
+        const order = startTraining(db, ctx.user.id, ctx.villageId, data.building as BuildingId, slot, n, ctx.now);
+        trained.push(`${order.total} ${TRIBES[ctx.user.tribe].units[slot]?.name ?? ''}`);
+      });
+      if (trained.length === 0) throw new GameError('Enter how many units to train');
+      setFlash(res, 'ok', `Training: ${trained.join(', ')}.`);
       const slot = db
         .select({ slot: slots.slot })
         .from(slots)
-        .where(and(eq(slots.villageId, ctx.villageId), eq(slots.building, order.building)))
+        .where(and(eq(slots.villageId, ctx.villageId), eq(slots.building, data.building)))
         .get()?.slot;
       res.redirect(303, slot ? `/slot/${slot}` : '/village');
     },

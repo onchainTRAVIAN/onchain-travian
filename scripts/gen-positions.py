@@ -1,23 +1,28 @@
-import math
-out=[]
-# dorf1 field positions (600x400 scene): outer ring 12 at 0..330, inner ring 6 at 15+60k
-pts=[]
-for k in range(12):
-    a=math.radians(k*30); pts.append((300+230*math.cos(a), 200+145*math.sin(a)))
-for k in range(6):
-    a=math.radians(15+60*k); pts.append((300+128*math.cos(a), 200+80*math.sin(a)))
-out.append('/* dorf1: 18 field plots (generated) */')
-for i,(x,y) in enumerate(pts,1):
-    out.append(f'.f{i} {{ left: {x/600*100:.2f}%; top: {y/400*100:.2f}%; }}')
-# dorf2 spots (600x440 scene)
-spots=[(190,120),(250,95),(355,95),(415,120),(470,160),(480,215),(455,270),(400,305),(330,325),(260,325),(195,305),(140,270),(120,215),(135,160),(215,180),(385,180),(390,240),(300,265),(210,240),(300,205)]
-slots=[s for s in range(19,39) if s!=26]
-mapping={26:(300,150),39:(300,380),40:(70,330)}
-for s,p in zip(slots,spots): mapping[s]=p
-out.append('/* dorf2: building spots (generated) */')
-for s in sorted(mapping):
-    x,y=mapping[s]
-    out.append(f'.s{s} {{ left: {x/600*100:.2f}%; top: {y/440*100:.2f}%; }}')
-out.append('/* bar widths */')
-for i in range(0,101,5): out.append(f'.w{i} {{ width: {i}%; }}')
+"""Generates the position classes appended to src/web/public/style.css.
+
+Classic layout measurements: resource-field level markers (rf1..rf18, 300x264 picture),
+village-centre building spots (slot = 18 + d, 540x448 picture, 75x100 buildings), and the
+7x7 diamond map (74x74 tiles at left = 16 + 37x + 36y, top = 104 + 20x - 20y).
+Usage: python3 scripts/gen-positions.py > /tmp/pos.css  (then replace the block in style.css)
+"""
+rf = [(93,27),(156,26),(216,41),(38,59),(130,67),(195,87),(253,81),(23,111),(74,104),(205,136),(260,139),(33,165),(84,158),(151,178),(230,192),(79,211),(132,223),(182,227)]
+d = [(115,52),(198,27),(258,17),(332,32),(388,81),(80,91),(161,98),(247,81),(395,122),(66,161),(192,126),(155,152),(402,180),(84,200),(227,196),(354,213),(158,236),(286,247),(144,267),(262,276)]
+out = ['/* dorf1 level markers (top-left of 17x12 badge) and click areas */']
+for i, (x, y) in enumerate(rf, 1):
+    out.append(f'#vmap1 .rf{i} {{ left: {x}px; top: {y}px; }}')
+    out.append(f'#vmap1 .ra{i} {{ left: {x-14}px; top: {y-24}px; }}')
+out.append('/* dorf2 building spots: slot = 18 + d (top-left of 75x100 image); z-index increases downwards */')
+for i, (x, y) in enumerate(d, 1):
+    s = 18 + i
+    out.append(f'#vmap2 .b{s} {{ left: {x}px; top: {y}px; z-index: {5+i}; }}')
+    out.append(f'#vmap2 .l{s} {{ left: {x+29}px; top: {y+74}px; }}')
+out += ['#vmap2 .b39 { left: 316px; top: 161px; z-index: 30; }', '#vmap2 .l39 { left: 342px; top: 262px; }', '#vmap2 .l40 { left: 240px; top: 350px; }']
+out.append('/* map: 7x7 diamond tiles */')
+for x in range(7):
+    for y in range(7):
+        out.append(f'#mapc .t{x}{y} {{ left: {16+37*x+36*y}px; top: {104+20*x-20*y}px; z-index: {10+x-y+7}; }}')
+for k in range(7):
+    out.append(f'#mapc .mx{k} {{ left: {4+37*k}px; top: {150+20*k}px; }}')
+    out.append(f'#mapc .my{k} {{ left: {300+36*k}px; top: {268-20*k}px; }}')
+out += ['#mapc .ar-n { left: 404px; top: 26px; }', '#mapc .ar-e { left: 404px; top: 214px; }', '#mapc .ar-s { left: 124px; top: 214px; }', '#mapc .ar-w { left: 124px; top: 26px; }']
 print('\n'.join(out))

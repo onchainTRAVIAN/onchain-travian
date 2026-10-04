@@ -94,7 +94,7 @@ export function pct(n: number): string {
 
 /** Classic "current / next level" effect text for a building. */
 export function effectAt(def: BuildingDef, level: number, tribe: TribeId): SafeHtml | null {
-  if (def.produces) return html`${resIcon(def.produces, 16)} ${fmtNum(fieldProduction(level) * config.WORLD_SPEED)} per hour`;
+  if (def.produces) return html`${resIcon(def.produces)} ${fmtNum(fieldProduction(level) * config.WORLD_SPEED)} per hour`;
   switch (def.id) {
     case 'main':
       return html`Construction time: ${pct(mainBuildingFactor(level))}`;
@@ -158,11 +158,13 @@ export function buildingLabel(id: string | null): { name: string; icon: string }
 const FIELD_ART: Record<string, string> = { woodcutter: 'wood', claypit: 'clay', ironmine: 'iron', cropland: 'crop' };
 const WALL_ART: Record<string, string> = { citywall: 'city', earthwall: 'earth', palisade: 'palisade' };
 
-export function buildingImg(id: string | null, alt?: string): SafeHtml {
+/** 75×100 building picture (resource fields and walls use their own small art). */
+export function buildingImg(id: string | null, alt?: string, floated = false): SafeHtml {
   const label = alt ?? buildingLabel(id).name;
-  if (id && FIELD_ART[id]) return html`<img src="/static/img/fields/${FIELD_ART[id]}.svg" alt="${label}">`;
-  if (id && WALL_ART[id]) return html`<img src="/static/img/walls/${WALL_ART[id]}.svg" alt="${label}">`;
-  return html`<img src="/static/img/buildings/${id ?? 'empty'}.svg" alt="${label}">`;
+  const cls = floated ? 'building' : '';
+  if (id && FIELD_ART[id]) return html`<img class="${cls} fld" src="/static/img/fields/${FIELD_ART[id]}.svg" alt="${label}">`;
+  if (id && WALL_ART[id]) return html`<img class="${cls}" src="/static/img/buildings/wall-${WALL_ART[id]}.svg" alt="${label}">`;
+  return html`<img class="${cls}" src="/static/img/buildings/${id ?? 'empty'}.svg" alt="${label}">`;
 }
 
 export function hasTroops(c: UnitCounts): boolean {
