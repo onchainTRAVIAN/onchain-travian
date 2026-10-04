@@ -42,7 +42,7 @@ import {
   processHeroRevivals,
   type HeroRow,
 } from './hero.js';
-import { oasesOwnedBy, oasisAnimals, setOasisAnimals, tileAt } from './oasis.js';
+import { oasesOwnedBy, oasisAnimals, oasisStock, setOasisAnimals, setOasisStock, tileAt } from './oasis.js';
 
 type MovementRow = typeof movements.$inferSelect;
 
@@ -404,6 +404,10 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
 /* Oases                                                               */
 /* ------------------------------------------------------------------ */
 
+function floorRes(r: Resources): Resources {
+  return res(Math.floor(r.wood), Math.floor(r.clay), Math.floor(r.iron), Math.floor(r.crop));
+}
+
 function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUnits: UnitCounts, aHero: HeroRow | undefined, t: number): void {
   const tile = tileAt(q, mv.toX, mv.toY);
   if (!tile) return;
@@ -416,7 +420,7 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
     const data: BattleReportData = {
       type: 'battle', mode: 'scout', attacker: side(home, attackerUnits, emptyUnits()), defenders: [], attackerWon: true, defendersHidden: false,
       loot: res(), capacity: 0, attackPower: 0, defensePower: 0,
-      scout: { success: true, troops: [{ tribe: 'nature', units: animals }] },
+      scout: { success: true, troops: [{ tribe: 'nature', units: animals }], resources: floorRes(oasisStock(q, tile, t)) },
       oasis: { x: tile.x, y: tile.y, captured: false },
     };
     addReport(q, home.userId, 'scout', `${home.name} scouts an oasis (${tile.x}|${tile.y})`, data, t);
@@ -439,6 +443,17 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
   setOasisAnimals(q, tile.x, tile.y, animalsLeft, t);
   const survivors = subUnits(attackerUnits, result.attackerLosses);
   const killedValue = upkeepOf('nature', animalLosses);
+  // Winners carry home what the oasis has gathered (as much as the survivors can carry).
+  let loot = res();
+  const capacity = carryOf(home.tribe, survivors, attackerMods.troopCarry);
+  if (result.attackerWon && capacity > 0) {
+    const stock = oasisStock(q, tile, t);
+    loot = computeLoot(stock, 0, capacity);
+    const left = res();
+    for (const k of RESOURCE_KEYS) left[k] = Math.max(0, stock[k] - loot[k]);
+    setOasisStock(q, tile.x, tile.y, left, t);
+    addLootTotal(q, home.userId, Math.floor(sumRes(loot)));
+  }
   addPoints(q, home.userId, 'offPoints', killedValue);
 
   const heroReports: NonNullable<BattleReportData['heroes']> = [];
@@ -481,14 +496,14 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
 
   const data: BattleReportData = {
     type: 'battle', mode, attacker: side(home, attackerUnits, result.attackerLosses), defenders: [{ ...natureSide, losses: animalLosses }],
-    attackerWon: result.attackerWon, defendersHidden: false, loot: res(), capacity: 0,
+    attackerWon: result.attackerWon, defendersHidden: false, loot, capacity,
     attackPower: result.attackPower, defensePower: result.defensePower,
     heroes: heroReports.length ? heroReports : undefined,
     oasis: { x: tile.x, y: tile.y, captured },
     notes: notes.length ? notes : undefined,
   };
   addReport(q, home.userId, result.attackerWon ? 'attack_won' : 'attack_lost', `${home.name} ${mode === 'raid' ? 'raids' : 'attacks'} an oasis (${tile.x}|${tile.y})`, data, t);
-  scheduleReturn(q, home, tile.x, tile.y, survivors, null, t, heroAlive);
+  scheduleReturn(q, home, tile.x, tile.y, survivors, loot, t, heroAlive);
 }
 
 /* ------------------------------------------------------------------ */

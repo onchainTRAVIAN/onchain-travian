@@ -58,6 +58,9 @@ export const tiles = sqliteTable(
     /** Oases: JSON number[10] of wild animals and when they last regrew. */
     animals: text('animals'),
     animalsAt: integer('animals_at'),
+    /** Unoccupied oases: JSON resources stored there (lootable) and when they were last updated. */
+    oasisRes: text('oasis_res'),
+    oasisResAt: integer('oasis_res_at'),
   },
   (t) => [primaryKey({ columns: [t.x, t.y] }), index('tiles_village_idx').on(t.villageId)],
 );

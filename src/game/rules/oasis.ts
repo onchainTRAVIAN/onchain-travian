@@ -35,3 +35,9 @@ export function regrowAnimals(type: OasisType, current: UnitCounts, hours: numbe
     return Math.min(cap, Math.floor(n + (cap * 0.1 * hours) / 24 + 1e-9));
   });
 }
+
+/** Resources an unoccupied oasis gathers per hour for each 25% of bonus (before world speed). */
+export const OASIS_RES_PER_25 = 40;
+/** Storage per resource in an unoccupied oasis (before world speed), capped at a warehouse level 20. */
+export const OASIS_RES_CAP = 1000;
+export const OASIS_RES_CAP_MAX = 80_000;

@@ -103,6 +103,43 @@
     });
   }
 
+  // Training: live total cost of everything entered in the training table.
+  var tt = document.getElementById('train-total');
+  if (tt) {
+    var form = tt.closest('form');
+    var have = tt.getAttribute('data-have').split(',').map(Number);
+    var keys = ['wood', 'clay', 'iron', 'crop'];
+    var fmt = function (n) { return Math.round(n).toLocaleString('en-US'); };
+    var dur = function (ms) {
+      var s = Math.round(ms / 1000);
+      var h = Math.floor(s / 3600);
+      var m = Math.floor((s % 3600) / 60);
+      return h + ':' + String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    };
+    var setText = function (id, text) {
+      var el = document.getElementById(id);
+      // Keep the icon (first child), replace the number after it.
+      while (el.childNodes.length > 1) el.removeChild(el.lastChild);
+      el.appendChild(document.createTextNode(text));
+      return el;
+    };
+    var recalc = function () {
+      var sum = [0, 0, 0, 0, 0, 0];
+      var ins = form.querySelectorAll('.tr-in');
+      for (var i = 0; i < ins.length; i++) {
+        var n = Math.max(0, Math.floor(Number(ins[i].value) || 0));
+        var c = ins[i].getAttribute('data-cost').split(',').map(Number);
+        for (var j = 0; j < 6; j++) sum[j] += n * c[j];
+      }
+      for (var k = 0; k < 4; k++) setText('tt-' + keys[k], fmt(sum[k])).className = sum[k] > have[k] ? 'miss' : '';
+      setText('tt-upkeep', fmt(sum[4]));
+      setText('tt-time', dur(sum[5]));
+    };
+    form.addEventListener('input', recalc);
+    form.addEventListener('click', function () { setTimeout(recalc, 0); });
+    recalc();
+  }
+
   // NPC merchant: live "Rest" counter and "Distribute remaining" button.
   var npc = document.getElementById('npc');
   if (npc) {

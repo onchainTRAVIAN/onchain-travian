@@ -467,3 +467,7 @@ ul.list li img.avatar.sm { margin-right: 8px; }
   #side_navi .sp-body a, #side_navi .sp-body form, #side_navi .sp-body button.lnk { width: auto; border-left: 0; padding: 4px 8px; }
   #side_info { float: none; clear: both; width: auto; margin: 10px 0 0; }
 }
+.train-total { margin: 6px 0 4px; padding: 6px 8px; background: #f6f6f6; border: 1px solid #ddd; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-size: 12px; }
+.train-total span { white-space: nowrap; }
+.train-total img { vertical-align: middle; margin-right: 3px; }
+.train-total .miss { color: #c00; font-weight: bold; }

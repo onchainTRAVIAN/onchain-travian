@@ -5,7 +5,7 @@ import type { Resources } from '../../game/rules/resources.js';
 import type { TribeId } from '../../game/rules/units.js';
 import { fmtClock, fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { costLine, csrfField, icon } from './layout.js';
+import { costLine, csrfField, icon, resIcon } from './layout.js';
 import { buildingImg, effectAt, unitIcon } from './parts.js';
 import { trainingQueue } from './village.js';
 
@@ -75,13 +75,21 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
           <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span>${icon('res/clock', 'Duration', 18, 12)}${fmtDuration(o.timeMs)}</span>`)}
           ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>
         <td class="val">${o.available
-          ? html`<label class="sr" for="t${o.slot}">How many ${o.unit.name}</label><input class="w30" id="t${o.slot}" type="number" name="t${o.slot}" min="0" max="${o.maxAffordable}" inputmode="numeric" value="0">`
+          ? html`<label class="sr" for="t${o.slot}">How many ${o.unit.name}</label><input class="w30 tr-in" id="t${o.slot}" type="number" name="t${o.slot}" min="0" max="${o.maxAffordable}" inputmode="numeric" value="0"
+              data-cost="${o.cost.wood},${o.cost.clay},${o.cost.iron},${o.cost.crop},${o.unit.upkeep},${o.timeMs}">`
           : html`<span class="none">-</span>`}</td>
         <td class="max">${o.available ? html`<a href="#u${o.slot}" class="fill" data-fill="t${o.slot}" data-value="${o.maxAffordable}">(${fmtNum(o.maxAffordable)})</a>` : html`<span class="none">(0)</span>`}</td>
       </tr>`,
     )}
     </tbody></table>
-    ${anyAvailable ? html`<p><button type="submit">train</button></p>` : ''}
+    ${anyAvailable
+      ? html`<div class="train-total" id="train-total" data-have="${Math.floor(have.wood)},${Math.floor(have.clay)},${Math.floor(have.iron)},${Math.floor(have.crop)}">
+          <b>Total:</b>
+          <span id="tt-wood">${resIcon('wood')}0</span><span id="tt-clay">${resIcon('clay')}0</span><span id="tt-iron">${resIcon('iron')}0</span><span id="tt-crop">${resIcon('crop')}0</span>
+          <span id="tt-upkeep">${icon('res/cropuse', 'Crop consumption', 18, 12)}0</span><span id="tt-time">${icon('res/clock', 'Duration', 18, 12)}0:00:00</span>
+        </div>
+        <p><button type="submit">train</button></p>`
+      : ''}
   </form>
   ${t.queue.length > 0 ? trainingQueue(t.queue, tribe, now, csrf) : ''}`;
 }

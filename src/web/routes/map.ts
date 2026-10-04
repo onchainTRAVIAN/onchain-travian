@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { db } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
 import { users, villages } from '../../db/schema.js';
-import { oasisAnimals, type TileRow } from '../../game/engine/oasis.js';
+import { oasisAnimals, oasisStock, type TileRow } from '../../game/engine/oasis.js';
 import { config } from '../../config.js';
 import { troopsAt } from '../../game/engine/state.js';
 import { dist, mapWindow, tileInfo } from '../../game/queries.js';
@@ -98,6 +98,7 @@ mapRouter.get('/map/tile', (req, res) => {
           : null,
       distance: d,
       animals: t.tile.kind === 'oasis' ? db.transaction((tx) => oasisAnimals(tx, t.tile, ctx.now)) : null,
+      oasisStock: t.tile.kind === 'oasis' && t.tile.villageId === null ? db.transaction((tx) => oasisStock(tx, t.tile, ctx.now)) : null,
       oasisOwner: oasisOwnerInfo(t.tile),
       travel,
       now: ctx.now,

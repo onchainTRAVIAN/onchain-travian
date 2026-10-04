@@ -2,9 +2,12 @@ import { and, eq } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
 import { tiles, villages } from '../../db/schema.js';
 import type { OasisType } from '../rules/map.js';
-import { initialAnimals, regrowAnimals } from '../rules/oasis.js';
+import { initialAnimals, OASIS_RES_CAP, OASIS_RES_CAP_MAX, OASIS_RES_PER_25, regrowAnimals } from '../rules/oasis.js';
+import { oasisBonus } from '../rules/map.js';
+import { RESOURCE_KEYS, res, type Resources } from '../rules/resources.js';
+import { config } from '../../config.js';
 import type { UnitCounts } from '../rules/units.js';
-import { parseUnits } from './state.js';
+import { parseResources, parseUnits } from './state.js';
 
 export type TileRow = typeof tiles.$inferSelect;
 
@@ -45,4 +48,51 @@ export function oasesOwnedBy(q: Q, villageId: number): TileRow[] {
 export function oasisOwner(q: Q, tile: TileRow) {
   if (tile.villageId === null) return undefined;
   return q.select().from(villages).where(eq(villages.id, tile.villageId)).get();
+}
+
+/** Per-hour gain and storage cap of an unoccupied oasis, per resource. */
+export function oasisRates(type: OasisType): { rate: Resources; cap: Resources } {
+  const bonus = oasisBonus(type);
+  const capOne = Math.min(OASIS_RES_CAP * config.WORLD_SPEED, OASIS_RES_CAP_MAX);
+  const rate = res();
+  const cap = res();
+  for (const k of RESOURCE_KEYS) {
+    const b = bonus[k] ?? 0;
+    if (b > 0) {
+      rate[k] = OASIS_RES_PER_25 * (b / 0.25) * config.WORLD_SPEED;
+      cap[k] = capOne;
+    }
+  }
+  return { rate, cap };
+}
+
+/**
+ * Resources lying in an oasis. Unoccupied oases gather the resources of their bonus over time
+ * (a fresh oasis starts half full); an oasis held by a village gathers nothing.
+ */
+export function oasisStock(q: Q, tile: TileRow, now: number): Resources {
+  if (tile.kind !== 'oasis' || !tile.oasis) return res();
+  const { rate, cap } = oasisRates(tile.oasis as OasisType);
+  if (tile.oasisRes === null || tile.oasisResAt === null) {
+    const start = res();
+    for (const k of RESOURCE_KEYS) start[k] = Math.floor(cap[k] / 2);
+    setOasisStock(q, tile.x, tile.y, start, now);
+    return start;
+  }
+  const stock = parseResources(tile.oasisRes);
+  if (now <= tile.oasisResAt) return stock;
+  if (tile.villageId !== null) {
+    // Held oases don't gather; just move the clock so nothing piles up while owned.
+    setOasisStock(q, tile.x, tile.y, stock, now);
+    return stock;
+  }
+  const hours = (now - tile.oasisResAt) / 3_600_000;
+  const next = res();
+  for (const k of RESOURCE_KEYS) next[k] = Math.min(cap[k], stock[k] + rate[k] * hours);
+  setOasisStock(q, tile.x, tile.y, next, now);
+  return next;
+}
+
+export function setOasisStock(q: Q, x: number, y: number, stock: Resources, now: number): void {
+  q.update(tiles).set({ oasisRes: JSON.stringify(stock), oasisResAt: now }).where(and(eq(tiles.x, x), eq(tiles.y, y))).run();
 }

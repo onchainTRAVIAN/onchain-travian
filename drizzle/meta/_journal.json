@@ -22,6 +22,13 @@
       "when": 1791128487472,
       "tag": "0002_goldmarket",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791130835598,
+      "tag": "0003_oasisres",
+      "breakpoints": true
     }
   ]
 }

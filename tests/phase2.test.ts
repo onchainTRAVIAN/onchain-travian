@@ -40,6 +40,7 @@ import { getModifiers } from '../src/game/modifiers.js';
 import { emptyUnits } from '../src/game/rules/units.js';
 import { res } from '../src/game/rules/resources.js';
 import { config } from '../src/config.js';
+import { oasisStock } from '../src/game/engine/oasis.js';
 import { buyListing, cancelListing, editListing, listResources, listTroops } from '../src/game/actions/goldmarket.js';
 
 const HOUR = 3_600_000;
@@ -197,6 +198,33 @@ describe('oases', () => {
     }
     const r = db.select().from(reports).where(eq(reports.userId, a.userId)).all().at(-1);
     expect(r?.title).toMatch(/oasis/);
+    finishAll();
+  });
+
+  it('unoccupied oases gather resources that winning raids carry home', () => {
+    const v = village(c.villageId);
+    const oasis = freeTileNear(v.x, v.y, 'oasis');
+    const tile = () => db.select().from(tiles).where(and(eq(tiles.x, oasis.x), eq(tiles.y, oasis.y))).get()!;
+    const first = db.transaction((tx) => oasisStock(tx, tile(), clock.now()));
+    expect(first.wood + first.clay + first.iron + first.crop).toBeGreaterThan(0);
+    clock.advance(10 * HOUR);
+    const later = db.transaction((tx) => oasisStock(tx, tile(), clock.now()));
+    expect(later.wood + later.clay + later.iron + later.crop).toBeGreaterThan(first.wood + first.clay + first.iron + first.crop);
+    // Clear the animals so a small raid wins, then send it.
+    db.update(tiles).set({ animals: JSON.stringify(emptyUnits()), animalsAt: clock.now() }).where(and(eq(tiles.x, oasis.x), eq(tiles.y, oasis.y))).run();
+    db.update(villages).set({ wood: 0, clay: 0, iron: 0, crop: 1000, resAt: clock.now() }).where(eq(villages.id, c.villageId)).run();
+    const units = emptyUnits();
+    units[0] = 100;
+    setTroopsAt(db, c.villageId, c.villageId, units);
+    const before = db.transaction((tx) => oasisStock(tx, tile(), clock.now()));
+    const mv = sendTroops(db, c.userId, c.villageId, { x: oasis.x, y: oasis.y, kind: 'raid', units }, clock.now());
+    advance(mv.arriveAt - clock.now() + 1);
+    const rep = db.select().from(reports).where(eq(reports.userId, c.userId)).all().at(-1);
+    const data = JSON.parse(rep?.data ?? '{}') as { loot?: { wood: number; clay: number; iron: number; crop: number } };
+    const got = (data.loot?.wood ?? 0) + (data.loot?.clay ?? 0) + (data.loot?.iron ?? 0) + (data.loot?.crop ?? 0);
+    expect(got).toBeGreaterThan(0);
+    const left = db.transaction((tx) => oasisStock(tx, tile(), clock.now()));
+    expect(left.wood + left.clay + left.iron + left.crop).toBeLessThan(before.wood + before.clay + before.iron + before.crop);
     finishAll();
   });
 });

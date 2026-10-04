@@ -1,3 +1,5 @@
+import { RESOURCE_KEYS, type Resources } from '../../game/rules/resources.js';
+import { resIcon } from './layout.js';
 import { config } from '../../config.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
 import { TRIBES } from '../../game/rules/units.js';
@@ -225,6 +227,8 @@ export interface TileViewData {
   village: { id: number; name: string; pop: number; isMine: boolean; owner: string; ownerId: number | null; tribe: string; protectedUntil: number | null } | null;
   distance: number;
   animals: number[] | null;
+  /** Resources lying in an unoccupied oasis (lootable). */
+  oasisStock: Resources | null;
   oasisOwner: { name: string; userId: number | null; villageName: string } | null;
   /** Travel time for your slowest and fastest unit types at home, for orientation. */
   travel: { label: string; ms: number }[];
@@ -247,6 +251,11 @@ export function tileView(d: TileViewData): SafeHtml {
       <li><span class="grow">Distance <span class="sub">${d.distance.toFixed(1)} fields</span></span></li>
       ${d.travel.map((t) => html`<li><span class="grow">${t.label} <span class="sub">${fmtDuration(t.ms)} travel</span></span></li>`)}
     </ul>
+    ${d.oasisStock
+      ? html`<h2>Resources in this oasis</h2>
+        <p class="cost">${RESOURCE_KEYS.filter((k) => (d.oasisStock?.[k] ?? 0) > 0).map((k) => html`<span>${resIcon(k)}${fmtNum(Math.floor(d.oasisStock?.[k] ?? 0))}</span>`)}</p>
+        <p class="small muted">Unoccupied oases gather these over time. Win an attack or raid here and your troops carry home as much as they can.</p>`
+      : ''}
     ${d.animals && d.animals.some((n) => n > 0) ? html`<h2>🐾 Animals</h2>${unitsTable('nature', d.animals, undefined, { hideEmpty: true })}` : ''}
     ${d.kind === 'oasis'
       ? html`<div class="actions">
