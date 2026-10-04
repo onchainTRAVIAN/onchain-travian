@@ -287,7 +287,13 @@ describe('marketplace', () => {
 
 describe('alliances & chat', () => {
   it('found, invite, join, diplomacy and leave', () => {
+    // Founding costs Gold: refused (and nothing created) without enough.
+    expect(() => createAlliance(db, a.userId, 'Round Table', 'RT', clock.now())).toThrow(/280 Gold/);
+    grantCredits(db, a.userId, 300, 'test', 'ally-grant-a', clock.now());
+    grantCredits(db, b.userId, 280, 'test', 'ally-grant-b', clock.now());
+    const before = creditBalance(db, a.userId);
     const al = createAlliance(db, a.userId, 'Round Table', 'RT', clock.now());
+    expect(creditBalance(db, a.userId)).toBe(before - 280);
     expect(() => createAlliance(db, c.userId, 'Copy', 'rt', clock.now())).toThrow(/taken/);
     invitePlayer(db, a.userId, 'Celt', clock.now());
     acceptInvite(db, c.userId, al.id, clock.now());
@@ -317,9 +323,10 @@ describe('alliances & chat', () => {
 
 describe('credits shop & news ticker', () => {
   it('ledger grants are idempotent and spending checks the balance', () => {
+    const start = creditBalance(db, a.userId);
     expect(grantCredits(db, a.userId, 200, 'test', 'test-grant-1', clock.now())).toBe(true);
     expect(grantCredits(db, a.userId, 200, 'test', 'test-grant-1', clock.now())).toBe(false);
-    expect(creditBalance(db, a.userId)).toBe(200);
+    expect(creditBalance(db, a.userId)).toBe(start + 200);
     expect(() => buyBoost(db, b.userId, 'build_queue', clock.now())).toThrow(/Gold/);
   });
 

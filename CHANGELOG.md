@@ -10,7 +10,9 @@
 - Clean side menus (card panels, 16px line icons, active page highlight); layout zooms up on wide screens; phone overflow fixed.
 - Map: clicks always hit the field under the cursor (tile art ignores the pointer), direction pad (diagonal in Classic view) + arrow keys, hover updates the details box.
 - Fix: Gold "finish now" (and other actions) return to the page you came from — Referrer-Policy is now `same-origin` (was `no-referrer`, so every redirect fell back to the village centre); finished fields fall back to the overview.
-- Village centre: clicks use a non-overlapping ellipse per building spot (`src/web/views/spots.ts`) instead of the overlapping 75×100 pictures, so the building under the cursor opens; wall gate clickable the same way.
+- Village centre: every point goes to the nearest building spot (Voronoi zones around each building picture, `src/web/views/spots.ts`) instead of the overlapping 75×100 pictures; hover outline per building; wall gate clickable.
+- Map: round arrow buttons on all four sides of the map (constant on-screen size at every map size); labels scale too.
+- Founding an alliance costs 280 Gold (`ALLIANCE_FOUND_PRICE`), on top of Embassy level 3.
 - Live world speed x100 (`WORLD_SPEED`/`TROOP_SPEED` Railway variables).
 
 ## 0.6.0 — 2026-10-04

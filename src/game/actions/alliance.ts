@@ -1,6 +1,7 @@
 import { and, desc, eq, or, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { allianceDiplomacy, allianceInvites, allianceMembers, alliances, slots, users, villages } from '../../db/schema.js';
+import { spend } from './credits.js';
 import { assertGame } from '../errors.js';
 
 export type AllianceRow = typeof alliances.$inferSelect;
@@ -48,12 +49,16 @@ export function allianceCapacity(q: Q, allianceId: number): number {
   return Math.max(MEMBERS_PER_EMBASSY_LEVEL, (leader ? bestEmbassy(q, leader.userId) : 0) * MEMBERS_PER_EMBASSY_LEVEL);
 }
 
+/** Gold price for founding an alliance. */
+export const ALLIANCE_FOUND_PRICE = 280;
+
 export function createAlliance(db: DB, userId: number, name: string, tag: string, now: number): AllianceRow {
   return db.transaction((tx) => {
     assertGame(!membership(tx, userId), 'Leave your current alliance first');
     assertGame(bestEmbassy(tx, userId) >= 3, 'You need an Embassy at level 3 to found an alliance');
     const taken = tx.select({ id: alliances.id }).from(alliances).where(eq(alliances.tagLower, tag.toLowerCase())).get();
     assertGame(!taken, 'That tag is already taken');
+    spend(tx, userId, ALLIANCE_FOUND_PRICE, `Founded alliance [${tag}]`, now);
     const a = tx.insert(alliances).values({ name, tag, tagLower: tag.toLowerCase(), founderId: userId, createdAt: now }).returning().get();
     tx.insert(allianceMembers).values({ userId, allianceId: a.id, role: 'leader', joinedAt: now }).run();
     tx.delete(allianceInvites).where(eq(allianceInvites.userId, userId)).run();

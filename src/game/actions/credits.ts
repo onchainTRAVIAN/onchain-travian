@@ -21,7 +21,7 @@ export function grantCredits(q: Q, userId: number, amount: number, reason: strin
   return r.changes > 0;
 }
 
-function spend(q: Q, userId: number, cost: number, reason: string, now: number): void {
+export function spend(q: Q, userId: number, cost: number, reason: string, now: number): void {
   if (cost <= 0) return;
   const bal = creditBalance(q, userId);
   if (bal < cost) throw new GameError(`This costs ${cost} Gold, you have ${bal}. Buy Gold under Plus & Gold.`);

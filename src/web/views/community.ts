@@ -1,5 +1,5 @@
 import { TRIBES, type TribeId } from '../../game/rules/units.js';
-import type { AllianceRow, Role } from '../../game/actions/alliance.js';
+import { ALLIANCE_FOUND_PRICE, type AllianceRow, type Role } from '../../game/actions/alliance.js';
 import { fmtAgo, fmtClock, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField } from './layout.js';
@@ -54,9 +54,10 @@ export function noAllianceView(d: {
           ${csrfField(d.csrf)}
           <label for="an">Name</label><input id="an" type="text" name="name" required minlength="3" maxlength="40">
           <label for="at">Tag (short name)</label><input id="at" type="text" name="tag" required minlength="2" maxlength="8" pattern="[A-Za-z0-9_\\-]{2,8}">
-          <div class="actions"><button type="submit">Found alliance</button></div>
+          <div class="actions"><button type="submit">Found alliance (${ALLIANCE_FOUND_PRICE} Gold)</button></div>
+          <p class="small muted">Founding an alliance costs ${ALLIANCE_FOUND_PRICE} Gold. <a href="/shop">Buy Gold »</a></p>
         </form>`
-      : html`<p class="muted small">You need an Embassy at level 3 to found an alliance.</p>`}
+      : html`<p class="muted small">You need an Embassy at level 3 to found an alliance (price: ${ALLIANCE_FOUND_PRICE} Gold).</p>`}
     <h2>Top alliances</h2>
     ${allianceTable(d.top, 0)}`;
 }

@@ -192,8 +192,10 @@ legend { font-weight: bold; padding: 0; margin-bottom: 4px; }
 #vmap2 .bld.b39 img { width: 69px; height: 120px; }
 /* Click layer: one non-overlapping ellipse per spot (pictures overlap, so they ignore the pointer). */
 #vmap2 .hitmap { position: absolute; left: 0; top: 0; width: 540px; height: 448px; z-index: 45; }
-#vmap2 .hitmap ellipse { fill: transparent; stroke: none; cursor: pointer; }
-#vmap2 .hitmap a:hover ellipse, #vmap2 .hitmap a:focus ellipse { fill: rgba(255, 255, 255, 0.28); stroke: #71d000; stroke-width: 2; stroke-dasharray: 5 3; }
+#vmap2 .hitmap .hit { fill: transparent; stroke: none; cursor: pointer; }
+#vmap2 .hitmap .hl { fill: none; stroke: none; pointer-events: none; }
+#vmap2 .hitmap a:hover .hl, #vmap2 .hitmap a:focus .hl { fill: rgba(255, 255, 255, 0.22); stroke: #71d000; stroke-width: 2.5; stroke-dasharray: 6 4; }
+#vmap2 .hitmap a:focus { outline: none; }
 #vmap2 h1, #vmap2 .lv { pointer-events: none; }
 #vmap2 .lv { position: absolute; z-index: 50; width: 17px; height: 17px; line-height: 17px; text-align: center; font: bold 9px Arial, Helvetica, sans-serif;
   color: #000; background: #fff; border: 1px solid #777; border-radius: 50%; box-sizing: border-box; pointer-events: none; }
@@ -212,7 +214,11 @@ legend { font-weight: bold; padding: 0; margin-bottom: 4px; }
 .mapsvg image, .mapsvg .own, .mapsvg .other, .mapsvg .ctr, .mapsvg text { pointer-events: none; }
 .mapsvg .hit.gl { stroke: #b9d18f; stroke-width: 1; }
 .mapsvg a.tile:hover .hit { fill: rgba(255, 255, 255, 0.3); stroke: #71d000; stroke-width: 1.5; }
-.mapsvg text.lbl { font: 11px Verdana, Arial, sans-serif; fill: #777; text-anchor: middle; }
+.mapsvg text.lbl { font-family: Verdana, Arial, sans-serif; fill: #777; text-anchor: middle; }
+.mapsvg a.side circle { fill: #fff; stroke: #9fcf55; stroke-width: 1.5; }
+.mapsvg a.side path { fill: none; stroke: #4c8c00; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.mapsvg a.side:hover circle, .mapsvg a.side:focus circle { fill: #eaf7d4; stroke: #71d000; }
+.mapsvg a.side:focus { outline: none; }
 .mapopts a.on { color: #000; }
 .mapopts .sep { margin-left: 12px; color: #999; }
 #map_coords { display: block; margin: 0 0 8px; }

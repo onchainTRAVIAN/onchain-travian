@@ -74,11 +74,19 @@ export function mapView(d: {
   const ys = [...new Set(d.grid.map((row) => row[0]?.y ?? 0))].reverse(); // ascending y
   const step = Math.max(1, Math.floor(n / 2));
   const link = (x: number, y: number) => `/map?x=${x}&y=${y}`;
-  const m = 28; // margin for the coordinate labels
+  // The SVG is scaled down to the ~550px column, so labels and buttons grow with the map size
+  // to keep the same size on screen (k = user units per screen pixel, roughly).
+  const k = ((d.style === 'diamond' ? 74 : 60) * n) / 470;
+  const r = 15 * k; // side-arrow button radius
+  const f = 11 * k; // label font size
+  const m = Math.round(2 * r + 30 * k); // margin for labels and side arrows
   let W: number;
   let H: number;
   const placed: Placed[] = [];
   const labels: SafeHtml[] = [];
+  const lbl = (x: number, y: number, v: number) =>
+    html`<text x="${Math.round(x)}" y="${Math.round(y)}" font-size="${Math.round(f)}" class="lbl">${v}</text>`;
+  let sides: { x: number; y: number; rot: number; href: string; title: string; key: string }[];
 
   if (d.style === 'diamond') {
     // Tile (i, j): centre = (37·(i+j), 20·(i−j)) — x grows down-right, y grows up-right (north).
@@ -92,9 +100,29 @@ export function mapView(d: {
       const cxp = ox + 37 + 37 * (i + j);
       const cyp = oy + 37 + 20 * (i - j);
       placed.push({ c, x: cxp - 37, y: cyp - 37, shape: `${cxp},${cyp - 20} ${cxp + 37},${cyp} ${cxp},${cyp + 20} ${cxp - 37},${cyp}` });
-      if (j === 0) labels.push(html`<text x="${cxp - 26}" y="${cyp + 34}" class="lbl">${c.x}</text>`);
-      if (i === n - 1) labels.push(html`<text x="${cxp + 26}" y="${cyp + 34}" class="lbl">${c.y}</text>`);
+      if (j === 0) labels.push(lbl(cxp - 22 - 6 * k, cyp + 22 + 10 * k, c.x));
+      if (i === n - 1) labels.push(lbl(cxp + 22 + 6 * k, cyp + 22 + 10 * k, c.y));
     }
+    // Diamond corners, then one button outside the middle of each edge (north is up-right).
+    const T = { x: m + 37 * n, y: m + 17 };
+    const R = { x: m + 74 * n, y: oy + 37 };
+    const Bm = { x: m + 37 * n, y: oy + 37 + 20 * n };
+    const L = { x: m, y: oy + 37 };
+    const out = (a: { x: number; y: number }, b: { x: number; y: number }, href: string, title: string, key: string) => {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy);
+      const nx = dy / len;
+      const ny = -dx / len;
+      const off = r + 24 * k;
+      return { x: (a.x + b.x) / 2 + nx * off, y: (a.y + b.y) / 2 + ny * off, rot: (Math.atan2(ny, nx) * 180) / Math.PI, href, title, key };
+    };
+    sides = [
+      out(T, R, link(d.cx, d.cy + step), 'North', 'n'),
+      out(R, Bm, link(d.cx + step, d.cy), 'East', 'e'),
+      out(Bm, L, link(d.cx, d.cy - step), 'South', 's'),
+      out(L, T, link(d.cx - step, d.cy), 'West', 'w'),
+    ];
   } else {
     const t = 60;
     W = t * n + 2 * m;
@@ -105,9 +133,16 @@ export function mapView(d: {
       const x = m + i * t;
       const y = m + (n - 1 - j) * t;
       placed.push({ c, x, y, shape: `${x},${y} ${x + t},${y} ${x + t},${y + t} ${x},${y + t}` });
-      if (j === 0) labels.push(html`<text x="${x + t / 2}" y="${m + n * t + 16}" class="lbl">${c.x}</text>`);
-      if (i === 0) labels.push(html`<text x="${m - 16}" y="${y + t / 2 + 4}" class="lbl">${c.y}</text>`);
+      if (j === 0) labels.push(lbl(x + t / 2, m + n * t + 14 * k, c.x));
+      if (i === 0) labels.push(lbl(m - 14 * k, y + t / 2 + 4 * k, c.y));
     }
+    const e = r + 4 * k;
+    sides = [
+      { x: W / 2, y: e, rot: -90, href: link(d.cx, d.cy + step), title: 'North', key: 'n' },
+      { x: W - e, y: H / 2, rot: 0, href: link(d.cx + step, d.cy), title: 'East', key: 'e' },
+      { x: W / 2, y: H - e, rot: 90, href: link(d.cx, d.cy - step), title: 'South', key: 's' },
+      { x: e, y: H / 2, rot: 180, href: link(d.cx - step, d.cy), title: 'West', key: 'w' },
+    ];
   }
 
   // Draw back-to-front so taller tiles overlap correctly.
@@ -142,6 +177,11 @@ export function mapView(d: {
     <svg class="mapsvg ${d.style}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map around ${d.cx}|${d.cy}">
       ${tiles}
       ${labels}
+      ${sides.map(
+        (a) => html`<a href="${a.href}" class="side" aria-label="Move ${a.title.toLowerCase()}"><title>${a.title}</title>
+          <g transform="translate(${Math.round(a.x)} ${Math.round(a.y)}) scale(${k.toFixed(3)})">
+            <circle r="15"></circle><path d="M-6 0h11M0-6l6 6-6 6" transform="rotate(${Math.round(a.rot)})"></path></g></a>`,
+      )}
     </svg>
     <div class="mapctl">
       ${mapPad(d.style, {

@@ -161,7 +161,8 @@ export function townView(d: VillageViewData): SafeHtml {
     <svg class="hitmap" viewBox="0 0 540 448" aria-label="Buildings">
       ${TOWN_SPOTS.map((p) => {
         const label = labels.get(p.slot) ?? 'Building site';
-        return html`<a href="/slot/${p.slot}" class="spot" aria-label="${label}"><title>${label}</title><ellipse cx="${p.cx}" cy="${p.cy}" rx="${p.rx}" ry="${p.ry}"></ellipse></a>`;
+        return html`<a href="/slot/${p.slot}" class="spot" aria-label="${label}"><title>${label}</title>
+          <ellipse class="hl" cx="${p.cx}" cy="${p.cy}" rx="${p.rx}" ry="${p.ry}"></ellipse><polygon class="hit" points="${p.points}"></polygon></a>`;
       })}
     </svg>
   </div>
