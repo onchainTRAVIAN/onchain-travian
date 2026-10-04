@@ -185,3 +185,61 @@ describe('rankings data', () => {
     expect(pops.size).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('map views and profiles', () => {
+  it('renders every map size and both views, and remembers the choice', async () => {
+    const agent = await newPlayer('mapper');
+    for (const size of [7, 11, 15, 21]) {
+      for (const view of ['diamond', 'grid']) {
+        const res = await agent.get(`/map?size=${size}&view=${view}`);
+        expect(res.status).toBe(200);
+        expect((res.text.match(/class="tile"/g) ?? []).length).toBe(size * size);
+        expect(res.text).toContain(view === 'grid' ? '/static/img/map/flat/' : '/static/img/map/grass');
+      }
+    }
+    const remembered = await agent.get('/map');
+    expect((remembered.text.match(/class="tile"/g) ?? []).length).toBe(21 * 21);
+  });
+
+  it('uploads a compressed avatar, shows it on the profile, and falls back to the tribe picture', async () => {
+    const sharp = (await import('sharp')).default;
+    const agent = await newPlayer('painter', 'teutons');
+    const acc = await agent.get('/account');
+    const token = csrfFrom(acc.text);
+    const big = await sharp({ create: { width: 1200, height: 800, channels: 3, background: { r: 200, g: 40, b: 40 } } }).png().toBuffer();
+    // Without the token the upload is refused.
+    const bad = await agent.post('/account/avatar').attach('avatar', big, 'me.png');
+    expect(bad.status).toBe(303);
+    expect(bad.headers.location).toBe('/');
+    expect((await agent.get('/account')).text).not.toMatch(/src="\/avatar\/\d+/);
+    const ok = await agent.post(`/account/avatar?_csrf=${encodeURIComponent(token)}`).attach('avatar', big, 'me.png');
+    expect(ok.status).toBe(303);
+    const profile = await agent.get('/account');
+    const m = /src="\/avatar\/(\d+)\?v=\d+"/.exec(profile.text);
+    expect(m).not.toBeNull();
+    const img = await agent.get(`/avatar/${m?.[1]}`).buffer(true).parse((r, cb) => {
+      const chunks: Buffer[] = [];
+      r.on('data', (c: Buffer) => chunks.push(c));
+      r.on('end', () => cb(null, Buffer.concat(chunks)));
+    });
+    expect(img.headers['content-type']).toMatch(/webp/);
+    const body = img.body as Buffer;
+    expect(body.length).toBeLessThan(20_000);
+    const meta = await sharp(body).metadata();
+    expect([meta.width, meta.height]).toEqual([128, 128]);
+    // Not a picture → friendly error.
+    const junk = await agent.post(`/account/avatar?_csrf=${encodeURIComponent(token)}`).attach('avatar', Buffer.from('hello'), 'x.png');
+    expect(junk.status).toBe(303);
+    // About text is escaped on the public profile.
+    await agent.post('/account/bio').type('form').send({ _csrf: token, bio: '<b>hi</b> I farm' });
+    const pub = await agent.get(`/player/${m?.[1]}`);
+    expect(pub.text).toContain('&lt;b&gt;hi&lt;/b&gt; I farm');
+    // Remove → tribe default.
+    await agent.post('/account/avatar/remove').type('form').send({ _csrf: token });
+    const after = await agent.get('/account');
+    expect(after.text).toContain('/static/img/avatars/teutons.svg');
+    const fallback = await agent.get(`/avatar/${m?.[1]}`);
+    expect(fallback.status).toBe(302);
+    expect(fallback.headers.location).toBe('/static/img/avatars/teutons.svg');
+  });
+});

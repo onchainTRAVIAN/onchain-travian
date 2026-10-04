@@ -143,23 +143,65 @@ export function buyBoost(db: DB, userId: number, productId: string, now: number)
 
 export const NPC_TRADE_PRICE = 3;
 
-/** Redistribute a village's resources freely (same total), for a fee. */
-export function npcTrade(db: DB, userId: number, villageId: number, target: Resources, now: number): void {
-  db.transaction((tx) => {
+/**
+ * Spread `rest` over the four resources in proportion to `target` (evenly if target is all zero),
+ * never above capacity. Returns the new amounts, or null if storage can't hold it all.
+ */
+export function distributeRest(target: Resources, rest: number, cap: Resources): Resources | null {
+  const out = { ...target };
+  let left = Math.max(0, Math.floor(rest));
+  for (let round = 0; left > 0 && round < 8; round++) {
+    const open = RESOURCE_KEYS.filter((k) => out[k] < cap[k]);
+    if (open.length === 0) break;
+    const weightSum = open.reduce((s, k) => s + (target[k] > 0 ? target[k] : 0), 0);
+    let given = 0;
+    for (const k of open) {
+      const share = weightSum > 0 ? (target[k] > 0 ? target[k] / weightSum : 0) : 1 / open.length;
+      const add = Math.min(cap[k] - out[k], Math.floor(left * share));
+      out[k] += add;
+      given += add;
+    }
+    left -= given;
+    if (given === 0) {
+      // Rounding leftovers: one by one into any resource with room.
+      for (const k of open) {
+        if (left <= 0) break;
+        const add = Math.min(cap[k] - out[k], left);
+        out[k] += add;
+        left -= add;
+      }
+      if (left > 0 && RESOURCE_KEYS.every((k) => out[k] >= cap[k])) break;
+    }
+  }
+  return left > 0 ? null : out;
+}
+
+/**
+ * NPC merchant: turn the village's resources into any mix, keeping the exact total, for a fee.
+ * Whatever the player doesn't assign (including resources produced since the page was opened)
+ * is spread over the requested mix, so nothing is ever lost.
+ */
+export function npcTrade(db: DB, userId: number, villageId: number, target: Resources, now: number): Resources {
+  return db.transaction((tx) => {
     ownedVillage(tx, userId, villageId);
     const state = catchUp(tx, villageId, now);
     assertGame(state, 'Village not found');
     const have = stockOf(state.village);
     const cap = capacityFor(state);
+    const total = Math.floor(sumRes(have));
     const clean = { ...target };
     for (const k of RESOURCE_KEYS) {
       assertGame(Number.isFinite(clean[k]) && clean[k] >= 0, 'Invalid amounts');
       clean[k] = Math.floor(clean[k]);
-      assertGame(clean[k] <= cap[k], `Not enough storage for that much ${k}`);
+      assertGame(clean[k] <= cap[k], `Your storage only holds ${cap[k]} ${k}`);
     }
-    assertGame(sumRes(clean) <= Math.floor(sumRes(have)), 'You can only redistribute what you have');
+    const asked = sumRes(clean);
+    assertGame(asked <= total, `You only have ${total} resources to trade (you entered ${asked})`);
+    const result = distributeRest(clean, total - asked, cap);
+    assertGame(result, 'Not enough storage for all your resources');
     spend(tx, userId, NPC_TRADE_PRICE, 'NPC merchant', now);
-    setResources(tx, villageId, clean);
+    setResources(tx, villageId, result);
+    return result;
   });
 }
 

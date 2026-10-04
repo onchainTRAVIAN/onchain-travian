@@ -146,7 +146,9 @@ export function setActiveVillage(req: Request, villageId: number): void {
 export function csrfGuard(req: Request, res: Response, next: NextFunction): void {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
   const body: unknown = req.body;
-  const sent = body && typeof body === 'object' && '_csrf' in body ? (body as { _csrf: unknown })._csrf : undefined;
+  let sent = body && typeof body === 'object' && '_csrf' in body ? (body as { _csrf: unknown })._csrf : undefined;
+  // File uploads (multipart) are parsed later by their route, so they carry the token in the URL.
+  if (sent === undefined && req.is('multipart/form-data')) sent = req.query._csrf;
   const expected = req.ctx.csrf;
   if (
     typeof sent !== 'string' ||

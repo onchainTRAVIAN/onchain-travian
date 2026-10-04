@@ -1,9 +1,9 @@
 import { config } from '../../config.js';
 import { NPC_TRADE_PRICE, PRODUCTS, TICKER_MAX_HOURS, TICKER_MAX_LENGTH } from '../../game/actions/credits.js';
-import { RESOURCE_ICON, RESOURCE_KEYS, sumRes, type Resources } from '../../game/rules/resources.js';
+import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
 import { fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { csrfField, timer } from './layout.js';
+import { csrfField, resIcon, timer } from './layout.js';
 
 export function shopView(d: {
   balance: number;
@@ -31,15 +31,7 @@ export function shopView(d: {
     <h2>News ticker</h2>
     <div class="card"><p>Put your message on the scrolling news line at the top of every player's screen.
       <b>${config.TICKER_PRICE_PER_HOUR} Gold per hour.</b></p><a class="btn" href="/shop/ticker">Book a time slot</a></div>
-    <h2>NPC merchant <span class="muted small">${NPC_TRADE_PRICE} Gold</span></h2>
-    <p class="small muted">Swap your resources into any mix instantly (same total: ${fmtNum(total)}).</p>
-    <form method="post" action="/shop/npc">${csrfField(d.csrf)}
-      <div class="row">${RESOURCE_KEYS.map(
-        (k) => html`<div><label for="n${k}">${RESOURCE_ICON[k]} <span class="small muted">max ${fmtNum(d.capacity[k])}</span></label>
-          <input id="n${k}" type="number" name="${k}" min="0" max="${d.capacity[k]}" value="${Math.min(even, d.capacity[k])}" inputmode="numeric"></div>`,
-      )}</div>
-      <div class="actions"><button type="submit">Exchange</button></div>
-    </form>
+    ${npcPanel(d.stock, d.capacity, d.balance, d.csrf)}
     <h2>Finish immediately</h2>
     <p class="small">Tap the <span class="btn gold small">⚡</span> button next to any construction, training or research to finish it now (2 Gold per hour left, at least 2).</p>
     <h2>Gold history</h2>
@@ -48,6 +40,28 @@ export function shopView(d: {
       : html`<ul class="list">${d.history.map(
           (h) => html`<li><span class="grow">${h.reason}<span class="sub">${fmtDateTime(h.createdAt)}</span></span><b class="${h.amount > 0 ? 'good' : 'bad'}">${h.amount > 0 ? '+' : ''}${fmtNum(h.amount)}</b></li>`,
         )}</ul>`}`;
+}
+
+/** Classic NPC merchant: redistribute all resources (same total) for a small Gold fee. */
+export function npcPanel(stock: Resources, capacity: Resources, balance: number, csrf: string): SafeHtml {
+  const total = Math.floor(sumRes(stock));
+  return html`<h2>NPC trade</h2>
+    <p class="small">Trade your resources into any mix with the NPC merchant. The total stays the same: <b>${fmtNum(total)}</b>.
+      Price: <b>${NPC_TRADE_PRICE} Gold</b> (you have ${fmtNum(balance)}).</p>
+    <form method="post" action="/shop/npc" class="block" id="npc" data-total="${total}">${csrfField(csrf)}
+      <table class="npc"><thead><tr><th></th><th>Now</th><th>New</th><th>Storage</th></tr></thead><tbody>
+      ${RESOURCE_KEYS.map(
+        (k) => html`<tr><td>${resIcon(k)} ${RESOURCE_LABEL[k]}</td><td class="num">${fmtNum(Math.floor(stock[k]))}</td>
+          <td class="center"><label class="sr" for="n${k}">New ${RESOURCE_LABEL[k]}</label>
+            <input class="npc-in" id="n${k}" type="number" name="${k}" min="0" max="${capacity[k]}" data-cap="${capacity[k]}" value="${Math.min(Math.floor(stock[k]), capacity[k])}" inputmode="numeric"></td>
+          <td class="num">${fmtNum(capacity[k])}</td></tr>`,
+      )}
+      <tr><td><b>Rest</b></td><td class="num">${fmtNum(total)}</td><td class="center"><b id="npc-rest">0</b></td><td></td></tr>
+      </tbody></table>
+      <p><button type="button" id="npc-dist" class="secondary">Distribute remaining</button>
+        <button type="submit">Trade (${NPC_TRADE_PRICE} Gold)</button></p>
+      <p class="small muted">Anything you leave unassigned (and resources produced meanwhile) is spread over your chosen mix, so nothing is lost.</p>
+    </form>`;
 }
 
 export function tickerView(d: {

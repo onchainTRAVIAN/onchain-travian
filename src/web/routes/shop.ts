@@ -90,9 +90,9 @@ shopRouter.post(
   '/shop/npc',
   formAction(z.object({ wood: amount, clay: amount, iron: amount, crop: amount }), (req, r, d) => {
     const ctx = authed(req);
-    npcTrade(db, ctx.user.id, ctx.villageId, res(d.wood, d.clay, d.iron, d.crop), ctx.now);
-    setFlash(r, 'ok', 'The NPC merchant exchanged your resources.');
-    r.redirect(303, '/shop');
+    const got = npcTrade(db, ctx.user.id, ctx.villageId, res(d.wood, d.clay, d.iron, d.crop), ctx.now);
+    setFlash(r, 'ok', `Trade done. Wood ${got.wood}, clay ${got.clay}, iron ${got.iron}, crop ${got.crop}.`);
+    r.redirect(303, backUrl(req, '/shop'));
   }, '/shop'),
 );
 

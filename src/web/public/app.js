@@ -56,6 +56,60 @@
     }, 6000);
   }
 
+  // NPC merchant: live "Rest" counter and "Distribute remaining" button.
+  var npc = document.getElementById('npc');
+  if (npc) {
+    var total = Number(npc.getAttribute('data-total')) || 0;
+    var inputs = npc.querySelectorAll('.npc-in');
+    var restEl = document.getElementById('npc-rest');
+    var sum = function () {
+      var s = 0;
+      for (var i = 0; i < inputs.length; i++) s += Math.max(0, Math.floor(Number(inputs[i].value) || 0));
+      return s;
+    };
+    var update = function () {
+      var rest = total - sum();
+      restEl.textContent = rest.toLocaleString('en-US');
+      restEl.className = rest === 0 ? 'c1' : rest < 0 ? 'bad' : 'c2';
+    };
+    npc.addEventListener('input', update);
+    document.getElementById('npc-dist').addEventListener('click', function () {
+      // Entered too much: take the excess back from the largest amounts first.
+      var over = sum() - total;
+      if (over > 0) {
+        var arr = Array.prototype.slice.call(inputs).sort(function (a, b) { return (Number(b.value) || 0) - (Number(a.value) || 0); });
+        for (var r = 0; r < arr.length && over > 0; r++) {
+          var cur = Math.max(0, Number(arr[r].value) || 0);
+          var cut = Math.min(cur, over);
+          arr[r].value = cur - cut;
+          over -= cut;
+        }
+      }
+      // Spread the rest evenly over resources that still have storage room.
+      for (var round = 0; round < 6; round++) {
+        var rest = total - sum();
+        if (rest <= 0) break;
+        var open = [];
+        for (var i = 0; i < inputs.length; i++) {
+          var cap = Number(inputs[i].getAttribute('data-cap')) || 0;
+          if ((Number(inputs[i].value) || 0) < cap) open.push(inputs[i]);
+        }
+        if (!open.length) break;
+        var share = Math.max(1, Math.floor(rest / open.length));
+        for (var j = 0; j < open.length && rest > 0; j++) {
+          var el = open[j];
+          var c = Number(el.getAttribute('data-cap')) || 0;
+          var v = Number(el.value) || 0;
+          var add = Math.min(c - v, share, rest);
+          el.value = v + add;
+          rest -= add;
+        }
+      }
+      update();
+    });
+    update();
+  }
+
   // "(max)" links fill unit inputs.
   document.addEventListener('click', function (e) {
     var a = e.target.closest ? e.target.closest('[data-fill]') : null;

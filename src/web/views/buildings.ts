@@ -55,6 +55,7 @@ export function smithyPanel(kind: 'blacksmith' | 'armoury', tribe: TribeId, opts
 }
 
 export function marketPanel(d: {
+  npc?: SafeHtml;
   merchants: { total: number; busy: number; free: number; capacity: number; speed: number };
   mine: OfferView[];
   others: OfferView[];
@@ -64,7 +65,8 @@ export function marketPanel(d: {
 }): SafeHtml {
   const resOptions = (sel: string) => RESOURCE_KEYS.map((k) => html`<option value="${k}"${k === sel ? html` selected` : ''}>${RESOURCE_LABEL[k]}</option>`);
   const ri = (k: string) => resIcon(k as ResourceKey);
-  return html`<h2>Send resources</h2>
+  return html`<p class="tabs"><a href="#send">Send resources</a><a href="#offer">Offer</a><a href="#buy">Buy</a><a href="#npc">NPC trade</a></p>
+    <h2 id="send">Send resources</h2>
     <p>Merchants ${d.merchants.free}/${d.merchants.total} · each merchant can carry <b>${fmtNum(d.merchants.capacity)}</b> resources.</p>
     <form method="post" action="/market/send">
       ${csrfField(d.csrf)}
@@ -74,7 +76,7 @@ export function marketPanel(d: {
       </tbody></table>
       <button type="submit">OK</button>
     </form>
-    <h2>Offer resources</h2>
+    <h2 id="offer">Offer resources</h2>
     <form method="post" action="/market/offer">
       ${csrfField(d.csrf)}
       <table class="tb"><tbody>
@@ -90,7 +92,7 @@ export function marketPanel(d: {
             <td><form method="post" action="/market/cancel">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="small secondary">cancel</button></form></td></tr>`,
         )}</tbody></table>`
       : ''}
-    <h2>Buy</h2>
+    <h2 id="buy">Buy</h2>
     <table class="tb"><thead><tr><th>Offered</th><th>Searching</th><th>Player</th><th>Duration</th><th>Action</th></tr></thead><tbody>
     ${d.others.length === 0
       ? html`<tr><td colspan="5" class="muted">There are no offers at the marketplace.</td></tr>`
@@ -99,7 +101,8 @@ export function marketPanel(d: {
             <td><a href="/map/tile?x=${o.x}&amp;y=${o.y}">${o.owner}</a></td><td class="num">${fmtDuration(o.hours * 3_600_000)}</td>
             <td><form method="post" action="/market/accept">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="linkbtn">Accept offer</button></form></td></tr>`,
         )}
-    </tbody></table>`;
+    </tbody></table>
+    ${d.npc ?? ''}`;
 }
 
 export function celebrationPanel(opts: CelebrationOption[], running: CelebrationRow | undefined, have: Resources, csrf: string, now: number): SafeHtml {

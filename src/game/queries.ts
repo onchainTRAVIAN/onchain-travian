@@ -143,6 +143,7 @@ export function rankings(q: Q, kind: RankKind, limit: number, offset: number) {
       off: users.offPoints,
       def: users.defPoints,
       loot: users.lootTotal,
+      avatarAt: users.avatarAt,
     })
     .from(users)
     .where(eq(users.banned, false))

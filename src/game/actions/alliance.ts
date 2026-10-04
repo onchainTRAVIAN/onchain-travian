@@ -160,6 +160,7 @@ export function allianceMembersList(q: Q, allianceId: number) {
       tribe: users.tribe,
       role: allianceMembers.role,
       lastSeenAt: users.lastSeenAt,
+      avatarAt: users.avatarAt,
       pop,
       villages: sql<number>`(select count(*) from villages v where v.user_id = "users"."id")`,
     })

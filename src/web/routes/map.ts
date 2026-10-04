@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { db } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
 import { users, villages } from '../../db/schema.js';
@@ -9,7 +9,7 @@ import { dist, mapWindow, tileInfo } from '../../game/queries.js';
 import { travelTimeMs, wrapCoord } from '../../game/rules/map.js';
 import { TRIBES } from '../../game/rules/units.js';
 import { authed } from '../session.js';
-import { mapView, tileView } from '../views/map.js';
+import { MAP_SIZES, mapView, tileView, type MapSize, type MapStyle } from '../views/map.js';
 import { intParam, loadGamePage, sendPage } from './helpers.js';
 
 export const mapRouter = Router();
@@ -25,7 +25,20 @@ function oasisOwnerInfo(tile: TileRow): { name: string; userId: number | null; v
   return row ? { name: row.uname ?? 'Nature', userId: row.uid, villageName: row.vname } : null;
 }
 
-const VIEW_RADIUS = 3;
+const MAP_COOKIE = 'mapview';
+
+/** View size/style from the query (and remember it), else from the cookie, else classic 7×7. */
+function mapPrefs(req: Request, res: Response): { size: MapSize; style: MapStyle } {
+  const fromCookie = typeof req.cookies?.[MAP_COOKIE] === 'string' ? String(req.cookies[MAP_COOKIE]).split(',') : [];
+  const qSize = Number(req.query.size);
+  const qView = req.query.view;
+  const size = (MAP_SIZES as readonly number[]).includes(qSize) ? (qSize as MapSize) : (MAP_SIZES as readonly number[]).includes(Number(fromCookie[0])) ? (Number(fromCookie[0]) as MapSize) : 7;
+  const style: MapStyle = qView === 'grid' || qView === 'diamond' ? qView : fromCookie[1] === 'grid' ? 'grid' : 'diamond';
+  if (req.query.size !== undefined || req.query.view !== undefined) {
+    res.cookie(MAP_COOKIE, `${size},${style}`, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 86_400_000, path: '/' });
+  }
+  return { size, style };
+}
 
 mapRouter.get('/map', (req, res) => {
   const ctx = authed(req);
@@ -33,11 +46,12 @@ mapRouter.get('/map', (req, res) => {
   const v = page.state.village;
   const cx = wrapCoord(intParam(req.query.x, v.x), config.MAP_RADIUS);
   const cy = wrapCoord(intParam(req.query.y, v.y), config.MAP_RADIUS);
+  const prefs = mapPrefs(req, res);
   sendPage(
     req,
     res,
     'Map',
-    mapView({ grid: mapWindow(db, cx, cy, VIEW_RADIUS), cx, cy, myId: ctx.user.id, homeX: v.x, homeY: v.y, step: VIEW_RADIUS * 2 + 1 }),
+    mapView({ grid: mapWindow(db, cx, cy, (prefs.size - 1) / 2), cx, cy, myId: ctx.user.id, homeX: v.x, homeY: v.y, size: prefs.size, style: prefs.style }),
     { nav: 'map', chrome: page.chrome },
   );
 });

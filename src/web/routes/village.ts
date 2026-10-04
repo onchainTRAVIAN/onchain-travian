@@ -21,7 +21,8 @@ import { canExpand } from '../../game/engine/expansion.js';
 import { membership } from '../../game/actions/alliance.js';
 import { oasesOwnedBy } from '../../game/engine/oasis.js';
 import { oasisSlots } from '../../game/rules/expansion.js';
-import { levelOf } from '../../game/engine/state.js';
+import { capacityFor, levelOf } from '../../game/engine/state.js';
+import { npcPanel } from '../views/shop.js';
 import { academyPanel, celebrationPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel } from '../views/buildings.js';
 import { celebrationOptions, runningCelebration, startCelebration } from '../../game/actions/celebration.js';
 
@@ -126,6 +127,7 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
     case 'market':
       return [
         marketPanel({
+          npc: npcPanel(have, capacityFor(state), page.chrome.credits, ctx.csrf),
           merchants: merchantInfo(db, state),
           mine: listOffers(db, state, true),
           others: listOffers(db, state, false),

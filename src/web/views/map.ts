@@ -23,48 +23,138 @@ function cellImage(c: MapCell): string {
   return (c.x * 7 + c.y * 13) % 5 === 0 ? 'grass2' : 'grass';
 }
 
-export function mapView(d: { grid: MapCell[][]; cx: number; cy: number; myId: number; homeX: number; homeY: number; step: number }): SafeHtml {
-  // grid rows are y descending (north first); columns x ascending.
+export const MAP_SIZES = [7, 11, 15, 21] as const;
+export type MapSize = (typeof MAP_SIZES)[number];
+export type MapStyle = 'diamond' | 'grid';
+
+interface Placed {
+  c: MapCell;
+  /** Top-left of the 74×74 tile image. */
+  x: number;
+  y: number;
+  /** Outline polygon/rect points for highlights. */
+  shape: string;
+}
+
+/**
+ * The map as one inline SVG (positions are SVG attributes, so any size works under the CSP)
+ * that scales to the column width.
+ */
+export function mapView(d: {
+  grid: MapCell[][];
+  cx: number;
+  cy: number;
+  myId: number;
+  homeX: number;
+  homeY: number;
+  size: MapSize;
+  style: MapStyle;
+}): SafeHtml {
+  const n = d.size;
   const cells = d.grid.flat();
   const xs = [...new Set(cells.map((c) => c.x))];
-  const ys = [...new Set(d.grid.map((row) => row[0]?.y ?? 0))].reverse(); // ascending
+  const ys = [...new Set(d.grid.map((row) => row[0]?.y ?? 0))].reverse(); // ascending y
+  const step = Math.max(1, Math.floor(n / 2));
   const link = (x: number, y: number) => `/map?x=${x}&y=${y}`;
+  const m = 46; // margin for labels and arrows
+  let W: number;
+  let H: number;
+  const placed: Placed[] = [];
+  const labels: SafeHtml[] = [];
+  let arrows: { x: number; y: number; rot: number; href: string; title: string }[];
+
+  if (d.style === 'diamond') {
+    // Tile (i, j): centre = (37·(i+j), 20·(i−j)) — x grows down-right, y grows up-right (north).
+    W = 74 * n + 2 * m;
+    H = 40 * (n - 1) + 74 + 2 * m;
+    const ox = m;
+    const oy = m + 20 * (n - 1);
+    for (const c of cells) {
+      const i = xs.indexOf(c.x);
+      const j = ys.indexOf(c.y);
+      const cxp = ox + 37 + 37 * (i + j);
+      const cyp = oy + 37 + 20 * (i - j);
+      placed.push({ c, x: cxp - 37, y: cyp - 37, shape: `${cxp},${cyp - 20} ${cxp + 37},${cyp} ${cxp},${cyp + 20} ${cxp - 37},${cyp}` });
+      if (j === 0) labels.push(html`<text x="${cxp - 26}" y="${cyp + 34}" class="lbl">${c.x}</text>`);
+      if (i === n - 1) labels.push(html`<text x="${cxp + 26}" y="${cyp + 34}" class="lbl">${c.y}</text>`);
+    }
+    const left = { x: ox, y: oy + 37 };
+    const top = { x: ox + 37 + 37 * (n - 1), y: oy + 37 - 20 * (n - 1) - 20 };
+    const right = { x: ox + 74 * n, y: oy + 37 };
+    const bottom = { x: ox + 37 + 37 * (n - 1), y: oy + 37 + 20 * (n - 1) + 20 };
+    const mid = (a: { x: number; y: number }, b: { x: number; y: number }, dx: number, dy: number) => ({ x: (a.x + b.x) / 2 + dx, y: (a.y + b.y) / 2 + dy });
+    arrows = [
+      { ...mid(top, right, 22, -14), rot: -30, href: link(d.cx, d.cy + step), title: 'North' },
+      { ...mid(right, bottom, 22, 14), rot: 30, href: link(d.cx + step, d.cy), title: 'East' },
+      { ...mid(bottom, left, -22, 14), rot: 150, href: link(d.cx, d.cy - step), title: 'South' },
+      { ...mid(left, top, -22, -14), rot: 210, href: link(d.cx - step, d.cy), title: 'West' },
+    ];
+  } else {
+    const t = 60;
+    W = t * n + 2 * m;
+    H = t * n + 2 * m;
+    for (const c of cells) {
+      const i = xs.indexOf(c.x);
+      const j = ys.indexOf(c.y);
+      const x = m + i * t;
+      const y = m + (n - 1 - j) * t;
+      placed.push({ c, x, y, shape: `${x},${y} ${x + t},${y} ${x + t},${y + t} ${x},${y + t}` });
+      if (j === 0) labels.push(html`<text x="${x + t / 2}" y="${m + n * t + 16}" class="lbl">${c.x}</text>`);
+      if (i === 0) labels.push(html`<text x="${m - 16}" y="${y + t / 2 + 4}" class="lbl">${c.y}</text>`);
+    }
+    arrows = [
+      { x: W / 2, y: m / 2 - 4, rot: -90, href: link(d.cx, d.cy + step), title: 'North' },
+      { x: W - m / 2 + 4, y: H / 2, rot: 0, href: link(d.cx + step, d.cy), title: 'East' },
+      { x: W / 2, y: H - m / 2 + 4, rot: 90, href: link(d.cx, d.cy - step), title: 'South' },
+      { x: m / 2 - 4, y: H / 2, rot: 180, href: link(d.cx - step, d.cy), title: 'West' },
+    ];
+  }
+
+  // Draw back-to-front so taller tiles overlap correctly.
+  placed.sort((a, b) => a.y - b.y || a.x - b.x);
+  const tileSize = d.style === 'diamond' ? 74 : 60;
+  const art = d.style === 'diamond' ? 'map' : 'map/flat';
+  const tiles = placed.map((p) => {
+    const c = p.c;
+    const label = c.village
+      ? `${c.village.name} (${c.x}|${c.y}) — ${c.village.owner}, population ${c.village.pop}`
+      : c.kind === 'oasis'
+        ? `Oasis (${c.x}|${c.y})`
+        : `Abandoned valley (${c.x}|${c.y})`;
+    const own = c.village?.userId === d.myId;
+    const ctr = c.x === d.cx && c.y === d.cy;
+    return html`<a href="/map/tile?x=${c.x}&amp;y=${c.y}" class="tile"><title>${label}</title>
+      <image href="/static/img/${art}/${cellImage(c)}.svg" x="${p.x}" y="${p.y}" width="${tileSize}" height="${tileSize}"></image>
+      ${c.village ? html`<polygon points="${p.shape}" class="${own ? 'own' : 'other'}"></polygon>` : ''}
+      ${ctr ? html`<polygon points="${p.shape}" class="ctr"></polygon>` : ''}
+      <polygon points="${p.shape}" class="${d.style === 'grid' ? 'hit gl' : 'hit'}"></polygon></a>`;
+  });
+
   const center = cells.find((c) => c.x === d.cx && c.y === d.cy);
   const villages = cells.filter((c) => c.village);
+  const opt = (sz: number, st: MapStyle, text: string, on: boolean) =>
+    html`<a href="/map?x=${d.cx}&amp;y=${d.cy}&amp;size=${sz}&amp;view=${st}" class="${on ? 'on' : ''}">${text}</a>`;
   return html`<h1>Map <span class="lvl">(${d.cx}|${d.cy})</span></h1>
-    <div id="mapc">
-      ${d.grid.map((row) =>
-        row.map((c) => {
-          const ix = xs.indexOf(c.x);
-          const iy = ys.indexOf(c.y);
-          const cls = [`t t${ix}${iy}`, c.village?.userId === d.myId ? 'own' : c.village ? 'other' : '', c.x === d.cx && c.y === d.cy ? 'ctr' : ''].join(' ');
-          const label = c.village
-            ? `${c.village.name} (${c.x}|${c.y}) — Player: ${c.village.owner}, Population: ${c.village.pop}`
-            : c.kind === 'oasis'
-              ? `Unoccupied oasis (${c.x}|${c.y})`
-              : `Abandoned valley (${c.x}|${c.y})`;
-          return html`<a class="${cls}" href="/map/tile?x=${c.x}&amp;y=${c.y}" title="${label}"><img src="/static/img/map/${cellImage(c)}.svg" alt="${label}"></a>`;
-        }),
-      )}
-      ${xs.map((x, k) => html`<div class="ruler mx${k}">${x}</div>`)}
-      ${ys.map((y, k) => html`<div class="ruler my${k}">${y}</div>`)}
-      <a class="ar ar-n" href="${link(d.cx, d.cy + d.step)}" title="North" aria-label="North"></a>
-      <a class="ar ar-e" href="${link(d.cx + d.step, d.cy)}" title="East" aria-label="East"></a>
-      <a class="ar ar-s" href="${link(d.cx, d.cy - d.step)}" title="South" aria-label="South"></a>
-      <a class="ar ar-w" href="${link(d.cx - d.step, d.cy)}" title="West" aria-label="West"></a>
-      <form id="map_coords" method="get" action="/map">
-        <label for="mx">x</label> <input id="mx" type="text" name="x" value="${d.cx}" inputmode="numeric">
-        <label for="my">y</label> <input id="my" type="text" name="y" value="${d.cy}" inputmode="numeric">
-        <button type="submit" class="small">OK</button>
-      </form>
-
-    </div>
-<table id="map_info"><thead><tr><th colspan="2">Details:</th></tr></thead><tbody>
-        ${center?.village
-          ? html`<tr><th>Village</th><td>${center.village.name}</td></tr><tr><th>Player</th><td>${center.village.owner}</td></tr><tr><th>Population</th><td>${fmtNum(center.village.pop)}</td></tr>`
-          : html`<tr><th>Field</th><td>${center?.kind === 'oasis' ? 'Oasis' : 'Abandoned valley'}</td></tr>`}
-      </tbody></table>
-    <p class="small"><a href="${link(d.homeX, d.homeY)}">» Back to your village</a></p>
+    <p class="tabs mapopts">Size: ${MAP_SIZES.map((sz) => opt(sz, d.style, `${sz}×${sz}`, sz === n))}
+      <span class="sep">View:</span> ${opt(n, 'diamond', 'Classic', d.style === 'diamond')}${opt(n, 'grid', 'Flat', d.style === 'grid')}</p>
+    <svg class="mapsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map around ${d.cx}|${d.cy}">
+      ${tiles}
+      ${labels}
+      ${arrows.map((a) => html`<a href="${a.href}" class="arrow"><title>${a.title}</title>
+        <polygon points="-10,-9 10,0 -10,9" transform="translate(${a.x} ${a.y}) rotate(${a.rot})"></polygon></a>`)}
+    </svg>
+    <form id="map_coords" method="get" action="/map">
+      <input type="hidden" name="size" value="${n}"><input type="hidden" name="view" value="${d.style}">
+      <b>x</b> <input type="text" name="x" value="${d.cx}" class="w30" inputmode="numeric">
+      <b>y</b> <input type="text" name="y" value="${d.cy}" class="w30" inputmode="numeric">
+      <button type="submit" class="small">OK</button>
+      <a href="${link(d.homeX, d.homeY)}" class="home">» back to my village</a>
+    </form>
+    <table id="map_info"><thead><tr><th colspan="2">Details (${d.cx}|${d.cy}):</th></tr></thead><tbody>
+      ${center?.village
+        ? html`<tr><th>Village</th><td>${center.village.name}</td></tr><tr><th>Player</th><td>${center.village.owner}</td></tr><tr><th>Population</th><td>${fmtNum(center.village.pop)}</td></tr>`
+        : html`<tr><th>Field</th><td>${center?.kind === 'oasis' ? 'Oasis' : 'Abandoned valley'}</td></tr>`}
+    </tbody></table>
     <table><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
     ${villages.length === 0
       ? html`<tr><td colspan="4" class="none center">none</td></tr>`

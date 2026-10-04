@@ -3,6 +3,7 @@ import type { AllianceRow, Role } from '../../game/actions/alliance.js';
 import { fmtAgo, fmtClock, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField } from './layout.js';
+import { avatarUrl } from '../../game/actions/avatar.js';
 
 /* ---------- Alliance ---------- */
 
@@ -12,6 +13,7 @@ interface MemberRow {
   tribe: TribeId;
   role: Role;
   lastSeenAt: number;
+  avatarAt: number;
   pop: number;
   villages: number;
 }
@@ -88,7 +90,7 @@ export function allianceView(d: {
     ${isMine ? html`<div class="actions"><a class="btn" href="/chat?c=alliance">💬 Alliance chat</a></div>` : ''}
     <h2>Members</h2>
     <ul class="list">${d.members.map(
-      (m) => html`<li><span class="grow"><a href="/player/${m.userId}">${m.username}</a> <span class="small">${TRIBES[m.tribe].icon}</span>
+      (m) => html`<li><img class="avatar sm" src="${avatarUrl({ id: m.userId, tribe: m.tribe, avatarAt: m.avatarAt })}" width="24" height="24" alt=""><span class="grow"><a href="/player/${m.userId}">${m.username}</a> <span class="small muted">${TRIBES[m.tribe].name}</span>
         <span class="sub">${ROLE_LABEL[m.role]} · ${fmtNum(m.pop)} pop · ${m.villages} village${m.villages === 1 ? '' : 's'}${isMine ? ` · seen ${fmtAgo(m.lastSeenAt, d.now)}` : ''}</span></span>
         ${canManage && m.role !== 'leader'
           ? html`<form method="post" action="/alliance/kick" class="inline">${csrfField(d.csrf)}<input type="hidden" name="userId" value="${m.userId}"><button type="submit" class="small secondary" aria-label="Remove ${m.username}">✕</button></form>`

@@ -100,6 +100,7 @@ function sideNavi(c: Chrome | null | undefined, csrf: string): SafeHtml {
     return html`<div id="side_navi"><p><a href="/">Home</a><a href="/login">Login</a><a href="/register">Register</a></p><p><a href="/stats">Statistics</a><a href="/help">Instructions</a></p></div>`;
   }
   return html`<div id="side_navi">
+    <div class="phead">${c.user.username}</div>
     <p><a href="/fields">Home</a><a href="/help">Instructions</a><a href="/account">Profile</a>
       <form method="post" action="/logout"><input type="hidden" name="_csrf" value="${csrf}"><button type="submit" class="lnk">Log out</button></form></p>
     <p><a href="/troops">Rally Point</a><a href="/hero">Hero${c.heroAlert ? html` <span class="c2">(!)</span>` : ''}</a><a href="/alliance">Alliance</a><a href="/chat">Chat</a></p>

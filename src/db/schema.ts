@@ -25,6 +25,10 @@ export const users = sqliteTable(
     culturePoints: real('culture_points').notNull().default(0),
     cultureAt: integer('culture_at').notNull().default(0),
     mutedUntil: integer('muted_until').notNull().default(0),
+    /** When the uploaded profile picture last changed (0 = use the tribe default). */
+    avatarAt: integer('avatar_at').notNull().default(0),
+    /** Free "About me" text on the public profile. */
+    bio: text('bio').notNull().default(''),
   },
   (t) => [uniqueIndex('users_username_lower_idx').on(t.usernameLower)],
 );

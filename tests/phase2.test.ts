@@ -349,6 +349,24 @@ describe('credits shop & news ticker', () => {
     expect(() => npcTrade(db, a.userId, a.villageId, res(9000, 0, 0, 0), clock.now())).toThrow();
   });
 
+  it('NPC merchant never loses resources: the unassigned rest is spread over the chosen mix', () => {
+    db.update(villages).set({ wood: 1000, clay: 1000, iron: 1000, crop: 1000, resAt: clock.now() }).where(eq(villages.id, a.villageId)).run();
+    // Player asked for 3000 of 4000 (e.g. production since page load): the extra 1000 must not vanish.
+    const got = npcTrade(db, a.userId, a.villageId, res(1500, 1500, 0, 0), clock.now());
+    expect(got.wood + got.clay + got.iron + got.crop).toBe(4000);
+    expect(got.iron).toBe(0);
+    expect(got.crop).toBe(0);
+    const v = village(a.villageId);
+    expect(Math.floor(v.wood + v.clay + v.iron + v.crop)).toBe(4000);
+    // All zeros → spread evenly.
+    const even = npcTrade(db, a.userId, a.villageId, res(0, 0, 0, 0), clock.now());
+    expect(even).toEqual(res(1000, 1000, 1000, 1000));
+    // Over capacity for one resource is rejected, and no Gold is charged.
+    const before = creditBalance(db, a.userId);
+    expect(() => npcTrade(db, a.userId, a.villageId, res(10_000_000, 0, 0, 0), clock.now())).toThrow(/storage/);
+    expect(creditBalance(db, a.userId)).toBe(before);
+  });
+
   it('players book ticker slots that show for everyone and can be removed with a refund', () => {
     const start = clock.now() + 2 * HOUR;
     const balance = creditBalance(db, a.userId);

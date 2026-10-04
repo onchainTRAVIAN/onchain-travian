@@ -4,6 +4,7 @@ import type { RankKind } from '../../game/queries.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, timer } from './layout.js';
+import { avatarUrl } from '../../game/actions/avatar.js';
 import { paginate } from './parts.js';
 
 /* ---------- Messages ---------- */
@@ -103,7 +104,7 @@ export function heroRankingView(d: { rows: { name: string; level: number; xp: nu
 
 export function rankingView(d: {
   kind: RankKind;
-  rows: { id: number; username: string; tribe: TribeId; pop: number; villages: number; off: number; def: number; loot: number }[];
+  rows: { id: number; username: string; tribe: TribeId; pop: number; villages: number; off: number; def: number; loot: number; avatarAt: number }[];
   offset: number;
   page: number;
   hasMore: boolean;
@@ -117,37 +118,72 @@ export function rankingView(d: {
       <tr><th class="num">#</th><th>Player</th><th class="num">Villages</th><th class="num">${tab?.col ?? ''}</th></tr>
       ${d.rows.map(
         (r, i) => html`<tr class="${r.id === d.myId ? 'me' : ''}"><td class="num">${d.offset + i + 1}</td>
-          <td><a href="/player/${r.id}">${r.username}</a> <span class="muted small">${TRIBES[r.tribe].name}</span></td>
+          <td><img class="avatar sm" src="${avatarUrl({ id: r.id, tribe: r.tribe, avatarAt: r.avatarAt })}" width="20" height="20" alt=""> <a href="/player/${r.id}">${r.username}</a> <span class="muted small">${TRIBES[r.tribe].name}</span></td>
           <td class="num">${r.villages}</td><td class="num">${fmtNum(value(r))}</td></tr>`,
       )}
     </table></div>
     ${paginate(`/stats?k=${d.kind}`, d.page, d.hasMore)}`;
 }
 
+export interface ProfileUser {
+  id: number;
+  username: string;
+  tribe: TribeId;
+  createdAt: number;
+  lastSeenAt: number;
+  offPoints: number;
+  defPoints: number;
+  lootTotal: number;
+  protectedUntil: number;
+  avatarAt: number;
+  bio: string;
+}
+
+function avatarImg(u: { id: number; tribe: string; avatarAt: number }, size: number, cls = 'avatar'): SafeHtml {
+  return html`<img class="${cls}" src="${avatarUrl(u)}" width="${size}" height="${size}" alt="">`;
+}
+
 export function playerView(d: {
-  user: { id: number; username: string; tribe: TribeId; createdAt: number; offPoints: number; defPoints: number; lootTotal: number; protectedUntil: number };
+  user: ProfileUser;
   villages: { id: number; name: string; x: number; y: number; pop: number; isCapital: boolean }[];
   rank: number;
+  alliance: { id: number; tag: string; name: string } | null;
+  heroLevel: number | null;
   isMe: boolean;
   now: number;
 }): SafeHtml {
   const t = TRIBES[d.user.tribe];
   const pop = d.villages.reduce((s, v) => s + v.pop, 0);
-  return html`<h1>${t.icon} ${d.user.username}</h1>
-    <ul class="list">
-      <li><span class="grow">Rank <span class="sub">#${d.rank} by population</span></span></li>
-      <li><span class="grow">Tribe <span class="sub">${t.name}</span></span></li>
-      <li><span class="grow">Population <span class="sub">${fmtNum(pop)} in ${d.villages.length} village${d.villages.length === 1 ? '' : 's'}</span></span></li>
-      <li><span class="grow">Attack / defence points <span class="sub">${fmtNum(d.user.offPoints)} / ${fmtNum(d.user.defPoints)}</span></span></li>
-      <li><span class="grow">Playing since <span class="sub">${fmtDateTime(d.user.createdAt).slice(0, 10)}</span></span></li>
-      ${d.user.protectedUntil > d.now ? html`<li><span class="grow">🛡️ Beginner protection <span class="sub">${timer(d.user.protectedUntil, d.now, false)} left</span></span></li>` : ''}
-    </ul>
-    <h2>Villages</h2>
-    <ul class="list">${d.villages.map(
-      (v) => html`<li><span class="grow"><a href="/map/tile?x=${v.x}&amp;y=${v.y}">${v.name}</a>${v.isCapital ? html` <span class="small">👑</span>` : ''}
-        <span class="sub">${fmtNum(v.pop)} pop</span></span><span class="small muted">(${v.x}|${v.y})</span></li>`,
-    )}</ul>
-    ${d.isMe ? '' : html`<div class="actions"><a class="btn" href="/messages/new?to=${encodeURIComponent(d.user.username)}">✉️ Send message</a></div>`}`;
+  const online = d.now - d.user.lastSeenAt < 15 * 60_000;
+  return html`<h1>Player profile</h1>
+    <div class="profile">
+      <div class="pcard">
+        ${avatarImg(d.user, 128, 'avatar big')}
+        <div class="pname">${d.user.username}</div>
+        <div class="ptribe"><img src="/static/img/units/${d.user.tribe}-1.svg" width="16" height="16" alt=""> ${t.name}</div>
+        <div class="pstatus ${online ? 'c1' : 'none'}">${online ? '● online' : `last seen ${fmtAgo(d.user.lastSeenAt, d.now)}`}</div>
+      </div>
+      <table class="pdetails"><thead><tr><th colspan="2">Details</th></tr></thead><tbody>
+        <tr><th>Rank</th><td>${d.rank}.</td></tr>
+        <tr><th>Tribe</th><td>${t.name}</td></tr>
+        <tr><th>Alliance</th><td>${d.alliance ? html`<a href="/alliance/${d.alliance.id}">[${d.alliance.tag}] ${d.alliance.name}</a>` : html`<span class="none">-</span>`}</td></tr>
+        <tr><th>Villages</th><td>${d.villages.length}</td></tr>
+        <tr><th>Population</th><td>${fmtNum(pop)}</td></tr>
+        <tr><th>Attack points</th><td>${fmtNum(d.user.offPoints)}</td></tr>
+        <tr><th>Defence points</th><td>${fmtNum(d.user.defPoints)}</td></tr>
+        <tr><th>Resources raided</th><td>${fmtNum(d.user.lootTotal)}</td></tr>
+        ${d.heroLevel !== null ? html`<tr><th>Hero</th><td>level ${d.heroLevel}</td></tr>` : ''}
+        <tr><th>Playing since</th><td>${fmtDateTime(d.user.createdAt).slice(0, 10)}</td></tr>
+        ${d.user.protectedUntil > d.now ? html`<tr><th>Protection</th><td>${timer(d.user.protectedUntil, d.now, false)}</td></tr>` : ''}
+      </tbody></table>
+    </div>
+    ${d.user.bio ? html`<div class="pbio"><b>About:</b><div class="msgbody">${d.user.bio}</div></div>` : ''}
+    <table><thead><tr><th>Villages</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
+    ${d.villages.map(
+      (v) => html`<tr><td><a href="/map/tile?x=${v.x}&amp;y=${v.y}">${v.name}</a>${v.isCapital ? html` <span class="c2 small">(capital)</span>` : ''}</td>
+        <td class="num">${fmtNum(v.pop)}</td><td class="center">(${v.x}|${v.y})</td></tr>`,
+    )}</tbody></table>
+    <p>${d.isMe ? html`<a href="/account">» Edit profile</a>` : html`<a href="/messages/new?to=${encodeURIComponent(d.user.username)}">» Write message</a>`}</p>`;
 }
 
 /* ---------- Account & help ---------- */
@@ -159,27 +195,42 @@ export function accountView(d: {
   protectedUntil: number;
   isAdmin: boolean;
   userId: number;
+  avatarAt: number;
+  bio: string;
   csrf: string;
   now: number;
 }): SafeHtml {
   const t = TRIBES[d.tribe];
-  return html`<h1>👤 ${d.username}</h1>
-    <p>${t.icon} ${t.name} — ${t.tagline}</p>
-    ${d.protectedUntil > d.now ? html`<div class="note">🛡️ Beginner protection ends in ${timer(d.protectedUntil, d.now, false)}.</div>` : ''}
-    <h2>Rename village</h2>
-    <form method="post" action="/account/rename">
-      ${csrfField(d.csrf)}
-      <label for="vn">Name of ${d.village.name}</label>
-      <input id="vn" type="text" name="name" value="${d.village.name}" required minlength="2" maxlength="30">
-      <div class="actions"><button type="submit">Save</button></div>
+  const me = { id: d.userId, tribe: d.tribe, avatarAt: d.avatarAt };
+  return html`<h1>Profile</h1>
+    <div class="profile">
+      <div class="pcard">${avatarImg(me, 128, 'avatar big')}
+        <div class="pname">${d.username}</div>
+        <div class="ptribe"><img src="/static/img/units/${d.tribe}-1.svg" width="16" height="16" alt=""> ${t.name}</div></div>
+      <div class="pedit">
+        <h2>Profile picture</h2>
+        <form method="post" action="/account/avatar?_csrf=${encodeURIComponent(d.csrf)}" enctype="multipart/form-data" class="block">
+          <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp,image/gif" required>
+          <button type="submit">Upload</button>
+          <p class="small muted">JPG, PNG, WebP or GIF up to 5 MB. It is cropped to a square and compressed automatically.</p>
+        </form>
+        ${d.avatarAt > 0
+          ? html`<form method="post" action="/account/avatar/remove">${csrfField(d.csrf)}<button type="submit" class="small secondary">Use my tribe picture instead</button></form>`
+          : html`<p class="small muted">You are using the ${t.name} picture.</p>`}
+      </div>
+    </div>
+    ${d.protectedUntil > d.now ? html`<p class="note">Beginner’s protection ends in ${timer(d.protectedUntil, d.now, false)}.</p>` : ''}
+    <h2>About me</h2>
+    <form method="post" action="/account/bio" class="block">${csrfField(d.csrf)}
+      <textarea name="bio" maxlength="500" rows="5" aria-label="About me">${d.bio}</textarea>
+      <p><button type="submit">Save</button> <span class="small muted">Shown on your public profile (max 500 characters).</span></p>
     </form>
-    <h2>More</h2>
-    <div class="actions">
-      <a class="btn secondary" href="/player/${d.userId}">Public profile</a>
-      <a class="btn secondary" href="/wallet">🦊 Wallet & token perks</a>
-      <a class="btn secondary" href="/help">Game guide</a>
-      ${d.isAdmin ? html`<a class="btn danger" href="/admin">🛡️ Admin</a>` : ''}
-    </div>`;
+    <h2>Rename village</h2>
+    <form method="post" action="/account/rename" class="block">${csrfField(d.csrf)}
+      <input id="vn" type="text" name="name" value="${d.village.name}" required minlength="2" maxlength="30" aria-label="Village name">
+      <button type="submit">Save</button>
+    </form>
+    <p><a href="/player/${d.userId}">» Public profile</a> | <a href="/wallet">» Wallet &amp; token perks</a>${d.isAdmin ? html` | <a href="/admin">» Admin</a>` : ''}</p>`;
 }
 
 export function helpView(): SafeHtml {

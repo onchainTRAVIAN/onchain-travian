@@ -1,9 +1,18 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
+import multer from 'multer';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
-import { reports } from '../../db/schema.js';
+import { heroes, reports, users } from '../../db/schema.js';
+import { membership } from '../../game/actions/alliance.js';
+
+function allianceTagFull(userId: number): { id: number; tag: string; name: string } | null {
+  const m = membership(db, userId);
+  return m ? { id: m.a.id, tag: m.a.tag, name: m.a.name } : null;
+}
 import { renameVillage } from '../../game/actions/account.js';
+import { AVATAR_MAX_UPLOAD, avatarPath, hasAvatar, removeAvatar, saveAvatar, setBio } from '../../game/actions/avatar.js';
+import { GameError } from '../../game/errors.js';
 import { deleteMessage, inbox, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
 import { parseReport } from '../../game/engine/reports.js';
 import { heroRankings, playerProfile, playerRank, rankings, reportList, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
@@ -204,6 +213,8 @@ socialRouter.get('/player/:id', (req, res) => {
       user: profile.user,
       villages: profile.villages,
       rank: playerRank(db, profile.user.id),
+      alliance: allianceTagFull(profile.user.id),
+      heroLevel: db.select({ l: heroes.level }).from(heroes).where(eq(heroes.userId, profile.user.id)).get()?.l ?? null,
       isMe: req.ctx.user?.id === profile.user.id,
       now: req.ctx.now,
     }),
@@ -227,6 +238,8 @@ socialRouter.get('/account', requireAuth, (req, res) => {
       protectedUntil: page.chrome.user.protectedUntil,
       isAdmin: page.chrome.user.role === 'admin',
       userId: ctx.user.id,
+      avatarAt: page.chrome.user.avatarAt,
+      bio: page.chrome.user.bio,
       csrf: ctx.csrf,
       now: ctx.now,
     }),
@@ -244,6 +257,70 @@ socialRouter.post(
     res.redirect(303, '/account');
   }, '/account'),
 );
+
+/* ---------- Avatars & about text ---------- */
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: AVATAR_MAX_UPLOAD, files: 1 } }).single('avatar');
+
+socialRouter.post('/account/avatar', requireAuth, (req, res, next) => {
+  upload(req, res, (err: unknown) => {
+    const ctx = authed(req);
+    if (err) {
+      setFlash(res, 'error', err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE' ? 'Pictures can be at most 5 MB' : 'Upload failed, please try again');
+      res.redirect(303, '/account');
+      return;
+    }
+    const file = (req as Request & { file?: Express.Multer.File }).file;
+    if (!file) {
+      setFlash(res, 'error', 'Choose a picture to upload');
+      res.redirect(303, '/account');
+      return;
+    }
+    saveAvatar(db, ctx.user.id, file.buffer, ctx.now)
+      .then((bytes) => {
+        setFlash(res, 'ok', `Profile picture saved (${Math.ceil(bytes / 1024)} KB).`);
+        res.redirect(303, '/account');
+      })
+      .catch((e: unknown) => {
+        if (e instanceof GameError) {
+          setFlash(res, 'error', e.message);
+          res.redirect(303, '/account');
+          return;
+        }
+        next(e);
+      });
+  });
+});
+
+socialRouter.post(
+  '/account/avatar/remove',
+  requireAuth,
+  formAction(z.object({}), (req, res) => {
+    removeAvatar(db, authed(req).user.id);
+    setFlash(res, 'ok', 'Your tribe picture is back.');
+    res.redirect(303, '/account');
+  }, '/account'),
+);
+
+socialRouter.post(
+  '/account/bio',
+  requireAuth,
+  formAction(z.object({ bio: z.string().max(2000) }), (req, res, d) => {
+    setBio(db, authed(req).user.id, d.bio);
+    setFlash(res, 'ok', 'Profile saved.');
+    res.redirect(303, '/account');
+  }, '/account'),
+);
+
+socialRouter.get('/avatar/:id', (req, res) => {
+  const id = intParam(req.params.id, 0);
+  if (id > 0 && hasAvatar(id)) {
+    res.set('Cache-Control', 'public, max-age=86400').type('image/webp').sendFile(avatarPath(id));
+    return;
+  }
+  const u = db.select({ tribe: users.tribe }).from(users).where(eq(users.id, id)).get();
+  res.redirect(302, `/static/img/avatars/${u?.tribe ?? 'romans'}.svg`);
+});
 
 socialRouter.get('/help', (req, res) => {
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
