@@ -1,10 +1,10 @@
-import { and, asc, eq, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, lte, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { buildOrders, celebrations, heroes, movements, researchOrders, slots, tiles, troops, users, villages } from '../../db/schema.js';
 import { finishCelebration } from '../actions/celebration.js';
 import { config } from '../../config.js';
 import { BUILDINGS, RALLY_SLOT, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
-import { catapultDamage, computeLoot, ramDamage, resolveBattle, resolveScouting, type ArmyGroup } from '../rules/battle.js';
+import { WALL_DURABILITY, canAimTwice, cataMorale, catapultResult, catapultTargetAllowed, computeLoot, moraleMalus, resolveBattle, resolveScouting, scoutPoints, type ArmyGroup } from '../rules/battle.js';
 import { distance, travelTimeMs } from '../rules/map.js';
 import { OASIS_RANGE, oasisSlots } from '../rules/expansion.js';
 import { RESOURCE_KEYS, addRes, res, sumRes, subRes, type Resources } from '../rules/resources.js';
@@ -29,7 +29,7 @@ import {
 } from './state.js';
 import { addReport, type BattleReportData, type ReportSide } from './reports.js';
 import { scheduleReturn, sendTroopsHome, villageInfo, type VillageInfo } from './movement.js';
-import { canExpand, conquerVillage } from './expansion.js';
+import { canExpand, conquerVillage, destroyVillage } from './expansion.js';
 import { createVillage } from './world.js';
 import {
   damageHero,
@@ -68,14 +68,19 @@ function countType(tribe: TribeId, units: UnitCounts, type: string): number {
   return units.reduce((s, n, i) => s + (unitDef(tribe, i).type === type ? n : 0), 0);
 }
 
-function pickCatapultTarget(state: VillageState, requested: string | null): VillageState['slots'][number] | undefined {
-  const candidates = state.slots.filter((s) => s.building && s.level > 0 && s.slot > 18 && s.slot !== WALL_SLOT && s.slot !== RALLY_SLOT);
-  if (requested) {
-    const match = candidates.filter((s) => s.building === requested).sort((a, b) => b.level - a.level)[0];
+/**
+ * Where a catapult volley lands: the requested building type if the attacker's Rally Point allows it
+ * (highest level of that type), otherwise random — random hits can land on any building or field
+ * (never the wall; rams deal with that).
+ */
+function pickCatapultTarget(state: VillageState, requested: string | null, rallyLevel: number, forceRandom: boolean): VillageState['slots'][number] | undefined {
+  const any = state.slots.filter((s) => s.building && s.level > 0 && s.slot !== WALL_SLOT);
+  if (requested && !forceRandom && catapultTargetAllowed(requested, rallyLevel)) {
+    const match = any.filter((s) => s.building === requested).sort((a, b) => b.level - a.level)[0];
     if (match) return match;
   }
-  if (candidates.length === 0) return undefined;
-  return candidates[Math.floor(Math.random() * candidates.length)];
+  if (any.length === 0) return undefined;
+  return any[Math.floor(Math.random() * any.length)];
 }
 
 function attackingHero(q: Q, home: VillageInfo, mv: MovementRow): HeroRow | undefined {
@@ -98,15 +103,21 @@ function playerPop(q: Q, userId: number | null): number {
 }
 
 /** Teutons' Brewery (in the capital): +1% attack per level for all their troops. */
-function breweryBonus(q: Q, home: VillageInfo): number {
-  if (home.tribe !== 'teutons' || home.userId === null) return 1;
-  const level =
+function breweryLevel(q: Q, userId: number | null): number {
+  if (userId === null) return 0;
+  return (
     q.select({ l: sql<number>`coalesce(max(${slots.level}), 0)` })
       .from(slots)
       .innerJoin(villages, eq(villages.id, slots.villageId))
-      .where(and(eq(villages.userId, home.userId), eq(slots.building, 'brewery')))
-      .get()?.l ?? 0;
-  return 1 + 0.01 * level;
+      .where(and(eq(villages.userId, userId), eq(slots.building, 'brewery')))
+      .get()?.l ?? 0
+  );
+}
+
+/** Teuton Brewery: +1% attack per level (and, elsewhere, random catapults and weaker chiefs). */
+function breweryBonus(q: Q, home: VillageInfo): number {
+  if (home.tribe !== 'teutons') return 1;
+  return 1 + 0.01 * breweryLevel(q, home.userId);
 }
 
 function readPrisoners(v: { prisoners: string }): Record<string, UnitCounts> {
@@ -123,16 +134,36 @@ function readPrisoners(v: { prisoners: string }): Record<string, UnitCounts> {
   return {};
 }
 
-/** Put attackers into free Gaul traps (proportionally across unit types). */
+function greatCelebrationRunning(q: Q, villageId: number, t: number): boolean {
+  return !!q
+    .select({ id: celebrations.id })
+    .from(celebrations)
+    .where(and(eq(celebrations.villageId, villageId), eq(celebrations.kind, 'great'), lte(celebrations.startAt, t), gt(celebrations.finishAt, t)))
+    .get();
+}
+
+/**
+ * Prisoners freed by an attack broke out of their traps: those traps are gone, but a third of
+ * the freed count is repaired at once (T3.6).
+ */
+function repairTraps(q: Q, villageId: number, freed: number): void {
+  const v = q.select({ traps: villages.traps }).from(villages).where(eq(villages.id, villageId)).get();
+  if (!v) return;
+  const left = Math.max(0, v.traps - freed) + Math.floor(freed / 3);
+  q.update(villages).set({ traps: Math.min(v.traps, left) }).where(eq(villages.id, villageId)).run();
+}
+
+/** Put attackers into free Gaul traps (proportionally across unit types). Traps must be built first. */
 function trapAttackers(q: Q, target: VillageState, home: VillageInfo, units: UnitCounts): UnitCounts {
   const caught = emptyUnits();
   if (target.tribe !== 'gauls' || target.userId === null) return caught;
   let capacity = 0;
   for (const s of target.slots) if (s.building === 'trapper') capacity += trapCapacity(s.level);
-  if (capacity <= 0) return caught;
+  const built = Math.min(capacity, target.village.traps);
+  if (built <= 0) return caught;
   const prisoners = readPrisoners(target.village);
   const held = Object.values(prisoners).reduce((sum, c) => sum + totalUnits(c), 0);
-  let free = capacity - held;
+  let free = built - held;
   const total = totalUnits(units);
   if (free <= 0 || total <= 0) return caught;
   const share = Math.min(1, free / total);
@@ -197,18 +228,15 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const wallSlot = target.slots.find((s) => s.slot === WALL_SLOT);
   const wallLevel = wallSlot?.level ?? 0;
 
-  // --- Scouting ---
+  // --- Scouting (T3: only scouts fight; attack 35/scout × morale vs 20/defending scout × wall) ---
   if (mv.kind === 'scout') {
+    const attackerGroup: ArmyGroup = { tribe: home.tribe, units: attackerUnits, upgrades: home.attackUpgrades };
+    const offPts = scoutPoints(attackerGroup, 'attack') * moraleMalus(playerPop(q, home.userId), playerPop(q, target.userId));
+    const wallMult = target.userId !== null ? Math.pow(1 + TRIBES[target.tribe].wallPerLevel, wallLevel) : 1;
+    const defPts = defenders.reduce((s, d) => s + scoutPoints(d.group, 'defense'), 0) * wallMult;
     const defScouts = defenders.reduce((s, d) => s + countType(d.group.tribe, d.group.units, 'scout'), 0);
-    const outcome = resolveScouting(countType(home.tribe, attackerUnits, 'scout'), defScouts);
-    const losses = emptyUnits();
-    let remaining = outcome.scoutLosses;
-    attackerUnits.forEach((n, i) => {
-      if (remaining <= 0 || n <= 0 || unitDef(home.tribe, i).type !== 'scout') return;
-      const l = Math.min(n, remaining);
-      losses[i] = l;
-      remaining -= l;
-    });
+    const outcome = resolveScouting(offPts, defPts);
+    const losses = attackerUnits.map((n, i) => (unitDef(home.tribe, i).type === 'scout' ? Math.min(n, Math.round(n * outcome.lossRatio)) : 0));
     const data: BattleReportData = {
       type: 'battle',
       mode: 'scout',
@@ -218,8 +246,8 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
       defendersHidden: !outcome.success,
       loot: res(),
       capacity: 0,
-      attackPower: 0,
-      defensePower: 0,
+      attackPower: Math.round(offPts),
+      defensePower: Math.round(defPts),
       scout: outcome.success
         ? {
             success: true,
@@ -231,6 +259,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
         : { success: false },
     };
     addReport(q, home.userId, 'scout', `${home.name} scouts ${targetInfo.name}`, data, t);
+    // The defender only notices scouts when he has scouts of his own.
     if (defScouts > 0) {
       addReport(q, targetInfo.userId, outcome.success ? 'defense_lost' : 'defense_won', `${targetInfo.name} was scouted by ${home.name}`, { ...data, scout: { success: outcome.success } }, t);
     }
@@ -248,6 +277,13 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   if (totalUnits(trapped) > 0) notes.push(`${totalUnits(trapped)} attacking soldiers were caught in traps.`);
 
   const heroGroups: ArmyGroup[] = defHeroes.map((h) => ({ tribe: 'romans', units: emptyUnits(), heroStrength: heroStrength(h) }));
+  const slotOf = (type: string) => TRIBES[home.tribe].units.findIndex((u) => u.type === type);
+  const ramSlot = slotOf('ram');
+  const cataSlot = slotOf('catapult');
+  // Stonemason (capital only) makes buildings and the wall sturdier against siege.
+  const durability = targetInfo.isCapital ? 1 + 0.1 * levelOf(target, 'stonemason') : 1;
+  const attackerPop = playerPop(q, home.userId);
+  const defenderPop = playerPop(q, target.userId);
   const result = resolveBattle({
     mode,
     attacker: { tribe: home.tribe, units: fighting, upgrades: home.attackUpgrades, heroStrength: aHero ? heroStrength(aHero) : 0 },
@@ -257,17 +293,24 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     attackMultiplier: attackerMods.attack * heroOffMultiplier(aHero) * breweryBonus(q, home),
     defenseMultiplier: defenderMods.defense * heroDefMultiplier(ownerHero),
     residenceLevel: Math.max(levelOf(target, 'residence'), levelOf(target, 'palace')),
-    attackerPop: playerPop(q, home.userId),
-    defenderPop: playerPop(q, target.userId),
+    attackerPop,
+    defenderPop,
+    rams: ramSlot >= 0 ? { count: fighting[ramSlot] ?? 0, upgrade: home.attackUpgrades?.[ramSlot] ?? 0 } : undefined,
+    siegeDurability: durability,
+    wallDurability: target.userId !== null ? WALL_DURABILITY[target.tribe] ?? 1 : 1,
+    extraUnits: (aHero ? 1 : 0) + defHeroes.length,
   });
 
   let survivors = subUnits(fighting, result.attackerLosses);
-  // A victorious attack frees this village's soldiers held in the enemy's traps.
+  // A victorious attack frees soldiers of this village (and of allies) held in the enemy's traps:
+  // a quarter of them die in the escape, and a third of the broken traps are rebuilt.
   if (result.attackerWon && mode === 'attack') {
     const freed = releasePrisoners(q, targetId, home.id);
     if (totalUnits(freed) > 0) {
-      survivors = addUnits(survivors, freed);
-      notes.push(`${totalUnits(freed)} of your trapped soldiers were freed.`);
+      const alive = freed.map((n) => n - Math.floor(n / 4));
+      survivors = addUnits(survivors, alive);
+      repairTraps(q, targetId, totalUnits(freed));
+      notes.push(`${totalUnits(alive)} of your trapped soldiers were freed (${totalUnits(freed) - totalUnits(alive)} died escaping).`);
     }
   }
   defenders.forEach((d, idx) => {
@@ -294,56 +337,87 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   let buildingChange: BattleReportData['building'];
   let loyaltyChange: BattleReportData['loyalty'];
   let conquered = false;
+  let destroyed = false;
+
+  // Rams hit the wall in every normal attack, won or lost.
+  if (mode === 'attack' && wallSlot && wallLevel > 0 && ramSlot >= 0 && (fighting[ramSlot] ?? 0) > 0) {
+    wallChange = { from: wallLevel, to: result.wallAfter };
+    if (result.wallAfter < wallLevel) {
+      q.update(slots).set({ level: result.wallAfter }).where(and(eq(slots.villageId, targetId), eq(slots.slot, WALL_SLOT))).run();
+    }
+  }
 
   if (mode === 'attack' && result.attackerWon) {
-    const rams = countType(home.tribe, survivors, 'ram');
-    const wallDown = ramDamage(rams, wallLevel);
-    if (wallSlot && rams > 0) {
-      wallChange = { from: wallLevel, to: wallLevel - wallDown };
-      if (wallDown > 0) q.update(slots).set({ level: wallLevel - wallDown }).where(and(eq(slots.villageId, targetId), eq(slots.slot, WALL_SLOT))).run();
-    }
-    const catas = countType(home.tribe, survivors, 'catapult');
+    // Catapults: all that were sent fire; targets depend on the attacker's Rally Point level.
+    const catas = cataSlot >= 0 ? fighting[cataSlot] ?? 0 : 0;
     if (catas > 0) {
-      const hit = pickCatapultTarget(target, mv.catapultTarget);
-      if (hit?.building) {
-        const durability = targetInfo.isCapital ? 1 + 0.1 * levelOf(target, 'stonemason') : 1;
-        const down = catapultDamage(catas, hit.level, durability);
-        const to = hit.level - down;
-        buildingChange = { name: BUILDINGS[hit.building as BuildingId]?.name ?? hit.building, from: hit.level, to };
-        if (down > 0) {
-          const keepType = hit.building === 'main' || to > 0;
+      const homeState = loadVillage(q, home.id);
+      const rally = homeState ? levelOf(homeState, 'rally') : 0;
+      const random = home.tribe === 'teutons' && breweryLevel(q, home.userId) > 0; // drunk catapults aim randomly
+      const wanted = (mv.catapultTarget ?? '').split(',').filter(Boolean);
+      const volleys = wanted.length >= 2 && canAimTwice(rally, catas) ? [wanted[0] ?? null, wanted[1] ?? null] : [wanted[0] ?? null];
+      const morale = cataMorale(attackerPop, defenderPop);
+      const changes: string[] = [];
+      for (const want of volleys) {
+        const fresh = loadVillage(q, targetId);
+        if (!fresh) break;
+        const hit = pickCatapultTarget(fresh, want, rally, random);
+        if (!hit?.building) continue;
+        const to = catapultResult(hit.level, Math.floor(catas / volleys.length), home.attackUpgrades?.[cataSlot] ?? 0, result.ratio, durability, morale);
+        const name = BUILDINGS[hit.building as BuildingId]?.name ?? hit.building;
+        changes.push(`${name} ${hit.level} → ${to}`);
+        buildingChange ??= { name, from: hit.level, to };
+        if (to < hit.level) {
+          const isField = hit.slot <= 18;
+          const keepType = isField || hit.building === 'main' || to > 0;
           q.update(slots).set({ level: to, building: keepType ? hit.building : null }).where(and(eq(slots.villageId, targetId), eq(slots.slot, hit.slot))).run();
           if (!keepType) q.delete(buildOrders).where(and(eq(buildOrders.villageId, targetId), eq(buildOrders.slot, hit.slot))).run();
-          refreshPopulation(q, targetId);
+        }
+      }
+      if (changes.length > 1) notes.push(`Catapults: ${changes.join(', ')}.`);
+      const pop = refreshPopulation(q, targetId);
+      // A village shot down to 0 population is destroyed (never a capital or a player's last village).
+      if (pop <= 0 && !targetInfo.isCapital && target.userId !== null) {
+        const count = q.select({ id: villages.id }).from(villages).where(eq(villages.userId, target.userId)).all().length;
+        if (count > 1) {
+          destroyVillage(q, targetId, t);
+          destroyed = true;
+          notes.push(`${targetInfo.name} was razed to the ground.`);
         }
       }
     }
 
     // Chiefs lower loyalty; at zero the village changes hands.
     const chiefs = countType(home.tribe, survivors, 'chief');
-    if (chiefs > 0 && target.userId !== null && home.userId !== null) {
+    if (!destroyed && chiefs > 0 && target.userId !== null && home.userId !== null) {
       const fresh = loadVillage(q, targetId);
       const protectedBy = fresh && (levelOf(fresh, 'residence') > 0 || levelOf(fresh, 'palace') > 0);
+      const ownerVillages = q.select({ id: villages.id }).from(villages).where(eq(villages.userId, target.userId)).all().length;
+      const check = canExpand(q, home.userId, home.id, t);
       if (targetInfo.isCapital) notes.push('A capital cannot be conquered.');
+      else if (ownerVillages <= 1) notes.push('A player’s last village cannot be conquered.');
       else if (protectedBy) notes.push('The Residence/Palace must be destroyed before loyalty can be lowered.');
+      else if (!check.ok) notes.push(`Your chiefs could not persuade anyone: ${check.reason ?? 'not enough culture points or expansion slots'}.`);
       else {
         const [lo, hi] = TRIBES[home.tribe].chiefPower;
         let drop = 0;
-        for (let i = 0; i < chiefs; i++) drop += lo + Math.floor(Math.random() * (hi - lo + 1));
+        for (let i = 0; i < chiefs; i++) {
+          drop += lo + Math.floor(Math.random() * (hi - lo + 1));
+          if (greatCelebrationRunning(q, home.id, t)) drop += 5;
+          if (greatCelebrationRunning(q, targetId, t)) drop -= 5;
+        }
+        drop *= moraleMalus(attackerPop, defenderPop); // chiefs of a much bigger attacker persuade less
+        if (home.tribe === 'teutons' && breweryLevel(q, home.userId) > 0) drop /= 2; // the Brewery dulls persuasion
+        drop = Math.max(0, drop);
         const from = target.village.loyalty;
         const to = Math.max(0, from - drop);
         loyaltyChange = { from: Math.round(from), to: Math.round(to) };
         q.update(villages).set({ loyalty: to }).where(eq(villages.id, targetId)).run();
         if (to <= 0) {
-          const check = canExpand(q, home.userId, home.id, t);
-          if (check.ok) {
-            conquerVillage(q, targetId, home.userId, home.id, t);
-            survivors = consumeOne(home.tribe, survivors, 'chief');
-            conquered = true;
-            notes.push(`${targetInfo.name} now belongs to ${home.username}!`);
-          } else {
-            notes.push(`Loyalty is gone, but the village could not be taken: ${check.reason ?? ''}`);
-          }
+          conquerVillage(q, targetId, home.userId, home.id, t);
+          survivors = consumeOne(home.tribe, survivors, 'chief');
+          conquered = true;
+          notes.push(`${targetInfo.name} now belongs to ${home.username}!`);
         }
       }
     }
@@ -351,7 +425,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
 
   let loot = res();
   const capacity = carryOf(home.tribe, survivors, attackerMods.troopCarry);
-  if (!conquered && totalUnits(survivors) > 0 && (mode === 'raid' || result.attackerWon) && capacity > 0) {
+  if (!conquered && !destroyed && totalUnits(survivors) > 0 && (mode === 'raid' || result.attackerWon) && capacity > 0) {
     const v = q.select().from(villages).where(eq(villages.id, targetId)).get();
     const fresh = v ? stockOf(v) : res();
     loot = computeLoot(fresh, hiddenByCranny(target, home.tribe), capacity);

@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
 import { movements, slots, tiles, trainOrders, troops, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
@@ -167,6 +167,39 @@ export function ownedTroopTotals(q: Q, villageId: number): UnitCounts {
   return total;
 }
 
+/** Tribe of the player owning a village (troops keep their owner's tribe wherever they are). */
+function tribeOfVillage(q: Q, villageId: number): TribeId {
+  const r = q.select({ tribe: users.tribe }).from(villages).innerJoin(users, eq(users.id, villages.userId)).where(eq(villages.id, villageId)).get();
+  return (r?.tribe ?? 'romans') as TribeId;
+}
+
+/**
+ * Crop eaten by troops for which this village pays (T3.6): every army stationed here — its own
+ * and reinforcements from others — plus its own troops on the move and its own soldiers held
+ * in enemy traps. Its troops stationed in other villages are fed by those hosts.
+ */
+export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId): number {
+  let total = 0;
+  for (const row of q.select({ owner: troops.ownerVillageId, units: troops.units }).from(troops).where(eq(troops.villageId, villageId)).all()) {
+    total += upkeepOf(row.owner === villageId ? tribe : tribeOfVillage(q, row.owner), parseUnits(row.units));
+  }
+  let moving = emptyUnits();
+  for (const m of q.select({ units: movements.units }).from(movements).where(eq(movements.fromVillageId, villageId)).all()) {
+    moving = addUnits(moving, parseUnits(m.units));
+  }
+  total += upkeepOf(tribe, moving);
+  const key = String(villageId);
+  for (const v of q.select({ prisoners: villages.prisoners }).from(villages).where(sql`${villages.prisoners} like ${'%"' + key + '"%'}`).all()) {
+    try {
+      const p = JSON.parse(v.prisoners) as Record<string, unknown>;
+      if (p[key]) total += upkeepOf(tribe, parseUnits(JSON.stringify(p[key])));
+    } catch {
+      // ignore malformed rows
+    }
+  }
+  return total;
+}
+
 function heroUpkeep(q: Q, villageId: number): number {
   const h = q.select({ status: heroes.status }).from(heroes).where(eq(heroes.homeVillageId, villageId)).get();
   return h && h.status !== 'dead' && h.status !== 'reviving' ? HERO_UPKEEP : 0;
@@ -177,7 +210,7 @@ function heroUpkeep(q: Q, villageId: number): number {
  * consumption does NOT scale with world speed (only production, times and culture do).
  */
 export function cropUpkeep(q: Q, state: VillageState): number {
-  return state.village.pop + upkeepOf(state.tribe, ownedTroopTotals(q, state.village.id)) + heroUpkeep(q, state.village.id);
+  return state.village.pop + fedTroopUpkeep(q, state.village.id, state.tribe) + heroUpkeep(q, state.village.id);
 }
 
 export interface Economy {
@@ -313,31 +346,40 @@ export function refreshPopulation(q: Q, villageId: number): number {
  * most crop-hungry first, until upkeep fits production again.
  */
 function starve(q: Q, state: VillageState, deficitPerHour: number, t: number): void {
+  // T3.6 order: reinforcements from other villages starve first, then the village's own army;
+  // within each army the most crop-hungry units go first.
   let toCut = deficitPerHour;
-  const home = troopsAt(q, state.village.id, state.village.id);
-  const order = home
-    .map((n, i) => ({ i, n, upkeep: TRIBES[state.tribe].units[i]?.upkeep ?? 1 }))
-    .filter((u) => u.n > 0)
-    .sort((a, b) => b.upkeep - a.upkeep);
-  const lost = emptyUnits();
-  for (const u of order) {
+  const rows = q.select().from(troops).where(eq(troops.villageId, state.village.id)).all();
+  rows.sort((a, b) => Number(a.ownerVillageId === state.village.id) - Number(b.ownerVillageId === state.village.id));
+  for (const row of rows) {
     if (toCut <= 0) break;
-    const kill = Math.min(u.n, Math.ceil(toCut / u.upkeep));
-    lost[u.i] = kill;
-    toCut -= kill * u.upkeep;
-  }
-  if (lost.every((n) => n === 0)) return;
-  setTroopsAt(q, state.village.id, state.village.id, home.map((n, i) => n - (lost[i] ?? 0)));
-  if (state.userId !== null) {
-    q.insert(reports)
-      .values({
-        userId: state.userId,
-        kind: 'starvation',
-        title: `Troops starved in ${state.village.name}`,
-        data: JSON.stringify({ type: 'return', villageName: state.village.name, units: lost, tribe: state.tribe, loot: res() }),
-        createdAt: t,
-      })
-      .run();
+    const tribe = row.ownerVillageId === state.village.id ? state.tribe : tribeOfVillage(q, row.ownerVillageId);
+    const units = parseUnits(row.units);
+    const order = units
+      .map((n, i) => ({ i, n, upkeep: TRIBES[tribe].units[i]?.upkeep ?? 1 }))
+      .filter((u) => u.n > 0)
+      .sort((a, b) => b.upkeep - a.upkeep);
+    const lost = emptyUnits();
+    for (const u of order) {
+      if (toCut <= 0) break;
+      const kill = Math.min(u.n, Math.ceil(toCut / u.upkeep));
+      lost[u.i] = kill;
+      toCut -= kill * u.upkeep;
+    }
+    if (lost.every((n) => n === 0)) continue;
+    setTroopsAt(q, state.village.id, row.ownerVillageId, units.map((n, i) => n - (lost[i] ?? 0)));
+    const ownerId = row.ownerVillageId === state.village.id ? state.userId : q.select({ u: villages.userId }).from(villages).where(eq(villages.id, row.ownerVillageId)).get()?.u ?? null;
+    if (ownerId !== null) {
+      q.insert(reports)
+        .values({
+          userId: ownerId,
+          kind: 'starvation',
+          title: `Troops starved in ${state.village.name}`,
+          data: JSON.stringify({ type: 'return', villageName: state.village.name, units: lost, tribe, loot: res() }),
+          createdAt: t,
+        })
+        .run();
+    }
   }
 }
 

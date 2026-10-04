@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0 — 2026-10-04 (classic T3.6 rules, phase 1: combat)
+- Siege uses the T3 formula (Kirilloid/TravianZ): demolition points 4·σ(att/def)·⌊engines/durability⌋·1.0205^upgrade, all engines sent count; rams strike the wall before the fight (battle recomputed at the lower wall) and damage it even in lost attacks; tribe wall sturdiness (Romans 1, Gauls 2, Teutons 5); Stonemason in the capital.
+- Catapult targets by Rally Point level (random < 3, storage at 3, fields & bonus buildings at 5, all but cranny/stonemason/trapper/walls at 10), two targets at Rally Point 20 with ≥ 20 catapults; random hits can land on fields; catapult morale; Teuton Brewery makes catapults random and halves chief persuasion.
+- Villages shot down to 0 population are razed (not capitals or a player's last village).
+- Morale as in T3.6 (attack × max(0.667, popRatio^−0.2·min(1, att/def))), scouting with scout strength (35/20, wall, (def/att)^1.5 losses), smithy upgrades stat + (stat + 300·upkeep/7)(1.007^L − 1).
+- Reinforcements are fed by the host village; prisoners are fed by their home; starvation hits reinforcements first.
+- Gaul traps must be built (20/30/10/20 each) up to Trapper capacity; prisoners can be released by the trap owner; freed prisoners lose a quarter and only a third of traps are repaired.
+- Conquest: no loyalty drop without culture points/expansion slot, last village protected, great celebrations ±5, morale; wall and tribe-only buildings destroyed on conquest; loyalty regrows 1%/h per Residence/Palace level only.
+
 ## 0.7.0 — 2026-10-04
 - Map is one scalable SVG: sizes 7×7 / 11×11 / 15×15 / 21×21, Classic (diamond) or Flat (square tiles) view, remembered in a cookie.
 - NPC trade keeps the exact total (unassigned rest spread over the chosen mix), live Rest counter + Distribute; also on the Marketplace.

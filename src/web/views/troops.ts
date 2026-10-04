@@ -1,4 +1,5 @@
-import { BUILDINGS, TOWN_BUILDING_IDS, WALL_IDS } from '../../game/rules/buildings.js';
+import { BUILDINGS, FIELD_IDS, TOWN_BUILDING_IDS } from '../../game/rules/buildings.js';
+import { catapultTargetAllowed } from '../../game/rules/battle.js';
 import { TRIBES, type TribeId, type UnitCounts } from '../../game/rules/units.js';
 import type { SendInput, SendPreview } from '../../game/actions/troops.js';
 import type { MovementView, StationedView } from '../../game/queries.js';
@@ -52,7 +53,21 @@ const MISSIONS: { kind: SendInput['kind']; label: string; help: string }[] = [
   { kind: 'settle', label: 'Found new village', help: '3 settlers to an abandoned valley.' },
 ];
 
-export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean; carryMult: number }): SafeHtml {
+const CATA_ORDER = [...FIELD_IDS, ...TOWN_BUILDING_IDS] as const;
+
+/** Catapult target menus: what the Rally Point level allows (random below level 3); a second one at level 20. */
+function catapultSelects(rally: number, chosen: string[]): SafeHtml {
+  const options = CATA_ORDER.filter((b) => catapultTargetAllowed(b, rally));
+  const sel = (name: string, current: string | undefined, label: string) =>
+    html`<label>${label} <select name="${name}"><option value="">random</option>${options.map(
+      (b) => html`<option value="${b}"${current === b ? html` selected` : ''}>${BUILDINGS[b].name}</option>`,
+    )}</select></label>`;
+  if (options.length === 0) return html`<p class="small muted">Catapults hit random buildings until your Rally Point reaches level 3.</p>`;
+  return html`<p>${sel('catapultTarget', chosen[0], 'Catapult target:')}
+    ${rally >= 20 ? html` ${sel('catapultTarget2', chosen[1], 'Second target:')} <span class="small muted">(needs at least 20 catapults; they split in half)</span>` : ''}</p>`;
+}
+
+export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean; carryMult: number; rallyLevel: number }): SafeHtml {
   const units = TRIBES[d.tribe].units;
   const kind = d.values.kind ?? 'attack';
   // Classic layout: three columns of units (infantry | cavalry | siege & specials).
@@ -79,9 +94,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
           <b>y</b> <input type="text" name="y" value="${d.values.y ?? ''}" class="w30" required inputmode="numeric"></td>
       </tr></tbody></table>
       ${d.home.some((n, i) => n > 0 && units[i]?.type === 'catapult')
-        ? html`<p>Catapult target: <select name="catapultTarget"><option value="">random</option>${TOWN_BUILDING_IDS.filter((b) => !WALL_IDS.includes(b) && b !== 'rally').map(
-            (b) => html`<option value="${b}"${d.values.catapultTarget === b ? html` selected` : ''}>${BUILDINGS[b].name}</option>`,
-          )}</select></p>`
+        ? catapultSelects(d.rallyLevel, (d.values.catapultTarget ?? '').split(','))
         : ''}
       <p><button type="submit">OK</button></p>
     </form>`;

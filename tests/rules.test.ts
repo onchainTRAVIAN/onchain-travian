@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS, buildCost, buildTimeMs, mainBuildingFactor } from '../src/game/rules/buildings.js';
 import { FIELD_PRODUCTION, crannyCapacity, storageCapacity } from '../src/game/rules/production.js';
-import { catapultDamage, computeLoot, ramDamage, resolveBattle, resolveScouting } from '../src/game/rules/battle.js';
+import { catapultResult, computeLoot, demolish, demolishPoints, moraleMalus, resolveBattle, resolveScouting, wallDuringBattle } from '../src/game/rules/battle.js';
 import { distance, generateTile, layoutFields, travelTimeMs, wrapCoord, FIELD_LAYOUTS, type FieldLayout } from '../src/game/rules/map.js';
 import { res } from '../src/game/rules/resources.js';
-import { TRIBES, TRIBE_IDS, emptyUnits, slowestSpeed, trainTimeMs } from '../src/game/rules/units.js';
+import { TRIBES, TRIBE_IDS, upgradedStat, emptyUnits, slowestSpeed, trainTimeMs } from '../src/game/rules/units.js';
 import { foldPerks } from '../src/game/modifiers.js';
 import { accrue } from '../src/game/engine/state.js';
 
@@ -128,11 +128,30 @@ describe('battle', () => {
   });
 
   it('rams and catapults need more machines for higher levels', () => {
-    expect(ramDamage(0, 5)).toBe(0);
-    expect(ramDamage(100, 5)).toBe(5);
-    expect(ramDamage(3, 5)).toBe(0);
-    expect(catapultDamage(1000, 10)).toBe(10);
-    expect(catapultDamage(1, 10)).toBe(0);
+    // T3 siege formula, values from Kirilloid's reference tests (src/model/base/combat/fns.spec.ts).
+    expect(demolish(6, 0)).toBe(6);
+    expect(demolish(6, 6)).toBe(6);
+    expect(demolish(6, 7)).toBe(5);
+    expect(demolish(6, 15)).toBe(4);
+    expect(demolish(6, 16)).toBe(3);
+    expect(demolish(6, 21)).toBe(1);
+    expect(demolish(6, 21.5)).toBe(0);
+    const at = (catas: number, x: number, durability = 1, upg = 0) => demolishPoints(catas, upg, durability, x);
+    expect(at(1, 0.825481812 - 1e-8)).toBeLessThan(1.5);
+    expect(at(1, 0.825481812 + 1e-8)).toBeGreaterThan(1.5);
+    expect(at(13, 0.88100169 - 1e-8)).toBeLessThan(21.5);
+    expect(at(13, 0.88100169 + 1e-8)).toBeGreaterThan(21.5);
+    expect(at(100, 0.18910846 - 1e-8, 1.3)).toBeLessThan(12.5);
+    expect(at(100, 0.18910846 + 1e-8, 1.3)).toBeGreaterThan(12.5);
+    // Early ram table (Romans wall 20, Teutons ×5, Gauls 19 ×2).
+    [0, 39, 74, 105, 132, 155, 174, 189, 200, 207, 210, 230, 281, 334, 390, 449, 510, 573, 639, 708, 779].forEach((v, l) => {
+      expect(wallDuringBattle(20, v, 1)).toBe(20 - l);
+    });
+    [0, 195, 370, 525, 660, 775, 870, 945, 1000, 1035, 1050].forEach((v, l) => expect(wallDuringBattle(20, v, 5)).toBe(20 - l));
+    [0, 74, 140, 198, 248, 290, 324, 350, 368, 378].forEach((v, l) => expect(wallDuringBattle(19, v, 2)).toBe(19 - l));
+    // A strong attack with enough catapults levels a building; one catapult does nothing.
+    expect(catapultResult(10, 200, 0, 10)).toBe(0);
+    expect(catapultResult(10, 1, 0, 1)).toBe(10);
   });
 
   it('loot respects carry capacity and the cranny', () => {
@@ -146,9 +165,19 @@ describe('battle', () => {
   });
 
   it('scouts are caught by more defending scouts', () => {
-    expect(resolveScouting(10, 0)).toEqual({ success: true, scoutLosses: 0 });
-    expect(resolveScouting(10, 20).success).toBe(false);
-    expect(resolveScouting(10, 5).success).toBe(true);
+    // Kirilloid T3 scans: 100 scouts (35 each) vs 100 defending scouts (20 each) → 43.2% lost; + Gaul wall 20 → 90.6%.
+    expect(resolveScouting(3500, 0)).toEqual({ success: true, lossRatio: 0 });
+    expect(resolveScouting(3500, 2000).lossRatio.toFixed(3)).toBe('0.432');
+    expect(resolveScouting(3500, 2000 * Math.pow(1.025, 20)).lossRatio.toFixed(3)).toBe('0.906');
+    expect(resolveScouting(100, 1000).success).toBe(false);
+    // Morale (Kirilloid fns.spec): 100 vs 10 pop → 0.667, 50 → 0.725, 20 → 0.871, weak attack (ratio 0.5) → 0.794.
+    expect(moraleMalus(100, 10)).toBe(0.667);
+    expect(moraleMalus(50, 10)).toBeCloseTo(0.725, 3);
+    expect(moraleMalus(20, 10)).toBeCloseTo(0.871, 3);
+    expect(moraleMalus(100, 10, 0.5)).toBeCloseTo(0.794, 3);
+    expect(moraleMalus(10, 100)).toBe(1);
+    // Smithy upgrade (Kirilloid t3 combat.spec): legionnaire attack 40 at level 20 → 52.4048.
+    expect(upgradedStat(TRIBES.romans.units[0]!, 40, 20)).toBeCloseTo(52.4048, 2);
   });
 });
 

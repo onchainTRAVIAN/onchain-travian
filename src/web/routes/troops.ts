@@ -51,13 +51,15 @@ const SendSchema = z.object({
   kind: KIND,
   u0: count, u1: count, u2: count, u3: count, u4: count, u5: count, u6: count, u7: count, u8: count, u9: count,
   catapultTarget: z.string().max(30).optional(),
+  catapultTarget2: z.string().max(30).optional(),
   hero: z.preprocess((v) => v === '1' || v === 'on' || v === true, z.boolean()).optional(),
 });
 type SendForm = z.infer<typeof SendSchema>;
 
 function toInput(d: SendForm): SendInput {
   const units = [d.u0, d.u1, d.u2, d.u3, d.u4, d.u5, d.u6, d.u7, d.u8, d.u9].slice(0, UNIT_SLOTS);
-  return { x: d.x, y: d.y, kind: d.kind, units, catapultTarget: d.catapultTarget || null, hero: !!d.hero };
+  const targets = [d.catapultTarget, d.catapultTarget2].filter((t): t is string => !!t);
+  return { x: d.x, y: d.y, kind: d.kind, units, catapultTarget: targets.length ? targets.join(',') : null, hero: !!d.hero };
 }
 
 troopsRouter.get('/troops/send', (req, res) => {
@@ -69,7 +71,7 @@ troopsRouter.get('/troops/send', (req, res) => {
     y: req.query.y !== undefined ? intParam(req.query.y, 0) : undefined,
     kind: kindParsed.success ? kindParsed.data : undefined,
   };
-  sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home: troopsAt(db, page.state.village.id, page.state.village.id), values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry }), {
+  sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home: troopsAt(db, page.state.village.id, page.state.village.id), values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry, rallyLevel: levelOf(page.state, 'rally') }), {
     nav: 'troops',
     chrome: page.chrome,
   });
@@ -82,7 +84,7 @@ troopsRouter.post('/troops/send/preview', (req, res, next) => {
   const home = troopsAt(db, page.state.village.id, page.state.village.id);
   const show = (message: string, values: Partial<SendInput>) => {
     req.ctx.flash = { type: 'error', text: message };
-    sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home, values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry }), { nav: 'troops', chrome: page.chrome, status: 422 });
+    sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home, values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry, rallyLevel: levelOf(page.state, 'rally') }), { nav: 'troops', chrome: page.chrome, status: 422 });
   };
   if (!parsed.success) {
     show(parsed.error.issues[0]?.message ?? 'Please check the form.', {});

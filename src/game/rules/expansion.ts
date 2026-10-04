@@ -16,8 +16,9 @@ export function oasisSlots(mansionLevel: number): number {
 }
 
 /** Loyalty regained per hour (before world speed). */
+/** T3.6: loyalty regrows 1% per hour per Residence/Palace level (nothing without either). */
 export function loyaltyRegenPerHour(residenceOrPalaceLevel: number): number {
-  return 1 + residenceOrPalaceLevel * 0.25;
+  return Math.max(0, residenceOrPalaceLevel);
 }
 
 /** Settlers needed to found a village. */

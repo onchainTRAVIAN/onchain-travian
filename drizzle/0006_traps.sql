@@ -1,0 +1,1 @@
+ALTER TABLE `villages` ADD `traps` integer DEFAULT 0 NOT NULL;

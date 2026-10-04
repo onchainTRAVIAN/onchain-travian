@@ -9,7 +9,8 @@ import { instantPrice } from '../../game/actions/credits.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
-import { unitIcon } from './parts.js';
+import { unitIcon, unitsInline } from './parts.js';
+import { TRAP_COST } from '../../game/actions/traps.js';
 
 const KIND_TITLE = { academy: 'Research', blacksmith: 'Blacksmith upgrades', armoury: 'Armoury upgrades' } as const;
 
@@ -139,4 +140,36 @@ export function mansionPanel(oases: { x: number; y: number; oasis: string | null
       : oases.map((o) => html`<tr><td><a href="/map/tile?x=${o.x}&amp;y=${o.y}">(${o.x}|${o.y})</a></td><td>${OASIS_LABEL[(o.oasis ?? 'wood') as OasisType]}</td></tr>`)}
   </tbody></table>
   <p><a href="/hero">» Your hero</a></p>`;
+}
+
+export function trapperPanel(d: {
+  built: number;
+  capacity: number;
+  held: number;
+  prisoners: { ownerVillageId: number; units: number[]; from: { name: string; x: number; y: number; tribe: TribeId; username: string } | undefined }[];
+  have: Resources;
+  csrf: string;
+}): SafeHtml {
+  const free = Math.max(0, d.built - d.held);
+  const canBuild = Math.max(0, d.capacity - d.built);
+  return html`<table class="tb"><tbody>
+      <tr><th>Traps built</th><td>${fmtNum(d.built)} of ${fmtNum(d.capacity)}</td></tr>
+      <tr><th>Ready</th><td>${fmtNum(free)}</td></tr>
+      <tr><th>Holding prisoners</th><td>${fmtNum(d.held)}</td></tr>
+    </tbody></table>
+    ${canBuild > 0
+      ? html`<form method="post" action="/traps/build" class="block">${csrfField(d.csrf)}
+          <p>Build traps: ${costLine(TRAP_COST, d.have)} each
+            <input type="number" name="count" min="1" max="${canBuild}" class="w30" inputmode="numeric" aria-label="Traps to build"> <button type="submit">Build</button></p>
+        </form>`
+      : html`<p class="small muted">All trap places are built. Upgrade the Trapper for more.</p>`}
+    ${d.prisoners.length
+      ? html`<h2>Prisoners</h2><table class="tb"><tbody>${d.prisoners.map(
+          (p) => html`<tr><td>${p.from ? html`<a href="/map/tile?x=${p.from.x}&amp;y=${p.from.y}">${p.from.name}</a> (${p.from.username})` : 'unknown'}</td>
+            <td>${p.from ? unitsInline(p.from.tribe, p.units) : fmtNum(p.units.reduce((a, b) => a + b, 0))}</td></tr>`,
+        )}</tbody></table>
+        <form method="post" action="/traps/free">${csrfField(d.csrf)}<button type="submit" class="secondary">Release all prisoners</button>
+          <span class="small muted">They walk home and all your traps are ready again.</span></form>`
+      : ''}
+    <p class="small muted">Each trap catches one attacker before the battle. A successful attack by the prisoners' side frees them: a quarter die escaping and only a third of their broken traps can be repaired.</p>`;
 }

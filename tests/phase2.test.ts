@@ -274,8 +274,12 @@ describe('expansion', () => {
     const rep = db.select().from(reports).where(eq(reports.userId, b.userId)).all().at(-1);
     expect(rep?.data).toContain('"conquered":true');
     finishAll();
+    // T3.6: loyalty regrows only with a Residence/Palace (1% per level per hour).
     home(bNew.id);
-    expect(village(bNew.id).loyalty).toBeGreaterThan(50);
+    expect(village(bNew.id).loyalty).toBeLessThan(5);
+    setSlot(bNew.id, 25, 'residence', 10);
+    clock.advance(5 * HOUR);
+    expect(catchUp(db, bNew.id, clock.now())?.village.loyalty).toBeGreaterThan(45);
   });
 
   it('capitals cannot be conquered', () => {

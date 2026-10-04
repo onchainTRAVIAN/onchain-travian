@@ -23,7 +23,8 @@ import { oasesOwnedBy } from '../../game/engine/oasis.js';
 import { oasisSlots } from '../../game/rules/expansion.js';
 import { capacityFor, levelOf } from '../../game/engine/state.js';
 import { npcPanel } from '../views/shop.js';
-import { academyPanel, celebrationPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel } from '../views/buildings.js';
+import { academyPanel, celebrationPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel, trapperPanel } from '../views/buildings.js';
+import { buildTraps, freePrisoners, trapPanelData } from '../../game/actions/traps.js';
 import { celebrationOptions, runningCelebration, startCelebration } from '../../game/actions/celebration.js';
 
 export const villageRouter = Router();
@@ -145,6 +146,8 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
     }
     case 'heromansion':
       return [mansionPanel(oasesOwnedBy(db, state.village.id), oasisSlots(levelOf(state, 'heromansion')))];
+    case 'trapper':
+      return [trapperPanel({ ...trapPanelData(db, state), have, csrf: ctx.csrf })];
     default:
       return [];
   }
@@ -163,6 +166,26 @@ villageRouter.post(
     const def = BUILDINGS[order.building as BuildingId];
     setFlash(res, 'ok', `${def?.name ?? 'Building'} level ${order.toLevel} is under construction.`);
     res.redirect(303, def?.kind === 'field' ? '/fields' : '/village');
+  }),
+);
+
+villageRouter.post(
+  '/traps/build',
+  formAction(z.object({ count: z.coerce.number().int().min(1).max(100_000) }), (req, res, data) => {
+    const ctx = authed(req);
+    const n = buildTraps(db, ctx.user.id, ctx.villageId, data.count, ctx.now);
+    setFlash(res, 'ok', `${n} traps built.`);
+    res.redirect(303, backUrl(req, '/village'));
+  }),
+);
+
+villageRouter.post(
+  '/traps/free',
+  formAction(z.object({}), (req, res) => {
+    const ctx = authed(req);
+    const n = freePrisoners(db, ctx.user.id, ctx.villageId, ctx.now);
+    setFlash(res, 'ok', `${n} prisoners were released and walk home.`);
+    res.redirect(303, backUrl(req, '/village'));
   }),
 );
 

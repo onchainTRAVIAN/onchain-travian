@@ -24,6 +24,7 @@ import { buildOption, buildOrdersOf, buildableOnEmptyPlot, startBuild } from '..
 import { startTraining, trainOptions } from '../src/game/actions/train.js';
 import { celebrationOptions, startCelebration } from '../src/game/actions/celebration.js';
 import { sendTroops } from '../src/game/actions/troops.js';
+import { buildTraps } from '../src/game/actions/traps.js';
 import { emptyUnits, totalUnits } from '../src/game/rules/units.js';
 
 /* Reference values: classic Travian 3.6 at speed 1. */
@@ -184,7 +185,11 @@ describe('classic mechanics', () => {
   });
 
   it('Gaul traps catch attackers; a winning attack frees them', () => {
-    setSlot(gaul.villageId, 31, 'trapper', 1); // 10 traps
+    setSlot(gaul.villageId, 31, 'trapper', 1); // room for 10 traps
+    // T3.6: traps must be built (20/30/10/20 each) before they catch anyone.
+    rich(gaul.villageId);
+    expect(buildTraps(db, gaul.userId, gaul.villageId, 10, clock.now())).toBe(10);
+    expect(() => buildTraps(db, gaul.userId, gaul.villageId, 1, clock.now())).toThrow(/at most 10/);
     rich(teuton.villageId);
     setSlot(teuton.villageId, 39, 'rally', 1);
     const units = emptyUnits();

@@ -43,6 +43,13 @@
       "when": 1791132054022,
       "tag": "0005_protection",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791136003562,
+      "tag": "0006_traps",
+      "breakpoints": true
     }
   ]
 }

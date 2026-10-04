@@ -304,8 +304,13 @@ export function trainTimeMs(u: UnitDef, buildingLevel: number, speedMultiplier: 
 }
 
 /** Smithy upgrades: +1.5% attack and defence per level, compounding. */
-export function smithyFactor(level: number): number {
-  return Math.pow(1.015, Math.max(0, level));
+/**
+ * A combat stat after Blacksmith/Armoury upgrades (T3.6):
+ * stat + (stat + 300·upkeep/7)·(1.007^level − 1), rounded to 4 decimals.
+ */
+export function upgradedStat(u: UnitDef, stat: number, level: number): number {
+  if (level <= 0) return stat;
+  return Math.round((stat + (stat + (300 * u.upkeep) / 7) * (Math.pow(1.007, level) - 1)) * 1e4) / 1e4;
 }
 
 /** Academy research cost: about 3x the unit cost. */

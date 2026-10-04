@@ -3,6 +3,7 @@ import type { Q } from '../../db/index.js';
 import {
   buildOrders,
   heroes,
+  slots,
   marketOffers,
   movements,
   researchOrders,
@@ -12,7 +13,8 @@ import {
   villages,
 } from '../../db/schema.js';
 import { culturePointsRequired, expansionSlots } from '../rules/expansion.js';
-import { catchUpCulture, levelOf, loadVillage } from './state.js';
+import { catchUpCulture, levelOf, loadVillage, refreshPopulation } from './state.js';
+import { BUILDINGS, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
 import { sendTroopsHome } from './movement.js';
 
 export interface ExpansionCheck {
@@ -108,4 +110,45 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
     .run();
   const home = q.select({ e: villages.expansions }).from(villages).where(eq(villages.id, fromVillageId)).get();
   q.update(villages).set({ expansions: (home?.e ?? 0) + 1 }).where(eq(villages.id, fromVillageId)).run();
+
+  // T3.6: the wall and the old tribe's special buildings are destroyed on conquest.
+  for (const sl of q.select().from(slots).where(eq(slots.villageId, targetId)).all()) {
+    const def = sl.building ? BUILDINGS[sl.building as BuildingId] : undefined;
+    if (sl.slot === WALL_SLOT || (def?.tribe && def.fixedSlot !== WALL_SLOT)) {
+      q.update(slots).set({ building: null, level: 0 }).where(and(eq(slots.villageId, targetId), eq(slots.slot, sl.slot))).run();
+    }
+  }
+  refreshPopulation(q, targetId);
+}
+
+/**
+ * A village whose population catapults brought to 0 disappears (never a capital or a player's
+ * last village). Foreign troops go home, a hero based here moves to the capital, the land is freed.
+ */
+export function destroyVillage(q: Q, villageId: number, now: number): void {
+  const v = q.select().from(villages).where(eq(villages.id, villageId)).get();
+  if (!v) return;
+  for (const row of q.select().from(troops).where(and(eq(troops.villageId, villageId), ne(troops.ownerVillageId, villageId))).all()) {
+    sendTroopsHome(q, villageId, row.ownerVillageId, now);
+  }
+  if (v.userId !== null) {
+    const capital = q
+      .select({ id: villages.id })
+      .from(villages)
+      .where(and(eq(villages.userId, v.userId), ne(villages.id, villageId)))
+      .orderBy(sql`${villages.isCapital} desc`, villages.id)
+      .limit(1)
+      .get();
+    const hero = q.select().from(heroes).where(eq(heroes.homeVillageId, villageId)).get();
+    if (hero && capital) {
+      const here = hero.locationId === villageId;
+      q.update(heroes)
+        .set({ homeVillageId: capital.id, ...(here ? { status: 'dead' as const, locationId: null, health: 0 } : {}) })
+        .where(eq(heroes.id, hero.id))
+        .run();
+    }
+  }
+  q.update(tiles).set({ villageId: null }).where(and(eq(tiles.kind, 'field'), eq(tiles.villageId, villageId))).run();
+  q.update(tiles).set({ villageId: null, animals: null, animalsAt: null }).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, villageId))).run();
+  q.delete(villages).where(eq(villages.id, villageId)).run();
 }

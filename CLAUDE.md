@@ -21,4 +21,5 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Gold economy: all Gold lives in `credits_ledger` (sum per user); transfers/market write paired rows with unique idem keys. Gold market: `src/game/actions/goldmarket.ts` (escrow on listing, `delivery` movement handled like `return`).
 - World speed scales production, build/train/research/travel times, culture points, loyalty and hero regen — NOT crop consumption (`cropUpkeep`).
 - Live ops: change world speed with Railway vars `WORLD_SPEED`/`TROOP_SPEED`; one-off DB fixes via SSH (script in /app, `node script.mjs`, uses `DATABASE_PATH`).
+- Combat follows Kirilloid's T3 model (`src/game/rules/battle.ts`: moraleMalus, demolishPoints/demolish, wallDuringBattle, catapultTargetAllowed); reference values pinned in `tests/rules.test.ts`, scenarios in `tests/combat.test.ts`. Rule decisions: memory `project-classic-rules`.
 - Rules data: `src/game/rules/{units,buildings,production}.ts` follow T3.6 formulas; `tests/classic.test.ts` pins reference values. Art: `src/web/public/img/` (SVG); dorf1/dorf2/map positions come from `scripts/gen-positions.py` (pasted at the end of `style.css`).

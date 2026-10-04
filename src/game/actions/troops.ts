@@ -2,12 +2,13 @@ import { eq, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { heroes, movements, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
-import { BUILDINGS, TOWN_BUILDING_IDS, type BuildingId } from '../rules/buildings.js';
+import { BUILDINGS, type BuildingId } from '../rules/buildings.js';
+import { canAimTwice, catapultTargetAllowed } from '../rules/battle.js';
 import { SETTLERS_PER_VILLAGE } from '../rules/expansion.js';
 import { distance, travelTimeArenaMs, wrapCoord } from '../rules/map.js';
-import { UNIT_SLOTS, subUnits, totalUnits, unitDef, type UnitCounts } from '../rules/units.js';
+import { TRIBES, UNIT_SLOTS, subUnits, totalUnits, unitDef, type UnitCounts } from '../rules/units.js';
 import { assertGame } from '../errors.js';
-import { catchUp, levelOf, setTroopsAt, troopsAt } from '../engine/state.js';
+import { catchUp, levelOf, loadVillage, setTroopsAt, troopsAt } from '../engine/state.js';
 import { groupSpeed, sendTroopsHome } from '../engine/movement.js';
 import { heroAtHome } from '../engine/hero.js';
 import { canExpand } from '../engine/expansion.js';
@@ -80,7 +81,16 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
     units.forEach((n, i) => assertGame(n === 0 || unitDef(me.tribe, i).type === 'scout', 'Only scouts can be sent to spy'));
   }
   if (input.catapultTarget) {
-    assertGame((TOWN_BUILDING_IDS as readonly string[]).includes(input.catapultTarget), 'Unknown catapult target');
+    const homeState = loadVillage(q, villageId);
+    const rally = homeState ? levelOf(homeState, 'rally') : 0;
+    const wanted = input.catapultTarget.split(',').filter(Boolean);
+    assertGame(wanted.length <= 2, 'At most two catapult targets');
+    for (const w of wanted) {
+      assertGame(w in BUILDINGS, 'Unknown catapult target');
+      assertGame(catapultTargetAllowed(w, rally), `Your Rally Point (level ${rally}) cannot aim at ${BUILDINGS[w as BuildingId].name}`);
+    }
+    const cataSlot = TRIBES[me.tribe].units.findIndex((u) => u.type === 'catapult');
+    if (wanted.length === 2) assertGame(canAimTwice(rally, units[cataSlot] ?? 0), 'Two targets need Rally Point level 20 and at least 20 catapults');
   }
 
   let targetVillageId: number | null = null;
@@ -139,8 +149,7 @@ export function sendTroops(db: DB, userId: number, villageId: number, input: Sen
         .run();
     }
     if (input.hero) tx.update(heroes).set({ status: 'moving', locationId: null }).where(eq(heroes.userId, userId)).run();
-    const catapultTarget =
-      input.kind === 'attack' && input.catapultTarget && BUILDINGS[input.catapultTarget as BuildingId] ? input.catapultTarget : null;
+    const catapultTarget = input.kind === 'attack' && input.catapultTarget ? input.catapultTarget : null;
     return tx
       .insert(movements)
       .values({

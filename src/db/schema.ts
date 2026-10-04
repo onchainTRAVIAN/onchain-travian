@@ -91,6 +91,8 @@ export const villages = sqliteTable(
     armoury: text('armoury').notNull().default('[0,0,0,0,0,0,0,0,0,0]'),
     /** Gaul trapper: units of other villages held prisoner here (JSON {ownerVillageId: number[10]}). */
     prisoners: text('prisoners').notNull().default('{}'),
+    /** Gaul traps built in this village (each holds one prisoner). */
+    traps: integer('traps').notNull().default(0),
     /** Villages founded or conquered from here (uses expansion slots). */
     expansions: integer('expansions').notNull().default(0),
     /** Village this one was founded from (null for starting villages). */
