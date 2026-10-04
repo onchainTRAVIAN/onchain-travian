@@ -112,8 +112,54 @@ export function goldMarketView(d: {
                 : html`<span class="none">cancelled</span>`;
           return html`<tr><td>${goodsCell(l)}</td><td class="num">${gold(l.price)}</td><td>${status}</td>
             <td class="center">${mine && l.status === 'open'
-              ? html`<form method="post" action="/goldmarket/cancel">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}"><button type="submit" class="small secondary">Cancel</button></form>`
+              ? html`<a href="/goldmarket/edit?id=${l.id}" class="btn small secondary">Edit</a>
+                <form method="post" action="/goldmarket/cancel" class="inline">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}"><button type="submit" class="small secondary">Cancel</button></form>`
               : ''}</td></tr>`;
         })}
     </tbody></table></div>`;
+}
+
+/** Edit an open offer: price and amounts (inputs allow up to what's in the offer plus what's in the village). */
+export function goldEditView(d: {
+  listing: ListingView;
+  stock: Resources;
+  home: UnitCounts;
+  villageName: string | null;
+  csrf: string;
+}): SafeHtml {
+  const l = d.listing;
+  const tribe = (l.tribe in TRIBES ? l.tribe : 'romans') as TribeId;
+  const canChange = d.villageName !== null;
+  let rows: SafeHtml;
+  if (l.kind === 'resources') {
+    const g = parseResources(l.goods);
+    rows = html`${RESOURCE_KEYS.map(
+      (k) => html`<tr><td>${resIcon(k)} <label for="er${k}">${RESOURCE_LABEL[k]}</label></td>
+        <td><input id="er${k}" type="number" name="${k}" min="0" max="${g[k] + Math.floor(d.stock[k])}" value="${g[k]}" inputmode="numeric"${canChange ? '' : html` readonly`}></td>
+        <td class="small muted">in offer ${fmtNum(g[k])}${canChange ? html`, in village ${fmtNum(Math.floor(d.stock[k]))}` : ''}</td></tr>`,
+    )}`;
+  } else {
+    const u = parseUnits(l.units);
+    const units = TRIBES[tribe].units;
+    rows = html`${SELLABLE_SLOTS.map((i) => {
+      const inOffer = u[i] ?? 0;
+      const atHome = d.home[i] ?? 0;
+      if (inOffer === 0 && atHome === 0) return '';
+      return html`<tr><td>${unitIcon(tribe, i)} <label for="et${i}">${units[i]?.name ?? ''}</label></td>
+        <td><input id="et${i}" type="number" name="t${i}" min="0" max="${inOffer + atHome}" value="${inOffer}" inputmode="numeric"${canChange ? '' : html` readonly`}></td>
+        <td class="small muted">in offer ${fmtNum(inOffer)}${canChange ? html`, at home ${fmtNum(atHome)}` : ''}</td></tr>`;
+    })}`;
+  }
+  return html`<h1>Edit offer</h1>
+    <p class="tabs"><a href="/goldmarket?tab=mine">« My offers</a></p>
+    <p class="small">${canChange
+      ? html`Raising an amount takes the extra from <b>${d.villageName}</b>; lowering it gives the difference back right away.`
+      : html`The village of this offer is no longer yours, so only the price can change.`}</p>
+    <form method="post" action="/goldmarket/edit" class="block">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}">
+      <table class="tb"><tbody>
+        ${rows}
+        <tr><td><label for="ep">Price</label></td><td><input id="ep" type="number" name="price" min="1" max="${LISTING_MAX_PRICE}" value="${l.price}" required inputmode="numeric"> Gold</td><td></td></tr>
+      </tbody></table>
+      <p><button type="submit">Save changes</button> <a href="/goldmarket?tab=mine" class="small">cancel</a></p>
+    </form>`;
 }

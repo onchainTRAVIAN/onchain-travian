@@ -119,6 +119,85 @@ export function cancelListing(db: DB, userId: number, listingId: number, now: nu
   });
 }
 
+/**
+ * Change an open offer's price and/or amounts. The difference in goods is settled with the
+ * offer's village right away: more is taken from it, less is given back.
+ */
+export function editListing(
+  db: DB,
+  userId: number,
+  listingId: number,
+  change: { price: number; goods?: Resources; units?: UnitCounts },
+  now: number,
+): void {
+  db.transaction((tx) => {
+    const l = tx.select().from(marketListings).where(eq(marketListings.id, listingId)).get();
+    assertGame(l && l.sellerId === userId, 'Offer not found');
+    assertGame(l.status === 'open', 'This offer is already closed');
+    assertPrice(change.price);
+    const villageOk = l.villageId !== null && tx.select({ u: villages.userId }).from(villages).where(eq(villages.id, l.villageId)).get()?.u === userId;
+    let goods = l.goods;
+    let units = l.units;
+    if (l.kind === 'resources' && change.goods) {
+      const old = parseResources(l.goods);
+      const next = res();
+      for (const k of RESOURCE_KEYS) {
+        const n = change.goods[k];
+        assertGame(Number.isFinite(n) && n >= 0, 'Invalid amounts');
+        next[k] = Math.floor(n);
+      }
+      assertGame(sumRes(next) >= LISTING_MIN_RESOURCES, `Offer at least ${LISTING_MIN_RESOURCES} resources`);
+      const changed = RESOURCE_KEYS.some((k) => next[k] !== old[k]);
+      if (changed) {
+        assertGame(villageOk && l.villageId !== null, 'The village of this offer is no longer yours: only the price can change');
+        const state = catchUp(tx, l.villageId, now);
+        assertGame(state, 'Village not found');
+        const stock = stockOf(state.village);
+        const cap = capacityFor(state);
+        const after = res();
+        for (const k of RESOURCE_KEYS) {
+          const delta = next[k] - old[k];
+          if (delta > 0) assertGame(stock[k] >= delta, `Not enough ${k} in this village`);
+          if (delta < 0) assertGame(stock[k] - delta <= cap[k], `Not enough storage to take back ${-delta} ${k}`);
+          after[k] = stock[k] - delta;
+        }
+        setResources(tx, l.villageId, after);
+      }
+      goods = JSON.stringify(next);
+    }
+    if (l.kind === 'troops' && change.units) {
+      const old = parseUnits(l.units);
+      const next = emptyUnits();
+      change.units.forEach((n, i) => {
+        assertGame(Number.isFinite(n) && n >= 0, 'Invalid amounts');
+        const c = Math.floor(n);
+        if (c > 0) assertGame((SELLABLE_SLOTS as readonly number[]).includes(i), 'Settlers and chiefs cannot be sold');
+        next[i] = c;
+      });
+      assertGame(totalUnits(next) > 0, 'Choose the troops you want to sell');
+      if (next.some((n, i) => n !== (old[i] ?? 0))) {
+        assertGame(villageOk && l.villageId !== null, 'The village of this offer is no longer yours: only the price can change');
+        catchUp(tx, l.villageId, now);
+        const home = troopsAt(tx, l.villageId, l.villageId);
+        const tribe = (l.tribe in TRIBES ? l.tribe : 'romans') as TribeId;
+        const after = home.map((h, i) => {
+          const delta = (next[i] ?? 0) - (old[i] ?? 0);
+          assertGame(delta <= 0 || h >= delta, `Not enough ${TRIBES[tribe].units[i]?.name ?? 'units'} at home`);
+          return h - delta;
+        });
+        setTroopsAt(tx, l.villageId, l.villageId, after);
+      }
+      units = JSON.stringify(next);
+    }
+    tx.update(marketListings).set({ price: change.price, goods, units }).where(eq(marketListings.id, l.id)).run();
+  });
+}
+
+export function ownListing(q: Q, userId: number, listingId: number): ListingRow | undefined {
+  const l = q.select().from(marketListings).where(eq(marketListings.id, listingId)).get();
+  return l && l.sellerId === userId ? l : undefined;
+}
+
 /** Travel time for a lot from the seller's village to (x, y). */
 export function deliveryTimeMs(l: { kind: 'resources' | 'troops'; tribe: string; units: string }, from: { x: number; y: number }, to: { x: number; y: number }): number {
   const tribe = (l.tribe in TRIBES ? l.tribe : 'romans') as TribeId;

@@ -6,6 +6,7 @@
 - Player profiles: avatar upload (sharp → 128×128 WebP on the volume, `/avatar/:id`), tribe default portraits, About text, details card; avatars in rankings and alliance lists.
 - Gold transfers between players (Plus page, profile link, message to receiver).
 - Gold market (`/goldmarket`): sell resources or troops (no settlers/chiefs) for Gold; goods held in escrow; troops buyable only by the same tribe; delivery via `delivery` movement.
+- Gold market offers can be edited (price and amounts; the difference is taken from / returned to the offer's village).
 - Clean side menus (card panels, 16px line icons, active page highlight); layout zooms up on wide screens; phone overflow fixed.
 - Map: clicks always hit the field under the cursor (tile art ignores the pointer), direction pad (diagonal in Classic view) + arrow keys, hover updates the details box.
 - Fix: Gold "finish now" (and other actions) return to the page you came from — Referrer-Policy is now `same-origin` (was `no-referrer`, so every redirect fell back to the village centre); finished fields fall back to the overview.

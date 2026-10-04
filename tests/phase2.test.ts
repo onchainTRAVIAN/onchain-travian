@@ -40,7 +40,7 @@ import { getModifiers } from '../src/game/modifiers.js';
 import { emptyUnits } from '../src/game/rules/units.js';
 import { res } from '../src/game/rules/resources.js';
 import { config } from '../src/config.js';
-import { buyListing, cancelListing, listResources, listTroops } from '../src/game/actions/goldmarket.js';
+import { buyListing, cancelListing, editListing, listResources, listTroops } from '../src/game/actions/goldmarket.js';
 
 const HOUR = 3_600_000;
 const T0 = Date.UTC(2026, 2, 1);
@@ -468,5 +468,35 @@ describe('gold market', () => {
     cancelListing(db, a.userId, expensive, clock.now());
     expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(20);
     expect(() => cancelListing(db, a.userId, expensive, clock.now())).toThrow(/closed/);
+    expect(() => editListing(db, a.userId, expensive, { price: 5 }, clock.now())).toThrow(/closed/);
+  });
+
+  it('edits an open offer: price, more goods taken from the village, fewer given back', () => {
+    db.update(villages).set({ wood: 3000, clay: 3000, iron: 3000, crop: 3000, resAt: clock.now() }).where(eq(villages.id, a.villageId)).run();
+    const id = listResources(db, a.userId, a.villageId, res(1000, 0, 0, 0), 30, clock.now());
+    editListing(db, a.userId, id, { price: 45, goods: res(1500, 200, 0, 0) }, clock.now());
+    expect(Math.floor(village(a.villageId).wood)).toBe(1500);
+    expect(Math.floor(village(a.villageId).clay)).toBe(2800);
+    editListing(db, a.userId, id, { price: 45, goods: res(500, 0, 0, 0) }, clock.now());
+    expect(Math.floor(village(a.villageId).wood)).toBe(2500);
+    expect(Math.floor(village(a.villageId).clay)).toBe(3000);
+    expect(() => editListing(db, a.userId, id, { price: 45, goods: res(9000, 0, 0, 0) }, clock.now())).toThrow(/Not enough wood/);
+    expect(() => editListing(db, b.userId, id, { price: 1 }, clock.now())).toThrow(/not found/);
+    const units = emptyUnits();
+    units[0] = 40;
+    setTroopsAt(db, a.villageId, a.villageId, units);
+    const sell = emptyUnits();
+    sell[0] = 10;
+    const tid = listTroops(db, a.userId, a.villageId, sell, 50, clock.now());
+    const more = emptyUnits();
+    more[0] = 25;
+    editListing(db, a.userId, tid, { price: 80, units: more }, clock.now());
+    expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(15);
+    const fewer = emptyUnits();
+    fewer[0] = 5;
+    editListing(db, a.userId, tid, { price: 20, units: fewer }, clock.now());
+    expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(35);
+    cancelListing(db, a.userId, tid, clock.now());
+    cancelListing(db, a.userId, id, clock.now());
   });
 });
