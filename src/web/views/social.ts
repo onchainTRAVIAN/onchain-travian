@@ -79,7 +79,7 @@ const RANK_TABS: { key: RankKind; label: string; col: string }[] = [
 ];
 
 const extraTabs = (on: string) =>
-  html`<a href="/stats/week" class="${on === 'week' ? 'on' : ''}">This week</a><a href="/stats/villages" class="${on === 'villages' ? 'on' : ''}">Villages</a><a href="/stats/heroes" class="${on === 'heroes' ? 'on' : ''}">Heroes</a><a href="/alliances">Alliances</a>`;
+  html`<a href="/stats/week" class="${on === 'week' ? 'on' : ''}">This week</a><a href="/endgame">Artifacts &amp; Wonders</a><a href="/stats/villages" class="${on === 'villages' ? 'on' : ''}">Villages</a><a href="/stats/heroes" class="${on === 'heroes' ? 'on' : ''}">Heroes</a><a href="/alliances">Alliances</a>`;
 
 function statsTabs(on: string): SafeHtml {
   return html`<nav class="tabs" aria-label="Ranking type">${RANK_TABS.map((t) => html`<a href="/stats?k=${t.key}" class="${t.key === on ? 'on' : ''}">${t.label}</a>`)}${extraTabs(on)}</nav>`;

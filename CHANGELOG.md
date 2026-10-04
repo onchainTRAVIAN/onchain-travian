@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0 — 2026-10-04 (classic T3.6 rules, phase 4: endgame)
+- Natars (NPC tribe with Kirilloid's T3 stats, original art) guard 22 artifacts in Treasuries: Architects' secret, Boots of the mercenary, Eyes of the eagle, Diet control, Trainers' talent, Storage master plan, Rivals' confusion (small = village, large/unique = account) and the Artifact of the fool (random effect each day).
+- Capturing: destroy the Treasury with catapults, win a normal attack with your hero, and have an empty Treasury (level 10 small, 20 large/unique) in the attacking village; effects start 24 h / speed later. Artifact villages can't be razed.
+- Great Warehouse / Great Granary (3× capacity) with a storage plan or in a World Wonder village.
+- World Wonder villages and construction plans: Wonder levels 1–100 (66.7k/69k/72.2k/13.2k at level 1, ×1.0275, capped at 1M), plan held in the alliance, a second plan holder from level 51; level 100 wins the world (banner for everyone).
+- Release by admin buttons, or automatically ARTIFACT_DAY / WONDER_DAY days after the world started. New page: Statistics → Artifacts & Wonders.
+
 ## 0.8.2 — 2026-10-04 (classic T3.6 rules, phase 3: buildings & economy)
 - Palace can be built in any village (one per account); finishing it makes that village the capital — the old capital loses Stonemason/Brewery and its fields above 10 drop to 10.
 - Demolition from Main Building 10: one level at a time, half the build time, no refund, doesn't use a builder.

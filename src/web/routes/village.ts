@@ -25,6 +25,8 @@ import { capacityFor, levelOf } from '../../game/engine/state.js';
 import { npcPanel } from '../views/shop.js';
 import { academyPanel, celebrationPanel, demolishPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel, trapperPanel } from '../views/buildings.js';
 import { buildTraps, freePrisoners, trapPanelData } from '../../game/actions/traps.js';
+import { artifactsIn } from '../../game/actions/endgame.js';
+import { treasuryPanel } from '../views/endgame.js';
 import { celebrationOptions, runningCelebration, startCelebration } from '../../game/actions/celebration.js';
 
 export const villageRouter = Router();
@@ -159,6 +161,8 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
         }),
       ];
     }
+    case 'treasury':
+      return [treasuryPanel({ level: levelOf(state, 'treasury'), held: artifactsIn(db, state.village.id), now: ctx.now })];
     case 'trapper':
       return [trapperPanel({ ...trapPanelData(db, state), have, csrf: ctx.csrf })];
     default:

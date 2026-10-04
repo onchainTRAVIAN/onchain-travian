@@ -30,6 +30,7 @@ import {
 import { addReport, type BattleReportData, type ReportSide } from './reports.js';
 import { scheduleReturn, sendTroopsHome, villageInfo, type VillageInfo } from './movement.js';
 import { canExpand, conquerVillage, destroyVillage, moveCapital } from './expansion.js';
+import { artifactValue, artifactsIn, tryCaptureArtifact, wonderLevelDone } from '../actions/endgame.js';
 import { HERO_XP_VALUE } from '../rules/hero.js';
 import { createVillage } from './world.js';
 import {
@@ -136,6 +137,10 @@ function readPrisoners(v: { prisoners: string }): Record<string, UnitCounts> {
   return {};
 }
 
+function attackerHeroAliveAfter(q: Q, heroId: number): boolean {
+  return q.select({ s: heroes.status }).from(heroes).where(eq(heroes.id, heroId)).get()?.s !== 'dead';
+}
+
 function greatCelebrationRunning(q: Q, villageId: number, t: number): boolean {
   return !!q
     .select({ id: celebrations.id })
@@ -233,9 +238,9 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   // --- Scouting (T3: only scouts fight; attack 35/scout × morale vs 20/defending scout × wall) ---
   if (mv.kind === 'scout') {
     const attackerGroup: ArmyGroup = { tribe: home.tribe, units: attackerUnits, upgrades: home.attackUpgrades };
-    const offPts = scoutPoints(attackerGroup, 'attack') * moraleMalus(playerPop(q, home.userId), playerPop(q, target.userId));
+    const offPts = scoutPoints(attackerGroup, 'attack') * moraleMalus(playerPop(q, home.userId), playerPop(q, target.userId)) * artifactValue(q, home.id, 'eyes', t);
     const wallMult = target.userId !== null ? Math.pow(1 + TRIBES[target.tribe].wallPerLevel, wallLevel) : 1;
-    const defPts = defenders.reduce((s, d) => s + scoutPoints(d.group, 'defense'), 0) * wallMult;
+    const defPts = defenders.reduce((s, d) => s + scoutPoints(d.group, 'defense'), 0) * wallMult * artifactValue(q, targetId, 'eyes', t);
     const defScouts = defenders.reduce((s, d) => s + countType(d.group.tribe, d.group.units, 'scout'), 0);
     const outcome = resolveScouting(offPts, defPts);
     const losses = attackerUnits.map((n, i) => (unitDef(home.tribe, i).type === 'scout' ? Math.min(n, Math.round(n * outcome.lossRatio)) : 0));
@@ -256,7 +261,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
             resources: stockOf(target.village),
             troops: defenders.map((d) => ({ tribe: d.group.tribe, units: d.group.units })),
             wallLevel,
-            crannyHides: hiddenByCranny(target, home.tribe),
+            crannyHides: hiddenByCranny(target, home.tribe, artifactValue(q, targetId, 'confusion', t)),
           }
         : { success: false },
     };
@@ -296,7 +301,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const ramSlot = slotOf('ram');
   const cataSlot = slotOf('catapult');
   // Stonemason (capital only) makes buildings and the wall sturdier against siege.
-  const durability = targetInfo.isCapital ? 1 + 0.1 * levelOf(target, 'stonemason') : 1;
+  const durability = (targetInfo.isCapital ? 1 + 0.1 * levelOf(target, 'stonemason') : 1) * artifactValue(q, targetId, 'architect', t);
   const attackerPop = playerPop(q, home.userId);
   const defenderPop = playerPop(q, target.userId);
   const result = resolveBattle({
@@ -373,7 +378,8 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     if (catas > 0) {
       const homeState = loadVillage(q, home.id);
       const rally = homeState ? levelOf(homeState, 'rally') : 0;
-      const random = home.tribe === 'teutons' && breweryLevel(q, home.userId) > 0; // drunk catapults aim randomly
+      // Drunk (Brewery) catapults aim randomly, and so does everyone against a Rivals' confusion holder.
+      const random = (home.tribe === 'teutons' && breweryLevel(q, home.userId) > 0) || artifactValue(q, targetId, 'confusion', t) > 1;
       const wanted = (mv.catapultTarget ?? '').split(',').filter(Boolean);
       const volleys = wanted.length >= 2 && canAimTwice(rally, catas) ? [wanted[0] ?? null, wanted[1] ?? null] : [wanted[0] ?? null];
       const morale = cataMorale(attackerPop, defenderPop);
@@ -397,7 +403,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
       if (changes.length > 1) notes.push(`Catapults: ${changes.join(', ')}.`);
       const pop = refreshPopulation(q, targetId);
       // A village shot down to 0 population is destroyed (never a capital or a player's last village).
-      if (pop <= 0 && !targetInfo.isCapital && target.userId !== null) {
+      if (pop <= 0 && !targetInfo.isCapital && target.userId !== null && artifactsIn(q, targetId).length === 0 && !target.village.wonder) {
         const count = q.select({ id: villages.id }).from(villages).where(eq(villages.userId, target.userId)).all().length;
         if (count > 1) {
           destroyVillage(q, targetId, t);
@@ -405,6 +411,12 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
           notes.push(`${targetInfo.name} was razed to the ground.`);
         }
       }
+    }
+
+    // A hero that survives a won attack can carry off an artifact once the Treasury is destroyed.
+    if (!destroyed && aHero && attackerHeroAliveAfter(q, aHero.id)) {
+      const note = tryCaptureArtifact(q, home.id, targetId, t);
+      if (note) notes.push(note);
     }
 
     // Chiefs lower loyalty; at zero the village changes hands.
@@ -448,7 +460,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   if (!conquered && !destroyed && totalUnits(survivors) > 0 && (mode === 'raid' || result.attackerWon) && capacity > 0) {
     const v = q.select().from(villages).where(eq(villages.id, targetId)).get();
     const fresh = v ? stockOf(v) : res();
-    loot = computeLoot(fresh, hiddenByCranny(target, home.tribe), capacity);
+    loot = computeLoot(fresh, hiddenByCranny(target, home.tribe, artifactValue(q, targetId, 'confusion', t)), capacity);
     setResources(q, targetId, subRes(fresh, loot));
   }
 
@@ -752,6 +764,7 @@ function handleBuildDone(q: Q, order: typeof buildOrders.$inferSelect): void {
   q.update(slots).set({ building, level: Math.max(0, order.toLevel) }).where(and(eq(slots.villageId, order.villageId), eq(slots.slot, order.slot))).run();
   q.delete(buildOrders).where(eq(buildOrders.id, order.id)).run();
   refreshPopulation(q, order.villageId);
+  if (order.building === 'wonder' && !order.demolish) wonderLevelDone(q, order.villageId, order.toLevel, order.finishAt);
   // Finishing a Palace makes this village the capital (T3.6: the Palace can stand in any village).
   if (order.building === 'palace' && order.toLevel === 1 && !order.demolish) moveCapital(q, order.villageId, order.finishAt);
 }

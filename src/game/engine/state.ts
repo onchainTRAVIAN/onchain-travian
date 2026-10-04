@@ -1,4 +1,6 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
+import { artifactValue } from './artifacts.js';
+import { clock } from '../../clock.js';
 import type { Q } from '../../db/index.js';
 import { movements, slots, tiles, trainOrders, troops, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
@@ -86,12 +88,12 @@ export function storageOf(state: Pick<VillageState, 'slots'>): { warehouse: numb
   let hasW = false;
   let hasG = false;
   for (const s of state.slots) {
-    if (s.building === 'warehouse' && s.level > 0) {
-      warehouse += storageCapacity(s.level);
+    if ((s.building === 'warehouse' || s.building === 'greatwarehouse') && s.level > 0) {
+      warehouse += storageCapacity(s.level) * (s.building === 'greatwarehouse' ? 3 : 1);
       hasW = true;
     }
-    if (s.building === 'granary' && s.level > 0) {
-      granary += storageCapacity(s.level);
+    if ((s.building === 'granary' || s.building === 'greatgranary') && s.level > 0) {
+      granary += storageCapacity(s.level) * (s.building === 'greatgranary' ? 3 : 1);
       hasG = true;
     }
   }
@@ -104,10 +106,11 @@ export function capacityFor(state: Pick<VillageState, 'slots'>): Resources {
 }
 
 /** Amount of each resource a cranny keeps safe from raiders. */
-export function hiddenByCranny(state: VillageState, attackerTribe: TribeId): number {
+export function hiddenByCranny(state: VillageState, attackerTribe: TribeId, confusion = 1): number {
   let total = 0;
   for (const s of state.slots) if (s.building === 'cranny') total += crannyCapacity(s.level);
-  return Math.floor(total * TRIBES[state.tribe].crannyMultiplier * TRIBES[attackerTribe].enemyCrannyFactor);
+  // `confusion`: Rivals' confusion artifact multiplies the crannies.
+  return Math.floor(total * confusion * TRIBES[state.tribe].crannyMultiplier * TRIBES[attackerTribe].enemyCrannyFactor);
 }
 
 export function populationOf(state: Pick<VillageState, 'slots'>): number {
@@ -187,7 +190,9 @@ export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId): number 
   // Roman Horse Drinking Trough: Equites Legati / Imperatoris / Caesaris eat 1 less from level 10 / 15 / 20.
   const trough =
     tribe === 'romans' ? q.select({ l: slots.level }).from(slots).where(and(eq(slots.villageId, villageId), eq(slots.building, 'horsetrough'))).get()?.l ?? 0 : 0;
-  const own = (units: UnitCounts) => upkeepOf(tribe, units) - troughDiscount(trough, units);
+  // Diet control (artifact) cuts what this village's own troops eat.
+  const diet = artifactValue(q, villageId, 'diet', clock.now());
+  const own = (units: UnitCounts) => (upkeepOf(tribe, units) - troughDiscount(trough, units)) * diet;
   let total = 0;
   for (const row of q.select({ owner: troops.ownerVillageId, units: troops.units }).from(troops).where(eq(troops.villageId, villageId)).all()) {
     total += row.owner === villageId ? own(parseUnits(row.units)) : upkeepOf(tribeOfVillage(q, row.owner), parseUnits(row.units));

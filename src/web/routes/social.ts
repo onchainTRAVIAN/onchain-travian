@@ -15,6 +15,8 @@ import { AVATAR_MAX_UPLOAD, avatarPath, hasAvatar, removeAvatar, saveAvatar, set
 import { GameError } from '../../game/errors.js';
 import { TRIBES } from '../../game/rules/units.js';
 import { unitInfoView, unitsIndexView } from '../views/units.js';
+import { endgameOverview } from '../../game/actions/endgame.js';
+import { endgameView } from '../views/endgame.js';
 import { WEEKLY_CATEGORIES, lastWinners, medalsOf, weekStart, weeklyStandings } from '../../game/actions/weekly.js';
 import { deleteMessage, inbox, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
 import { parseReport } from '../../game/engine/reports.js';
@@ -338,7 +340,7 @@ socialRouter.get('/stats/week', (req, res) => {
   );
 });
 
-const UNIT_TRIBES = ['romans', 'teutons', 'gauls', 'nature'] as const;
+const UNIT_TRIBES = ['romans', 'teutons', 'gauls', 'nature', 'natars'] as const;
 
 socialRouter.get('/unit/:tribe/:n', (req, res) => {
   const tribe = UNIT_TRIBES.find((t) => t === req.params.tribe);
@@ -348,6 +350,13 @@ socialRouter.get('/unit/:tribe/:n', (req, res) => {
     return;
   }
   sendPage(req, res, TRIBES[tribe].units[n - 1]?.name ?? 'Troop', unitInfoView({ tribe, slot: n - 1 }), {
+    chrome: req.ctx.user ? loadGamePage(req).chrome : null,
+  });
+});
+
+socialRouter.get('/endgame', (req, res) => {
+  sendPage(req, res, 'Artifacts & World Wonders', endgameView({ ...endgameOverview(db), now: req.ctx.now }), {
+    nav: 'stats',
     chrome: req.ctx.user ? loadGamePage(req).chrome : null,
   });
 });

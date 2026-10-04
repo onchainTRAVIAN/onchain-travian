@@ -8,6 +8,7 @@ import { TRIBES, addUnits, trainTimeMs, type TrainingBuilding, type UnitDef } fr
 import { SETTLERS_PER_VILLAGE, expansionSlots } from '../rules/expansion.js';
 import { isResearched } from './research.js';
 import { ownedTroopTotals } from '../engine/state.js';
+import { artifactValue } from '../engine/artifacts.js';
 import { getModifiers } from '../modifiers.js';
 import { GameError, assertGame } from '../errors.js';
 import { catchUp, levelOf, setResources, stockOf, type VillageState } from '../engine/state.js';
@@ -70,7 +71,8 @@ export function trainOptions(q: Q, state: VillageState, building: BuildingId, no
     .filter(({ unit }) => unit.building === site.units)
     .map(({ unit, slot }) => {
       const cost = scaleRes(unitCost(unit, mods.troopCost), site.costMult);
-      const timeMs = trainTimeMs(unit, Math.max(1, bLevel), config.WORLD_SPEED * mods.trainSpeed * trough);
+      // Trainers' talent (artifact) shortens training.
+      const timeMs = Math.round(trainTimeMs(unit, Math.max(1, bLevel), config.WORLD_SPEED * mods.trainSpeed * trough) * artifactValue(q, state.village.id, 'trainer', now));
       let reason: string | undefined;
       if (bLevel <= 0) reason = `Requires ${BUILDINGS[building].name}`;
       for (const req of unit.requires) {

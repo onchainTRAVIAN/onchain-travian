@@ -4,6 +4,7 @@ import { clock } from './clock.js';
 import { ensureWorld } from './game/engine/world.js';
 import { processDue } from './game/engine/events.js';
 import { processWeek } from './game/actions/weekly.js';
+import { processEndgame } from './game/actions/endgame.js';
 import { createApp } from './app.js';
 import { startCryptoWorkers } from './crypto/worker.js';
 
@@ -22,6 +23,11 @@ const worker = setInterval(() => {
     if (r.awarded > 0) console.log(`Weekly medals awarded: ${r.awarded}`);
   } catch (err) {
     console.error('Weekly rollover failed:', err);
+  }
+  try {
+    processEndgame(db, clock.now());
+  } catch (err) {
+    console.error('Endgame release failed:', err);
   }
 }, 1000);
 

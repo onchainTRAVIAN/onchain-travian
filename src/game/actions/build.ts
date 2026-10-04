@@ -1,3 +1,4 @@
+import { canBuildGreatStorage, wonderBlocker } from './endgame.js';
 import { and, asc, eq, ne } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { buildOrders, slots, villages } from '../../db/schema.js';
@@ -82,6 +83,11 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   if (base.maxed) return no(`Fully upgraded (level ${maxLevel})`);
   if (def.tribe && def.tribe !== state.tribe) return no(`Only the ${TRIBES[def.tribe].name} can build this`);
   if (def.capitalOnly && !state.village.isCapital) return no('Can only be built in your capital');
+  if (def.special === 'wonder') {
+    const block = wonderBlocker(q, state, nextLevel, now);
+    if (block) return no(block);
+  }
+  if (def.special === 'greatStorage' && !canBuildGreatStorage(q, state, now)) return no('Needs a storage master plan artifact (or a World Wonder village)');
   if (def.nonCapital && state.village.isCapital) return no('Cannot be built in your capital');
 
   if (pendingHere) return no('Already under construction');
@@ -148,7 +154,7 @@ function ownsElsewhere(q: Q, userId: number, villageId: number, id: BuildingId):
 
 /** Reasons that mean "never show this building in the list" (tribe, capital rules). */
 function hiddenReason(reason: string | undefined): boolean {
-  return !!reason && /^(Only the|Can only be built in your capital|Cannot be built in your capital|You already have|Already built|Cannot be built next to|Upgrade your existing)/.test(reason);
+  return !!reason && /^(Only the|Can only be built in your capital|Cannot be built in your capital|You already have|Already built|Cannot be built next to|Upgrade your existing|Only in a World Wonder village|Needs a storage master plan)/.test(reason);
 }
 
 /** Buildings that could go on an empty town plot, best options first. */

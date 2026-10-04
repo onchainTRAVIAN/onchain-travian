@@ -4,8 +4,8 @@ import type { Requirement } from './buildings.js';
 /** Tribes players can choose (classic Travian 3 tribes). */
 export const TRIBE_IDS = ['romans', 'teutons', 'gauls'] as const;
 export type PlayableTribeId = (typeof TRIBE_IDS)[number];
-/** 'nature' = wild animals living in oases. */
-export type TribeId = PlayableTribeId | 'nature';
+/** 'nature' = wild animals living in oases; 'natars' = the NPC tribe guarding artifacts and World Wonders. */
+export type TribeId = PlayableTribeId | 'nature' | 'natars';
 
 export type UnitType = 'inf' | 'cav' | 'scout' | 'ram' | 'catapult' | 'chief' | 'settler';
 export type TrainingBuilding = 'barracks' | 'stable' | 'workshop' | 'residence';
@@ -247,7 +247,40 @@ const nature: TribeDef = {
   ],
 };
 
-export const TRIBES: Record<TribeId, TribeDef> = { romans, teutons, gauls, nature };
+/** Natars (T3.6): the ancient NPC tribe. Stats from Kirilloid's T3 model; they never train or attack. */
+const N = (id: string, name: string, type: UnitType, attack: number, defInf: number, defCav: number, speed: number, upkeep: number): UnitDef =>
+  U({ id, name, icon: '🛡️', type, description: 'A soldier of the ancient Natar empire.', attack, defInf, defCav, speed, carry: 0, upkeep, cost: [0, 0, 0, 0], trainTime: 0, building: 'barracks' });
+
+const natars: TribeDef = {
+  id: 'natars',
+  name: 'Natars',
+  icon: '🏛️',
+  tagline: 'The ancient empire',
+  description: 'The Natars guard the artifacts and the World Wonders.',
+  strengths: [],
+  wallPerLevel: 0.025,
+  wallName: 'Wall',
+  crannyMultiplier: 1,
+  enemyCrannyFactor: 1,
+  parallelBuild: false,
+  merchantCapacity: 0,
+  merchantSpeed: 1,
+  chiefPower: [0, 0],
+  units: [
+    N('pikeman', 'Pikeman', 'inf', 20, 35, 50, 6, 1),
+    N('thorned_warrior', 'Thorned Warrior', 'inf', 65, 30, 10, 7, 1),
+    N('guardsman', 'Guardsman', 'inf', 100, 90, 75, 6, 1),
+    N('birds_of_prey', 'Birds of Prey', 'scout', 0, 10, 10, 25, 1),
+    N('axerider', 'Axerider', 'cav', 155, 80, 50, 14, 2),
+    N('natarian_knight', 'Natarian Knight', 'cav', 170, 140, 80, 12, 3),
+    N('war_elephant', 'War Elephant', 'ram', 250, 120, 150, 5, 4),
+    N('ballista', 'Ballista', 'catapult', 60, 45, 10, 3, 5),
+    N('natarian_emperor', 'Natarian Emperor', 'chief', 80, 50, 50, 5, 1),
+    N('natar_settler', 'Settler', 'settler', 30, 40, 40, 5, 1),
+  ],
+};
+
+export const TRIBES: Record<TribeId, TribeDef> = { romans, teutons, gauls, nature, natars };
 
 export function isTribeId(id: string): id is PlayableTribeId {
   return (TRIBE_IDS as readonly string[]).includes(id);

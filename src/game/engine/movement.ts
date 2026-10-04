@@ -5,6 +5,7 @@ import { config } from '../../config.js';
 import { distance, travelTimeArenaMs } from '../rules/map.js';
 import { sumRes, type Resources } from '../rules/resources.js';
 import { TRIBES, emptyUnits, slowestSpeed, totalUnits, type TribeId, type UnitCounts } from '../rules/units.js';
+import { artifactValue } from './artifacts.js';
 import { buildingLevelIn, catchUp, parseLevels, setTroopsAt, troopsAt } from './state.js';
 
 export interface VillageInfo {
@@ -70,7 +71,10 @@ export function scheduleReturn(
 ): void {
   if (totalUnits(units) <= 0 && !withHero) return;
   const dist = distance(fromX, fromY, home.x, home.y, config.MAP_RADIUS);
-  const travel = travelTimeArenaMs(dist, groupSpeed(home.tribe, units, heroSpeedFor(q, home.userId, withHero, home.tribe)), buildingLevelIn(q, home.id, 'tournament'), config.TROOP_SPEED);
+  const travel = Math.round(
+    travelTimeArenaMs(dist, groupSpeed(home.tribe, units, heroSpeedFor(q, home.userId, withHero, home.tribe)), buildingLevelIn(q, home.id, 'tournament'), config.TROOP_SPEED) /
+      artifactValue(q, home.id, 'boots', t),
+  );
   q.insert(movements)
     .values({
       kind: 'return',

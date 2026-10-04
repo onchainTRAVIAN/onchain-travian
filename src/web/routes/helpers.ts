@@ -8,6 +8,7 @@ import { catchUp, economyOf, type VillageState } from '../../game/engine/state.j
 import { unreadCounts, userVillages } from '../../game/queries.js';
 import { activeTicker, creditBalance } from '../../game/actions/credits.js';
 import { ensureHero } from '../../game/engine/hero.js';
+import { winner } from '../../game/actions/endgame.js';
 import { heroPoints } from '../../game/rules/hero.js';
 import { pointsUsed } from '../../game/actions/hero.js';
 import { catchUpCulture } from '../../game/engine/state.js';
@@ -57,12 +58,18 @@ export function sendPage(req: Request, res: Response, title: string, body: SafeH
         chrome: opts.chrome ?? null,
         nav: opts.nav,
         ticker: activeTicker(db, req.ctx.now),
-        announcement: getMeta(db, 'announcement') ?? null,
+        announcement: winnerBanner() ?? getMeta(db, 'announcement') ?? null,
       }).value,
     );
 }
 
 /** Redirect target for "go back" after a form: same-origin Referer or a fallback. */
+/** Once a World Wonder reaches level 100 everybody sees who won. */
+function winnerBanner(): string | null {
+  const w = winner(db);
+  return w ? `🏆 ${w.alliance ?? w.user} completed the World Wonder in ${w.village} and won this world!` : null;
+}
+
 export function backUrl(req: Request, fallback: string): string {
   const ref = req.get('referer');
   if (!ref) return fallback;

@@ -34,7 +34,7 @@ function costRow(c: Resources): SafeHtml {
 export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
   const t = TRIBES[d.tribe];
   const u = t.units[d.slot] as UnitDef;
-  const isNature = d.tribe === 'nature';
+  const isNature = d.tribe === 'nature' || d.tribe === 'natars';
   const n = d.slot + 1;
   const train = trainTimeMs(u, 1, config.WORLD_SPEED);
   const research = !isNature && needsResearch(d.slot, u);
@@ -59,7 +59,9 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
       </div>
     </div>
     ${isNature
-      ? html`<p class="small muted">Wild animals live in unoccupied oases. Clear them out to capture the oasis; your hero gains experience from every animal killed.</p>`
+      ? d.tribe === 'natars'
+        ? html`<p class="small muted">The Natars guard artifacts and World Wonders. They never attack and can't be trained. <a href="/endgame">» Artifacts &amp; World Wonders</a></p>`
+        : html`<p class="small muted">Wild animals live in unoccupied oases. Clear them out to capture the oasis; your hero gains experience from every animal killed.</p>`
       : html`<h2>Training</h2>
         <table><tbody>
           <tr><th>Cost</th><td>${costRow(u.cost)}</td></tr>
@@ -77,9 +79,9 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
 }
 
 export function unitsIndexView(d: { tribe: TribeId | null }): SafeHtml {
-  const tribes: TribeId[] = d.tribe ? [d.tribe] : ['romans', 'teutons', 'gauls', 'nature'];
+  const tribes: TribeId[] = d.tribe ? [d.tribe] : ['romans', 'teutons', 'gauls', 'nature', 'natars'];
   return html`<h1>Troops</h1>
-    <p class="tabs">${(['romans', 'teutons', 'gauls', 'nature'] as TribeId[]).map(
+    <p class="tabs">${(['romans', 'teutons', 'gauls', 'nature', 'natars'] as TribeId[]).map(
       (t) => html`<a href="/units?t=${t}" class="${d.tribe === t ? 'on' : ''}">${TRIBES[t].name}</a>`,
     )}<a href="/units" class="${d.tribe === null ? 'on' : ''}">All</a></p>
     ${tribes.map(

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, lt, ne, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { medals, messages, users, weekSnapshots, weeks } from '../../db/schema.js';
 import type { TribeId } from '../rules/units.js';
@@ -52,7 +52,7 @@ function totals(q: Q): Totals[] {
       villages: sql<number>`(select count(*) from villages v where v.user_id = "users"."id")`,
     })
     .from(users)
-    .where(eq(users.banned, false))
+    .where(and(eq(users.banned, false), ne(users.tribe, 'natars')))
     .all();
 }
 

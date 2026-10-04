@@ -6,6 +6,7 @@ import { creditsLedger, deposits, sessions, users, villages } from '../../db/sch
 import { deleteChatMessage } from '../../game/actions/chat.js';
 import { grantCredits, removeTicker, upcomingTicker } from '../../game/actions/credits.js';
 import { getMeta, setMeta } from '../../game/engine/world.js';
+import { releaseArtifacts, releaseWonders } from '../../game/actions/endgame.js';
 import { onlineCount, playerCount } from '../../game/queries.js';
 import { assertGame } from '../../game/errors.js';
 import { authed, requireAuth, setFlash } from '../session.js';
@@ -53,6 +54,7 @@ adminRouter.get('/admin', (req, res) => {
         indexerBlock: getMeta(db, 'indexer_block') ?? '—',
       },
       announcement: getMeta(db, 'announcement') ?? '',
+      endgame: { artifacts: Number(getMeta(db, 'artifacts_released_at') ?? 0) || null, wonders: Number(getMeta(db, 'wonders_released_at') ?? 0) || null },
       players,
       query: q,
       ticker: upcomingTicker(db, ctx.now),
@@ -62,6 +64,24 @@ adminRouter.get('/admin', (req, res) => {
     { chrome: page.chrome },
   );
 });
+
+adminRouter.post(
+  '/admin/endgame/artifacts',
+  formAction(z.object({}), (req, res) => {
+    const n = releaseArtifacts(db, authed(req).now);
+    setFlash(res, 'ok', n > 0 ? `The Natars appeared with ${n} artifacts.` : 'Artifacts were already released.');
+    res.redirect(303, '/admin');
+  }, '/admin'),
+);
+
+adminRouter.post(
+  '/admin/endgame/wonders',
+  formAction(z.object({}), (req, res) => {
+    const n = releaseWonders(db, authed(req).now);
+    setFlash(res, 'ok', n > 0 ? `${n} World Wonder villages and their construction plans appeared.` : 'World Wonders were already released.');
+    res.redirect(303, '/admin');
+  }, '/admin'),
+);
 
 adminRouter.post(
   '/admin/announcement',

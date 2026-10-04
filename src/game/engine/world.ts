@@ -102,7 +102,7 @@ export function createVillage(
   }
   rows.push({ villageId: v.id, slot: RALLY_SLOT, building: 'rally', level: 0 });
   const tribe = q.select({ tribe: users.tribe }).from(users).where(eq(users.id, opts.userId)).get()?.tribe ?? 'romans';
-  rows.push({ villageId: v.id, slot: WALL_SLOT, building: WALL_FOR[tribe], level: 0 });
+  rows.push({ villageId: v.id, slot: WALL_SLOT, building: tribe === 'natars' ? null : WALL_FOR[tribe], level: 0 });
   q.insert(slots).values(rows).run();
   q.insert(troops).values({ villageId: v.id, ownerVillageId: v.id, units: JSON.stringify(emptyUnits()) }).run();
   q.update(tiles).set({ villageId: v.id }).where(and(eq(tiles.x, opts.x), eq(tiles.y, opts.y))).run();

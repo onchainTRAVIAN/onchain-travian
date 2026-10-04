@@ -45,6 +45,9 @@ export const TOWN_BUILDING_IDS = [
   'brewery',
   'trapper',
   'horsetrough',
+  'greatwarehouse',
+  'greatgranary',
+  'wonder',
   'citywall',
   'earthwall',
   'palisade',
@@ -81,6 +84,11 @@ export interface BuildingDef {
   fixedSlot?: number;
   excludes?: BuildingId[];
   produces?: ResourceKey;
+  /**
+   * Endgame buildings: Great Warehouse/Granary need a storage plan artifact (or a World Wonder
+   * village); the World Wonder only stands in Natar World Wonder villages.
+   */
+  special?: 'greatStorage' | 'wonder';
   /** Only this tribe may build it. */
   tribe?: PlayableTribeId;
   capitalOnly?: boolean;
@@ -98,6 +106,9 @@ export const TOWN_SLOT_LAST = 38;
 export const MAIN_SLOT = 26;
 export const RALLY_SLOT = 39;
 export const WALL_SLOT = 40;
+/** World Wonder villages keep their Wonder on this plot. */
+export const WONDER_SLOT = 25;
+export const WONDER_MAX_LEVEL = 100;
 
 type Init = Omit<BuildingDef, 'multiple' | 'baseCost' | 'requires' | 'time' | 'kind'> & {
   kind?: BuildingDef['kind'];
@@ -223,6 +234,15 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   horsetrough: B({ id: 'horsetrough', name: 'Horse Drinking Trough', icon: '🐴', cost: [780, 420, 660, 540], costFactor: 1.28, maxLevel: 20,
     time: { a: 2200 + 3750, k: 1.16, b: 3750 }, pop: 5, cp: 3, requires: [['rally', 10], ['stable', 20]], tribe: 'romans',
     description: 'Roman horses drink here: cavalry trains 1% faster per level, and from level 10/15/20 Equites Legati/Imperatoris/Caesaris eat 1 crop less.' }),
+  greatwarehouse: B({ id: 'greatwarehouse', name: 'Great Warehouse', icon: '🏚️', cost: [650, 800, 450, 200], costFactor: 1.28, maxLevel: 20, t1: 9000, pop: 1, cp: 1,
+    requires: [['main', 10]], multiple: true, special: 'greatStorage',
+    description: 'Stores three times as much wood, clay and iron as a warehouse. Can only be built with a storage plan artifact or in a World Wonder village.' }),
+  greatgranary: B({ id: 'greatgranary', name: 'Great Granary', icon: '🛖', cost: [400, 500, 350, 100], costFactor: 1.28, maxLevel: 20, t1: 7000, pop: 1, cp: 1,
+    requires: [['main', 10]], multiple: true, special: 'greatStorage',
+    description: 'Stores three times as much crop as a granary. Can only be built with a storage plan artifact or in a World Wonder village.' }),
+  wonder: B({ id: 'wonder', name: 'World Wonder', icon: '🏛️', cost: [66700, 69050, 72200, 13200], costFactor: 1.0275, maxLevel: WONDER_MAX_LEVEL,
+    time: { a: 60857, k: 1.014, b: 42857 }, pop: 1, cp: 0, fixedSlot: WONDER_SLOT, special: 'wonder',
+    description: 'The alliance that first completes a World Wonder to level 100 wins the world. Needs a construction plan held in your alliance (two from level 50).' }),
   citywall: B({ id: 'citywall', name: 'City Wall', icon: '🏯', cost: [70, 90, 170, 70], costFactor: 1.28, maxLevel: 20, t1: 2000, pop: 0, cp: 1,
     fixedSlot: WALL_SLOT, tribe: 'romans',
     description: 'The city wall protects your village: +3% defence per level for all troops inside.' }),
@@ -255,8 +275,12 @@ function round5(n: number): number {
 
 /** Cost to upgrade *to* `level`. */
 export function buildCost(def: BuildingDef, level: number): Resources {
+  // World Wonder (T3): each resource is capped at 1,000,000; the last level has its own price.
+  if (def.id === 'wonder' && level >= WONDER_MAX_LEVEL) return res(1e6, 1e6, 1e6, 193_630);
+  const cap = def.id === 'wonder' ? 1e6 : Infinity;
   const k = Math.pow(def.costFactor, Math.max(0, level - 1));
-  return res(round5(def.baseCost.wood * k), round5(def.baseCost.clay * k), round5(def.baseCost.iron * k), round5(def.baseCost.crop * k));
+  const c = (n: number) => Math.min(cap, round5(n * k));
+  return res(c(def.baseCost.wood), c(def.baseCost.clay), c(def.baseCost.iron), c(def.baseCost.crop));
 }
 
 /** Seconds to build `level` at speed 1 with a level-1 Main Building. */

@@ -5,6 +5,7 @@ import { csrfField } from './layout.js';
 export function adminView(d: {
   stats: { players: number; online: number; villages: number; creditsIssued: number; deposits: number; indexerBlock: string };
   announcement: string;
+  endgame: { artifacts: number | null; wonders: number | null };
   players: { id: number; username: string; role: string; banned: boolean; mutedUntil: number; lastSeenAt: number; credits: number; villages: number }[];
   query: string;
   ticker: { t: { id: number; body: string; startsAt: number; endsAt: number; price: number }; username: string | null }[];
@@ -26,6 +27,12 @@ export function adminView(d: {
       <input id="ann" type="text" name="text" value="${d.announcement}" maxlength="200" placeholder="Shown on the news ticker for everyone (empty = off)">
       <div class="actions"><button type="submit">Publish</button></div>
     </form>
+    <h2>🏛️ Endgame</h2>
+    <p class="small">Artifacts: ${d.endgame.artifacts ? html`released ${fmtDateTime(d.endgame.artifacts)} UTC` : 'not released'} ·
+      World Wonders: ${d.endgame.wonders ? html`released ${fmtDateTime(d.endgame.wonders)} UTC` : 'not released'}.
+      (Automatic release: set ARTIFACT_DAY / WONDER_DAY.)</p>
+    ${!d.endgame.artifacts ? html`<form method="post" action="/admin/endgame/artifacts" class="inline">${csrfField(d.csrf)}<button type="submit" class="secondary">Release artifacts now</button></form>` : ''}
+    ${!d.endgame.wonders ? html`<form method="post" action="/admin/endgame/wonders" class="inline">${csrfField(d.csrf)}<button type="submit" class="secondary">Release World Wonders now</button></form>` : ''}
     <h2>👥 Players</h2>
     <form method="get" action="/admin" class="row"><div><label for="aq" class="sr">Search</label><input id="aq" type="text" name="q" value="${d.query}" placeholder="Search name"></div><div><button type="submit" class="block">Search</button></div></form>
     ${d.players.map(

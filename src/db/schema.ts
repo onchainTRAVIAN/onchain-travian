@@ -13,7 +13,7 @@ export const users = sqliteTable(
     username: text('username').notNull(),
     usernameLower: text('username_lower').notNull(),
     passwordHash: text('password_hash').notNull(),
-    tribe: text('tribe', { enum: ['romans', 'teutons', 'gauls'] }).notNull(),
+    tribe: text('tribe', { enum: ['romans', 'teutons', 'gauls', 'natars'] }).notNull(),
     role: text('role', { enum: ['player', 'admin'] }).notNull().default('player'),
     banned: integer('banned', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at').notNull(),
@@ -96,6 +96,8 @@ export const villages = sqliteTable(
     prisoners: text('prisoners').notNull().default('{}'),
     /** Gaul traps built in this village (each holds one prisoner). */
     traps: integer('traps').notNull().default(0),
+    /** A World Wonder village (Natar-founded; the Wonder stands on plot 25). */
+    wonder: integer('wonder', { mode: 'boolean' }).notNull().default(false),
     /** Villages founded or conquered from here (uses expansion slots). */
     expansions: integer('expansions').notNull().default(0),
     /** Village this one was founded from (null for starting villages). */
@@ -410,6 +412,22 @@ export const medals = sqliteTable(
     prize: integer('prize').notNull(),
   },
   (t) => [uniqueIndex('medals_week_cat_rank').on(t.weekStart, t.category, t.rank), index('medals_user_idx').on(t.userId)],
+);
+
+/** Artifacts (T3.6 endgame): held in a village's Treasury; small ones work for that village, large/unique for the whole account. */
+export const artifacts = sqliteTable(
+  'artifacts',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    kind: text('kind', { enum: ['architect', 'boots', 'eyes', 'diet', 'trainer', 'storage', 'confusion', 'fool', 'plan'] }).notNull(),
+    size: text('size', { enum: ['small', 'large', 'unique'] }).notNull(),
+    villageId: integer('village_id').references(() => villages.id, { onDelete: 'set null' }),
+    /** Effects start this long after a capture (24 h / world speed). */
+    activeAt: integer('active_at').notNull(),
+    capturedAt: integer('captured_at'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('artifacts_village_idx').on(t.villageId)],
 );
 
 /** Gold market: resources or troops a player sells to others for Gold. Goods are held in escrow. */
