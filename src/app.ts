@@ -15,6 +15,7 @@ import { heroRouter } from './web/routes/hero.js';
 import { communityRouter } from './web/routes/community.js';
 import { shopRouter } from './web/routes/shop.js';
 import { adminRouter } from './web/routes/admin.js';
+import { walletRouter } from './web/routes/wallet.js';
 import { sendPage } from './web/routes/helpers.js';
 import { html } from './web/html.js';
 
@@ -58,6 +59,7 @@ export function createApp() {
   app.use(socialRouter);
   app.use(communityRouter);
   app.use(adminRouter);
+  app.use(walletRouter);
   app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map', '/research', '/market', '/hero', '/shop'], requireAuth);
   app.use(villageRouter);
   app.use(troopsRouter);

@@ -41,6 +41,11 @@ function loginForm(csrf: string, username: string): SafeHtml {
 export function loginView(csrf: string, username = ''): SafeHtml {
   return html`<h1>Log in</h1>
   ${loginForm(csrf, username)}
+  <div data-wallet data-csrf="${csrf}" class="actions">
+    <button type="button" class="block secondary" data-action="login">🦊 Log in with wallet</button>
+    <p class="small" data-status role="status"></p>
+  </div>
+  <script src="/static/wallet.js" defer></script>
   <p class="center small">New here? <a href="/register">Create a free account</a></p>`;
 }
 

@@ -154,7 +154,10 @@ export function csrfGuard(req: Request, res: Response, next: NextFunction): void
     expected.length === 0 ||
     !timingSafeEqual(Buffer.from(sent), Buffer.from(expected))
   ) {
-    res.status(403);
+    if (req.is('application/json')) {
+      res.status(403).json({ ok: false, error: 'Your session expired. Please reload the page.' });
+      return;
+    }
     setFlash(res, 'error', 'Your session expired. Please try again.');
     res.redirect(303, req.get('referer') && sameOrigin(req) ? (req.get('referer') ?? '/') : '/');
     return;

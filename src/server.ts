@@ -4,6 +4,7 @@ import { clock } from './clock.js';
 import { ensureWorld } from './game/engine/world.js';
 import { processDue } from './game/engine/events.js';
 import { createApp } from './app.js';
+import { startCryptoWorkers } from './crypto/worker.js';
 
 ensureWorld(db);
 
@@ -16,12 +17,15 @@ const worker = setInterval(() => {
   }
 }, 1000);
 
+const stopCrypto = startCryptoWorkers(db);
+
 const server = createApp().listen(config.PORT, () => {
   console.log(`${config.WORLD_NAME} running on http://localhost:${config.PORT} (speed x${config.WORLD_SPEED})`);
 });
 
 function shutdown() {
   clearInterval(worker);
+  stopCrypto();
   server.close(() => process.exit(0));
 }
 process.on('SIGINT', shutdown);
