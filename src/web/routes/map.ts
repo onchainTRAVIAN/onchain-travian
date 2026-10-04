@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { db } from '../../db/index.js';
+import { eq } from 'drizzle-orm';
+import { users, villages } from '../../db/schema.js';
+import { oasisAnimals, type TileRow } from '../../game/engine/oasis.js';
 import { config } from '../../config.js';
 import { troopsAt } from '../../game/engine/state.js';
 import { dist, mapWindow, tileInfo } from '../../game/queries.js';
@@ -10,6 +13,17 @@ import { mapView, tileView } from '../views/map.js';
 import { intParam, loadGamePage, sendPage } from './helpers.js';
 
 export const mapRouter = Router();
+
+function oasisOwnerInfo(tile: TileRow): { name: string; userId: number | null; villageName: string } | null {
+  if (tile.kind !== 'oasis' || tile.villageId === null) return null;
+  const row = db
+    .select({ vname: villages.name, uid: users.id, uname: users.username })
+    .from(villages)
+    .leftJoin(users, eq(users.id, villages.userId))
+    .where(eq(villages.id, tile.villageId))
+    .get();
+  return row ? { name: row.uname ?? 'Nature', userId: row.uid, villageName: row.vname } : null;
+}
 
 const VIEW_RADIUS = 3;
 
@@ -69,6 +83,8 @@ mapRouter.get('/map/tile', (req, res) => {
             }
           : null,
       distance: d,
+      animals: t.tile.kind === 'oasis' ? db.transaction((tx) => oasisAnimals(tx, t.tile, ctx.now)) : null,
+      oasisOwner: oasisOwnerInfo(t.tile),
       travel,
       now: ctx.now,
     }),

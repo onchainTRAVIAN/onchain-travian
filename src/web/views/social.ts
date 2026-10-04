@@ -76,6 +76,8 @@ const RANK_TABS: { key: RankKind; label: string; col: string }[] = [
   { key: 'raid', label: 'Raiders', col: 'Loot' },
 ];
 
+const allianceTab = html`<a href="/alliances">Alliances</a>`;
+
 export function rankingView(d: {
   kind: RankKind;
   rows: { id: number; username: string; tribe: TribeId; pop: number; villages: number; off: number; def: number; loot: number }[];
@@ -87,7 +89,7 @@ export function rankingView(d: {
   const tab = RANK_TABS.find((t) => t.key === d.kind) ?? RANK_TABS[0];
   const value = (r: (typeof d.rows)[number]) => (d.kind === 'attack' ? r.off : d.kind === 'defense' ? r.def : d.kind === 'raid' ? r.loot : r.pop);
   return html`<h1>🏆 Rankings</h1>
-    <nav class="tabs" aria-label="Ranking type">${RANK_TABS.map((t) => html`<a href="/stats?k=${t.key}" class="${t.key === d.kind ? 'on' : ''}">${t.label}</a>`)}</nav>
+    <nav class="tabs" aria-label="Ranking type">${RANK_TABS.map((t) => html`<a href="/stats?k=${t.key}" class="${t.key === d.kind ? 'on' : ''}">${t.label}</a>`)}${allianceTab}</nav>
     <div class="tblwrap"><table>
       <tr><th class="num">#</th><th>Player</th><th class="num">Villages</th><th class="num">${tab?.col ?? ''}</th></tr>
       ${d.rows.map(
@@ -151,7 +153,9 @@ export function accountView(d: {
     <h2>More</h2>
     <div class="actions">
       <a class="btn secondary" href="/player/${d.userId}">Public profile</a>
+      <a class="btn secondary" href="/wallet">🦊 Wallet & token perks</a>
       <a class="btn secondary" href="/help">Game guide</a>
+      ${d.isAdmin ? html`<a class="btn danger" href="/admin">🛡️ Admin</a>` : ''}
     </div>`;
 }
 

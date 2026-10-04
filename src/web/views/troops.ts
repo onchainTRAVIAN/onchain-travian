@@ -46,12 +46,13 @@ export function troopsView(d: TroopsViewData): SafeHtml {
 
 const MISSIONS: { kind: SendInput['kind']; label: string; help: string }[] = [
   { kind: 'raid', label: '💰 Raid', help: 'Grab resources and retreat. Both sides lose fewer troops.' },
-  { kind: 'attack', label: '⚔️ Attack', help: 'Fight to the end. Rams and catapults only work in an attack.' },
+  { kind: 'attack', label: '⚔️ Attack', help: 'Fight to the end. Rams, catapults and chiefs only work here.' },
   { kind: 'reinforce', label: '🛡️ Reinforce', help: 'Station troops to defend a village.' },
   { kind: 'scout', label: '🔭 Scout', help: 'Spy on resources and troops (scouts only).' },
+  { kind: 'settle', label: '🧺 Settle', help: 'Found a new village with 3 settlers on an empty valley.' },
 ];
 
-export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string }): SafeHtml {
+export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean }): SafeHtml {
   const units = TRIBES[d.tribe].units;
   const kind = d.values.kind ?? 'raid';
   return html`<h1>⚔️ Send troops</h1>
@@ -70,6 +71,9 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
         )}</div>
       </fieldset>
       <fieldset class="plain"><legend><b>Troops</b></legend>
+        ${d.heroHome
+          ? html`<label class="choice"><input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> 🦸 <b>Hero joins</b> <span class="small muted">— adds fighting strength and gains experience</span></label>`
+          : ''}
         ${units.every((_, i) => (d.home[i] ?? 0) === 0)
           ? html`<p class="muted">You have no troops at home. Train some in the <a href="/village">Barracks</a> first.</p>`
           : units.map((u, i) => {
@@ -103,13 +107,15 @@ export function confirmView(d: { tribe: TribeId; input: SendInput; preview: Send
       <li><span class="grow">Travel time <span class="sub">${fmtDuration(d.preview.travelMs)} — arrives in ${timer(arrive, d.now, false)}</span></span></li>
     </ul>
     <h2>Troops</h2>
-    ${unitsTable(d.tribe, d.input.units, undefined, { hideEmpty: true })}
+    ${d.input.units.some((n) => n > 0) ? unitsTable(d.tribe, d.input.units, undefined, { hideEmpty: true }) : ''}
+    ${d.input.hero ? html`<p>🦸 Your hero joins this mission.</p>` : ''}
     <form method="post" action="/troops/send">
       ${csrfField(d.csrf)}
       <input type="hidden" name="x" value="${d.input.x}"><input type="hidden" name="y" value="${d.input.y}">
       <input type="hidden" name="kind" value="${d.input.kind}">
       ${d.input.units.map((n, i) => html`<input type="hidden" name="u${i}" value="${n}">`)}
       ${d.input.catapultTarget ? html`<input type="hidden" name="catapultTarget" value="${d.input.catapultTarget}">` : ''}
+      ${d.input.hero ? html`<input type="hidden" name="hero" value="1">` : ''}
       <div class="actions"><button type="submit" class="block">✅ Send troops</button></div>
     </form>
     <div class="actions"><a class="btn secondary" href="/troops/send?x=${d.input.x}&amp;y=${d.input.y}&amp;kind=${d.input.kind}">← Change</a></div>`;

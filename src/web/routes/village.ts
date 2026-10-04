@@ -13,7 +13,16 @@ import { GameError } from '../../game/errors.js';
 import { authed, setActiveVillage, setFlash } from '../session.js';
 import { fieldsView, townView, type VillageViewData } from '../views/village.js';
 import { slotView } from '../views/slot.js';
-import { formAction, loadGamePage, sendPage, type GamePage } from './helpers.js';
+import { formAction, intParam, loadGamePage, sendPage, type GamePage } from './helpers.js';
+import type { SafeHtml } from '../html.js';
+import { academyOptions, researchOrdersOf, smithyOptions } from '../../game/actions/research.js';
+import { listOffers, merchantInfo } from '../../game/actions/market.js';
+import { canExpand } from '../../game/engine/expansion.js';
+import { membership } from '../../game/actions/alliance.js';
+import { oasesOwnedBy } from '../../game/engine/oasis.js';
+import { oasisSlots } from '../../game/rules/expansion.js';
+import { levelOf } from '../../game/engine/state.js';
+import { academyPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel } from '../views/buildings.js';
 
 export const villageRouter = Router();
 
@@ -69,7 +78,7 @@ villageRouter.get('/slot/:n', (req, res) => {
   const def = buildingId ? BUILDINGS[buildingId] : null;
   const trainingBuildings: TrainingBuilding[] = ['barracks', 'stable', 'workshop', 'residence'];
   const isTraining = def && (trainingBuildings as string[]).includes(def.id);
-  const hasTrainable = isTraining && TRIBES[state.tribe].units.some((u) => u.building === def.id && def.id !== 'residence');
+  const hasTrainable = isTraining && TRIBES[state.tribe].units.some((u) => u.building === def.id);
   const training =
     def && isTraining && hasTrainable
       ? {
@@ -91,12 +100,47 @@ villageRouter.get('/slot/:n', (req, res) => {
       have: stockOf(state.village),
       tribe: state.tribe,
       training,
+      panels: def ? buildingPanels(req, page, def.id) : [],
       csrf: ctx.csrf,
       now: ctx.now,
     }),
     { nav: def?.kind === 'field' ? 'fields' : 'village', chrome: page.chrome },
   );
 });
+
+function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[] {
+  const ctx = authed(req);
+  const { state } = page;
+  const have = stockOf(state.village);
+  switch (id) {
+    case 'academy':
+      return [academyPanel(academyOptions(db, state, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
+    case 'smithy':
+      return [smithyPanel(smithyOptions(db, state, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
+    case 'market':
+      return [
+        marketPanel({
+          merchants: merchantInfo(db, state),
+          mine: listOffers(db, state, true),
+          others: listOffers(db, state, false),
+          csrf: ctx.csrf,
+          x: req.query.x !== undefined ? intParam(req.query.x, 0) : undefined,
+          y: req.query.y !== undefined ? intParam(req.query.y, 0) : undefined,
+        }),
+      ];
+    case 'residence':
+    case 'palace':
+      return [expansionPanel(canExpand(db, ctx.user.id, state.village.id, ctx.now), page.chrome.villages.length)];
+    case 'embassy': {
+      const m = membership(db, ctx.user.id);
+      return [embassyPanel(m ? { id: m.a.id, name: m.a.name, tag: m.a.tag } : null)];
+    }
+    case 'heromansion':
+      return [mansionPanel(oasesOwnedBy(db, state.village.id), oasisSlots(levelOf(state, 'heromansion')))];
+    default:
+      return [];
+  }
+}
 
 const BuildSchema = z.object({
   slot: z.coerce.number().int().min(1).max(40),

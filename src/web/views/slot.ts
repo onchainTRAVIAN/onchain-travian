@@ -40,6 +40,8 @@ export interface SlotViewData {
   have: Resources;
   tribe: TribeId;
   training: { options: TrainOption[]; queue: TrainOrderRow[] } | null;
+  /** Building-specific panels (academy, market, residence...). */
+  panels: SafeHtml[];
   csrf: string;
   now: number;
 }
@@ -64,7 +66,7 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
           : ''}</div>
       </div>`,
     )}
-    ${t.queue.length > 0 ? html`<h3>In training</h3>${trainingQueue(t.queue, tribe, now)}` : ''}`;
+    ${t.queue.length > 0 ? html`<h3>In training</h3>${trainingQueue(t.queue, tribe, now, csrf)}` : ''}`;
 }
 
 export function slotView(d: SlotViewData): SafeHtml {
@@ -91,13 +93,8 @@ export function slotView(d: SlotViewData): SafeHtml {
   if (def.id === 'rally' && d.level > 0) {
     extra.push(html`<div class="actions"><a class="btn" href="/troops">🚩 Open Rally Point</a><a class="btn secondary" href="/troops/send">⚔️ Send troops</a></div>`);
   }
+  if (d.level > 0) extra.push(...d.panels);
   if (d.training && d.level > 0) extra.push(trainingPanel(d.training, d.tribe, d.have, d.csrf, d.now));
-  if (d.level > 0 && ['market', 'embassy', 'smithy', 'palace'].includes(def.id)) {
-    extra.push(html`<div class="note">ℹ️ More ${def.name} features (trading, alliances, upgrades) are coming in the next update.</div>`);
-  }
-  if (def.id === 'residence' && d.level > 0 && !d.training) {
-    extra.push(html`<div class="note">ℹ️ Settlers and new villages are coming in the next update.</div>`);
-  }
 
   return html`<h1>${def.icon} ${def.name} <span class="muted small">${d.level > 0 ? `level ${d.level}` : 'not built yet'}</span></h1>
     <p>${def.description}</p>

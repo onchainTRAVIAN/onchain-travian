@@ -9,6 +9,7 @@ import { fmtNum, fmtSigned } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, timer } from './layout.js';
 import { buildingLabel, movementList, unitsTable } from './parts.js';
+import { instantPrice } from '../../game/actions/credits.js';
 
 export interface VillageViewData {
   state: VillageState;
@@ -47,12 +48,14 @@ export function buildQueue(orders: BuildOrderRow[], now: number, csrf: string): 
       <span class="grow">${l.name} <b>→ level ${o.toLevel}</b>
         <span class="sub">Done in ${timer(o.finishAt, now)}</span>
         <span class="bar" aria-hidden="true"><i class="w${Math.round(done / 5) * 5}"></i></span></span>
-      <form method="post" action="/build/cancel">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
+      <form method="post" action="/shop/finish/build" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
+        <button type="submit" class="small gold" title="Finish now for ${instantPrice(o.finishAt - now)} credits">⚡${instantPrice(o.finishAt - now)}</button></form>
+      <form method="post" action="/build/cancel" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
         <button type="submit" class="small secondary" aria-label="Cancel ${l.name}">✕</button></form></li>`;
   })}</ul>`;
 }
 
-export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: number): SafeHtml {
+export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: number, csrf?: string): SafeHtml {
   if (orders.length === 0) return html``;
   return html`<ul class="list">${orders.map((o) => {
     const u = TRIBES[tribe].units[o.unitSlot];
@@ -61,7 +64,9 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
     return html`<li><span aria-hidden="true">${u?.icon ?? '❔'}</span>
       <span class="grow">${fmtNum(o.total - o.done)} × ${u?.name ?? '?'}
         <span class="sub">${o.startAt > now ? html`Starts in ${timer(o.startAt, now)}` : html`Next one in ${timer(nextAt, now)}`}</span></span>
-      <span class="right small">all done in<br>${timer(end, now)}</span></li>`;
+      <span class="right small">all done in<br>${timer(end, now)}</span>
+      ${csrf ? html`<form method="post" action="/shop/finish/train">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
+        <button type="submit" class="small gold" title="Finish now for ${instantPrice(end - now)} credits">⚡${instantPrice(end - now)}</button></form>` : ''}</li>`;
   })}</ul>`;
 }
 
@@ -99,7 +104,7 @@ export function fieldsView(d: VillageViewData): SafeHtml {
   ${productionTable(d.eco)}
   <h2>⚔️ Troops at home</h2>
   ${unitsTable(d.state.tribe, d.homeTroops, undefined, { hideEmpty: true })}
-  ${trainingQueue(d.training, d.state.tribe, d.now)}
+  ${trainingQueue(d.training, d.state.tribe, d.now, d.csrf)}
   <h2>🚩 Troop movements</h2>
   ${movementList(d.movements, d.now)}
   <div class="actions"><a class="btn" href="/village">🏘️ Village center</a><a class="btn secondary" href="/troops/send">⚔️ Send troops</a></div>`;
@@ -126,7 +131,7 @@ export function townView(d: VillageViewData): SafeHtml {
   })}</div>
   <h2>🔨 Construction</h2>
   ${buildQueue(d.orders, d.now, d.csrf)}
-  ${d.training.length > 0 ? html`<h2>🎯 Training</h2>${trainingQueue(d.training, d.state.tribe, d.now)}` : ''}
+  ${d.training.length > 0 ? html`<h2>🎯 Training</h2>${trainingQueue(d.training, d.state.tribe, d.now, d.csrf)}` : ''}
   <div class="actions"><a class="btn" href="/fields">🌾 Resource fields</a></div>`;
 }
 

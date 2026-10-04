@@ -106,6 +106,33 @@ describe('account flow', () => {
   });
 });
 
+describe('community and shop through the web', () => {
+  it('posts in world chat and sees it in the feed', async () => {
+    const agent = await newPlayer('Chatty', 'legion');
+    const page = await agent.get('/chat');
+    const res = await agent.post('/chat').type('form').send({ _csrf: csrfFrom(page.text), c: 'global', body: 'Hello <b>realm</b>!' });
+    expect(res.status).toBe(303);
+    const feed = await agent.get('/chat/feed');
+    expect(feed.text).toContain('Hello &lt;b&gt;realm&lt;/b&gt;!');
+  });
+
+  it('first player is admin and can open the admin panel; others cannot', async () => {
+    const other = await newPlayer('NotAdmin', 'horde');
+    const res = await other.get('/admin');
+    expect(res.status).toBe(303);
+  });
+
+  it('booking the ticker without credits shows a friendly error', async () => {
+    const agent = await newPlayer('Poor', 'clans');
+    const page = await agent.get('/shop/ticker');
+    const start = /name="start" value="(\d+)"/.exec(page.text)?.[1] ?? '0';
+    const res = await agent.post('/shop/ticker').type('form').send({ _csrf: csrfFrom(page.text), body: 'Hello everyone', start, hours: '1' });
+    expect(res.status).toBe(303);
+    const back = await agent.get('/shop/ticker');
+    expect(back.text).toMatch(/costs \d+ credits/);
+  });
+});
+
 describe('playing through the web', () => {
   it('upgrades a field and shows it in the construction queue', async () => {
     const agent = await newPlayer('Hannibal', 'horde');
@@ -130,7 +157,7 @@ describe('playing through the web', () => {
 
   it('renders map, tile, troops, send form, reports, messages and rankings', async () => {
     const agent = await newPlayer('Cleopatra', 'clans');
-    for (const path of ['/map', '/map?x=5&y=5', '/map/tile?x=0&y=0', '/troops', '/troops/send', '/reports', '/messages', '/messages/new', '/stats?k=attack', '/village', '/slot/19', '/slot/39', '/slot/40', '/slot/30']) {
+    for (const path of ['/map', '/map?x=5&y=5', '/map/tile?x=0&y=0', '/troops', '/troops/send', '/reports', '/messages', '/messages/new', '/stats?k=attack', '/village', '/slot/19', '/slot/39', '/slot/40', '/slot/30', '/hero', '/chat', '/chat/feed', '/alliance', '/alliances', '/shop', '/shop/ticker', '/troops/send?kind=settle']) {
       const res = await agent.get(path);
       expect(res.status, path).toBe(200);
     }

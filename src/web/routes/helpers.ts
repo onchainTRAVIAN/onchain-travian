@@ -6,6 +6,12 @@ import { eq } from 'drizzle-orm';
 import { GameError } from '../../game/errors.js';
 import { catchUp, economyOf, type VillageState } from '../../game/engine/state.js';
 import { unreadCounts, userVillages } from '../../game/queries.js';
+import { activeTicker, creditBalance } from '../../game/actions/credits.js';
+import { ensureHero } from '../../game/engine/hero.js';
+import { heroPoints } from '../../game/rules/hero.js';
+import { pointsUsed } from '../../game/actions/hero.js';
+import { catchUpCulture } from '../../game/engine/state.js';
+import { getMeta } from '../../game/engine/world.js';
 import { authed, setFlash } from '../session.js';
 import { layout, type Chrome, type NavKey } from '../views/layout.js';
 import type { SafeHtml } from '../html.js';
@@ -18,15 +24,21 @@ export interface GamePage {
 /** Load the active village (caught up to now) plus header data for a logged-in page. */
 export function loadGamePage(req: Request): GamePage {
   const ctx = authed(req);
-  const state = db.transaction((tx) => catchUp(tx, ctx.villageId, ctx.now));
+  const { state, hero } = db.transaction((tx) => {
+    catchUpCulture(tx, ctx.user.id, ctx.now);
+    return { state: catchUp(tx, ctx.villageId, ctx.now), hero: ensureHero(tx, ctx.user.id, ctx.now) };
+  });
   if (!state) throw new GameError('Village not found');
   const user = db.select().from(users).where(eq(users.id, ctx.user.id)).get() ?? ctx.user;
+  const heroAlert = !!hero && (hero.status === 'dead' || heroPoints(hero.level) - pointsUsed(hero) > 0);
   const chrome: Chrome = {
     user,
     village: state.village,
     villages: userVillages(db, ctx.user.id),
     eco: economyOf(db, state, ctx.now),
     unread: unreadCounts(db, ctx.user.id),
+    credits: creditBalance(db, ctx.user.id),
+    heroAlert,
   };
   return { chrome, state };
 }
@@ -44,6 +56,8 @@ export function sendPage(req: Request, res: Response, title: string, body: SafeH
         flash: req.ctx.flash,
         chrome: opts.chrome ?? null,
         nav: opts.nav,
+        ticker: activeTicker(db, req.ctx.now),
+        announcement: getMeta(db, 'announcement') ?? null,
       }).value,
     );
 }

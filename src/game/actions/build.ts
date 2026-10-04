@@ -104,6 +104,7 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   for (const req of def.requires) {
     if (levelOf(state, req.building) < req.level) return no(`Requires ${BUILDINGS[req.building].name} level ${req.level}`);
   }
+  if (def.id === 'palace' && !state.village.isCapital) return no('A Palace can only be built in your capital');
 
   if (orders.length >= mods.buildQueue) return no('Your builders are busy');
 

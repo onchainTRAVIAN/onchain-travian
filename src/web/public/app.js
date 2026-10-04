@@ -43,6 +43,19 @@
   tick();
   setInterval(tick, 1000);
 
+  // Live chat: refresh the message list every few seconds without reloading the page.
+  var log = document.getElementById('chatlog');
+  if (log && window.fetch) {
+    var feed = log.getAttribute('data-feed');
+    setInterval(function () {
+      if (document.hidden) return;
+      fetch(feed, { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (htmlText) { if (htmlText !== null) log.innerHTML = htmlText; })
+        .catch(function () {});
+    }, 6000);
+  }
+
   // "(max)" links fill unit inputs.
   document.addEventListener('click', function (e) {
     var a = e.target.closest ? e.target.closest('[data-fill]') : null;

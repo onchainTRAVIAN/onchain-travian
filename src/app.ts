@@ -10,6 +10,11 @@ import { villageRouter } from './web/routes/village.js';
 import { troopsRouter } from './web/routes/troops.js';
 import { mapRouter } from './web/routes/map.js';
 import { socialRouter } from './web/routes/social.js';
+import { economyRouter } from './web/routes/economy.js';
+import { heroRouter } from './web/routes/hero.js';
+import { communityRouter } from './web/routes/community.js';
+import { shopRouter } from './web/routes/shop.js';
+import { adminRouter } from './web/routes/admin.js';
 import { sendPage } from './web/routes/helpers.js';
 import { html } from './web/html.js';
 
@@ -51,10 +56,15 @@ export function createApp() {
 
   app.use(authRouter);
   app.use(socialRouter);
-  app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map'], requireAuth);
+  app.use(communityRouter);
+  app.use(adminRouter);
+  app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map', '/research', '/market', '/hero', '/shop'], requireAuth);
   app.use(villageRouter);
   app.use(troopsRouter);
   app.use(mapRouter);
+  app.use(economyRouter);
+  app.use(heroRouter);
+  app.use(shopRouter);
 
   app.use((req: Request, res: Response) => {
     sendPage(req, res, 'Not found', html`<h1>Lost in the wilderness</h1><p>This page does not exist.</p><div class="actions"><a class="btn" href="/">Back to safety</a></div>`, {

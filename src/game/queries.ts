@@ -214,7 +214,7 @@ export function tileInfo(q: Q, x: number, y: number) {
   return q
     .select({ tile: tiles, v: villages, owner: users.username, ownerId: users.id, tribe: users.tribe, protectedUntil: users.protectedUntil })
     .from(tiles)
-    .leftJoin(villages, eq(villages.id, tiles.villageId))
+    .leftJoin(villages, and(eq(villages.id, tiles.villageId), eq(tiles.kind, 'field')))
     .leftJoin(users, eq(users.id, villages.userId))
     .where(and(eq(tiles.x, x), eq(tiles.y, y)))
     .get();
