@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.2 — 2026-10-04 (classic T3.6 rules, phase 3: buildings & economy)
+- Palace can be built in any village (one per account); finishing it makes that village the capital — the old capital loses Stonemason/Brewery and its fields above 10 drop to 10.
+- Demolition from Main Building 10: one level at a time, half the build time, no refund, doesn't use a builder.
+- Horse Drinking Trough: Equites Legati/Imperatoris/Caesaris eat 1 crop less from level 10/15/20.
+- Marketplace offers can be limited to your own alliance.
+- Rally Point handles 5 outgoing troop movements per level.
+
 ## 0.8.1 — 2026-10-04 (classic T3.6 rules, phase 2: hero)
 - Classic hero: trained in the Hero's Mansion from a researched fighting unit at home (2× unit cost, 1.6× its time); keeps the unit's stats and speed. Five skills (attack, defence, attack bonus, defence bonus, regeneration), 5 points per level, free redistribution at level 0. Attack round5((2a/3+27.5)·pts + 5a/4), defence with k = (di/dc)^0.2 (Kirilloid t3/hero). No production skill.
 - Hero fights with its own army and its bonuses boost only that army; dies at > 90% damage or when its army is wiped out; regenerates (10 + 5·points)%/day; revive cost 2·cost(+30)·(level+1)^1.25, time 1.6·time·(level+1); XP = upkeep killed (hero 6), shared by defending heroes; animals ×1.

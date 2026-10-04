@@ -51,10 +51,11 @@ economyRouter.post(
       wantRes: RES,
       wantAmount: z.coerce.number().int().min(1, 'Enter how much you want').max(10_000_000),
       maxHours: z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number().int().min(1).max(96).optional()),
+      allianceOnly: z.preprocess((v) => v === '1' || v === 'on', z.boolean()).optional(),
     }),
     (req, res, d) => {
       const ctx = authed(req);
-      createOffer(db, ctx.user.id, ctx.villageId, { res: d.offerRes, amount: d.offerAmount }, { res: d.wantRes, amount: d.wantAmount }, d.maxHours ?? null, ctx.now);
+      createOffer(db, ctx.user.id, ctx.villageId, { res: d.offerRes, amount: d.offerAmount }, { res: d.wantRes, amount: d.wantAmount }, d.maxHours ?? null, ctx.now, !!d.allianceOnly);
       setFlash(res, 'ok', 'Your offer is on the market.');
       res.redirect(303, backUrl(req, '/village'));
     },

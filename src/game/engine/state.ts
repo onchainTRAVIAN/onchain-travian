@@ -167,6 +167,11 @@ export function ownedTroopTotals(q: Q, villageId: number): UnitCounts {
   return total;
 }
 
+/** Crop saved per hour by a Horse Drinking Trough at `level` for these Roman troops. */
+export function troughDiscount(level: number, units: UnitCounts): number {
+  return (level >= 10 ? units[3] ?? 0 : 0) + (level >= 15 ? units[4] ?? 0 : 0) + (level >= 20 ? units[5] ?? 0 : 0);
+}
+
 /** Tribe of the player owning a village (troops keep their owner's tribe wherever they are). */
 function tribeOfVillage(q: Q, villageId: number): TribeId {
   const r = q.select({ tribe: users.tribe }).from(villages).innerJoin(users, eq(users.id, villages.userId)).where(eq(villages.id, villageId)).get();
@@ -179,15 +184,19 @@ function tribeOfVillage(q: Q, villageId: number): TribeId {
  * in enemy traps. Its troops stationed in other villages are fed by those hosts.
  */
 export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId): number {
+  // Roman Horse Drinking Trough: Equites Legati / Imperatoris / Caesaris eat 1 less from level 10 / 15 / 20.
+  const trough =
+    tribe === 'romans' ? q.select({ l: slots.level }).from(slots).where(and(eq(slots.villageId, villageId), eq(slots.building, 'horsetrough'))).get()?.l ?? 0 : 0;
+  const own = (units: UnitCounts) => upkeepOf(tribe, units) - troughDiscount(trough, units);
   let total = 0;
   for (const row of q.select({ owner: troops.ownerVillageId, units: troops.units }).from(troops).where(eq(troops.villageId, villageId)).all()) {
-    total += upkeepOf(row.owner === villageId ? tribe : tribeOfVillage(q, row.owner), parseUnits(row.units));
+    total += row.owner === villageId ? own(parseUnits(row.units)) : upkeepOf(tribeOfVillage(q, row.owner), parseUnits(row.units));
   }
   let moving = emptyUnits();
   for (const m of q.select({ units: movements.units }).from(movements).where(eq(movements.fromVillageId, villageId)).all()) {
     moving = addUnits(moving, parseUnits(m.units));
   }
-  total += upkeepOf(tribe, moving);
+  total += own(moving);
   const key = String(villageId);
   for (const v of q.select({ prisoners: villages.prisoners }).from(villages).where(sql`${villages.prisoners} like ${'%"' + key + '"%'}`).all()) {
     try {

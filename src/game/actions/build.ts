@@ -114,11 +114,13 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   }
 
   // Romans may build one resource field and one village building at the same time.
+  // Demolitions run on their own and don't occupy a builder.
   const extra = mods.buildQueue - 1;
+  const building = orders.filter((o) => !o.demolish);
   if (TRIBES[state.tribe].parallelBuild) {
-    const sameKind = orders.filter((o) => (o.slot <= FIELD_SLOTS) === (slot <= FIELD_SLOTS)).length;
+    const sameKind = building.filter((o) => (o.slot <= FIELD_SLOTS) === (slot <= FIELD_SLOTS)).length;
     if (sameKind >= 1 + extra) return no('Your builders are busy');
-  } else if (orders.length >= mods.buildQueue) {
+  } else if (building.length >= mods.buildQueue) {
     return no('Your builders are busy');
   }
 
@@ -197,8 +199,39 @@ export function cancelBuild(db: DB, userId: number, orderId: number, now: number
     assertGame(state, 'Village not found');
     const def = BUILDINGS[order.building as BuildingId];
     assertGame(def, 'Unknown building');
-    setResources(tx, order.villageId, addRes(stockOf(state.village), buildCost(def, order.toLevel)));
+    // Demolitions cost nothing, so cancelling refunds nothing.
+    if (!order.demolish) setResources(tx, order.villageId, addRes(stockOf(state.village), buildCost(def, order.toLevel)));
     tx.delete(buildOrders).where(eq(buildOrders.id, orderId)).run();
+  });
+}
+
+export const DEMOLISH_MAIN_LEVEL = 10;
+
+/**
+ * Demolish one level of a village building (Main Building level 10+, T3.6). One demolition at a
+ * time; it takes half the time the level took to build and returns nothing.
+ */
+export function startDemolish(db: DB, userId: number, villageId: number, slot: number, now: number): BuildOrderRow {
+  return db.transaction((tx) => {
+    ownedVillage(tx, userId, villageId);
+    const state = catchUp(tx, villageId, now);
+    assertGame(state, 'Village not found');
+    assertGame(levelOf(state, 'main') >= DEMOLISH_MAIN_LEVEL, `Demolishing needs a Main Building at level ${DEMOLISH_MAIN_LEVEL}`);
+    assertGame(slot >= TOWN_SLOT_FIRST && slot <= 40, 'Only buildings in the village can be demolished');
+    const row = state.slots.find((s) => s.slot === slot);
+    assertGame(row?.building && row.level > 0, 'There is nothing to demolish here');
+    const orders = buildOrdersOf(tx, villageId);
+    assertGame(!orders.some((o) => o.demolish), 'Another building is already being demolished');
+    assertGame(!orders.some((o) => o.slot === slot), 'This building is under construction');
+    const def = BUILDINGS[row.building as BuildingId];
+    assertGame(def, 'Unknown building');
+    const mods = getModifiers(tx, userId, now);
+    const timeMs = Math.round(buildTimeMs(def, row.level, levelOf(state, 'main'), config.WORLD_SPEED * mods.buildSpeed) / 2);
+    return tx
+      .insert(buildOrders)
+      .values({ villageId, slot, building: row.building, toLevel: row.level - 1, startAt: now, finishAt: now + Math.max(1000, timeMs), demolish: true })
+      .returning()
+      .get();
   });
 }
 

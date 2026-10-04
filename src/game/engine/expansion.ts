@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, lte, ne, sql } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
 import {
   buildOrders,
@@ -14,7 +14,7 @@ import {
 } from '../../db/schema.js';
 import { culturePointsRequired, expansionSlots } from '../rules/expansion.js';
 import { catchUpCulture, levelOf, loadVillage, refreshPopulation } from './state.js';
-import { BUILDINGS, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
+import { BUILDINGS, FIELD_MAX_NON_CAPITAL, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
 import { sendTroopsHome } from './movement.js';
 
 export interface ExpansionCheck {
@@ -151,4 +151,28 @@ export function destroyVillage(q: Q, villageId: number, now: number): void {
   q.update(tiles).set({ villageId: null }).where(and(eq(tiles.kind, 'field'), eq(tiles.villageId, villageId))).run();
   q.update(tiles).set({ villageId: null, animals: null, animalsAt: null }).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, villageId))).run();
   q.delete(villages).where(eq(villages.id, villageId)).run();
+}
+
+/**
+ * Make `villageId` its owner's capital. The old capital loses capital-only buildings (Stonemason,
+ * Brewery) and its resource fields above level 10 drop to 10.
+ */
+export function moveCapital(q: Q, villageId: number, _now: number): void {
+  const v = q.select().from(villages).where(eq(villages.id, villageId)).get();
+  if (!v || v.userId === null || v.isCapital) return;
+  const old = q.select().from(villages).where(and(eq(villages.userId, v.userId), eq(villages.isCapital, true))).get();
+  if (old) {
+    q.update(villages).set({ isCapital: false }).where(eq(villages.id, old.id)).run();
+    for (const sl of q.select().from(slots).where(eq(slots.villageId, old.id)).all()) {
+      const def = sl.building ? BUILDINGS[sl.building as BuildingId] : undefined;
+      if (def?.capitalOnly) q.update(slots).set({ building: null, level: 0 }).where(and(eq(slots.villageId, old.id), eq(slots.slot, sl.slot))).run();
+      else if (def?.kind === 'field' && sl.level > FIELD_MAX_NON_CAPITAL) {
+        q.update(slots).set({ level: FIELD_MAX_NON_CAPITAL }).where(and(eq(slots.villageId, old.id), eq(slots.slot, sl.slot))).run();
+      }
+    }
+    q.delete(buildOrders).where(and(eq(buildOrders.villageId, old.id), inArray(buildOrders.building, ['stonemason', 'brewery']))).run();
+    q.delete(buildOrders).where(and(eq(buildOrders.villageId, old.id), lte(buildOrders.slot, 18), gt(buildOrders.toLevel, FIELD_MAX_NON_CAPITAL))).run();
+    refreshPopulation(q, old.id);
+  }
+  q.update(villages).set({ isCapital: true }).where(eq(villages.id, villageId)).run();
 }

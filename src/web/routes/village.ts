@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { slots, tiles, users } from '../../db/schema.js';
 import { and, eq } from 'drizzle-orm';
-import { buildOption, buildOrdersOf, buildableOnEmptyPlot, cancelBuild, isValidSlot, startBuild, ownedVillage } from '../../game/actions/build.js';
+import { buildOption, buildOrdersOf, buildableOnEmptyPlot, cancelBuild, isValidSlot, startBuild, startDemolish, ownedVillage } from '../../game/actions/build.js';
 import { isTrainingSite, startTraining, trainOptions, trainOrdersOf } from '../../game/actions/train.js';
 import { BUILDINGS, type BuildingId } from '../../game/rules/buildings.js';
 import { TRIBES, type TrainingBuilding } from '../../game/rules/units.js';
@@ -23,7 +23,7 @@ import { oasesOwnedBy } from '../../game/engine/oasis.js';
 import { oasisSlots } from '../../game/rules/expansion.js';
 import { capacityFor, levelOf } from '../../game/engine/state.js';
 import { npcPanel } from '../views/shop.js';
-import { academyPanel, celebrationPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel, trapperPanel } from '../views/buildings.js';
+import { academyPanel, celebrationPanel, demolishPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel, trapperPanel } from '../views/buildings.js';
 import { buildTraps, freePrisoners, trapPanelData } from '../../game/actions/traps.js';
 import { celebrationOptions, runningCelebration, startCelebration } from '../../game/actions/celebration.js';
 
@@ -146,6 +146,19 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
     }
     case 'heromansion':
       return [mansionPanel(oasesOwnedBy(db, state.village.id), oasisSlots(levelOf(state, 'heromansion')), ctx.csrf)];
+    case 'main': {
+      const busy = buildOrdersOf(db, state.village.id).find((o) => o.demolish);
+      return [
+        demolishPanel({
+          mainLevel: levelOf(state, 'main'),
+          buildings: state.slots
+            .filter((sl) => sl.slot >= 19 && sl.building && sl.level > 0)
+            .map((sl) => ({ slot: sl.slot, name: BUILDINGS[sl.building as BuildingId]?.name ?? sl.building ?? '', level: sl.level })),
+          busy: busy ? BUILDINGS[busy.building as BuildingId]?.name ?? busy.building : null,
+          csrf: ctx.csrf,
+        }),
+      ];
+    }
     case 'trapper':
       return [trapperPanel({ ...trapPanelData(db, state), have, csrf: ctx.csrf })];
     default:
@@ -166,6 +179,16 @@ villageRouter.post(
     const def = BUILDINGS[order.building as BuildingId];
     setFlash(res, 'ok', `${def?.name ?? 'Building'} level ${order.toLevel} is under construction.`);
     res.redirect(303, def?.kind === 'field' ? '/fields' : '/village');
+  }),
+);
+
+villageRouter.post(
+  '/build/demolish',
+  formAction(z.object({ slot: z.coerce.number().int().min(19).max(40) }), (req, res, data) => {
+    const ctx = authed(req);
+    const o = startDemolish(db, ctx.user.id, ctx.villageId, data.slot, ctx.now);
+    setFlash(res, 'ok', `Demolishing ${BUILDINGS[o.building as BuildingId]?.name ?? o.building} to level ${o.toLevel}.`);
+    res.redirect(303, backUrl(req, '/village'));
   }),
 );
 

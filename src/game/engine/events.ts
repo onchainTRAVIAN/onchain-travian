@@ -29,7 +29,7 @@ import {
 } from './state.js';
 import { addReport, type BattleReportData, type ReportSide } from './reports.js';
 import { scheduleReturn, sendTroopsHome, villageInfo, type VillageInfo } from './movement.js';
-import { canExpand, conquerVillage, destroyVillage } from './expansion.js';
+import { canExpand, conquerVillage, destroyVillage, moveCapital } from './expansion.js';
 import { HERO_XP_VALUE } from '../rules/hero.js';
 import { createVillage } from './world.js';
 import {
@@ -747,9 +747,13 @@ function handleMovement(q: Q, mv: MovementRow): void {
 
 function handleBuildDone(q: Q, order: typeof buildOrders.$inferSelect): void {
   catchUp(q, order.villageId, order.finishAt);
-  q.update(slots).set({ building: order.building, level: order.toLevel }).where(and(eq(slots.villageId, order.villageId), eq(slots.slot, order.slot))).run();
+  // A building demolished to level 0 leaves an empty plot.
+  const building = order.demolish && order.toLevel <= 0 ? null : order.building;
+  q.update(slots).set({ building, level: Math.max(0, order.toLevel) }).where(and(eq(slots.villageId, order.villageId), eq(slots.slot, order.slot))).run();
   q.delete(buildOrders).where(eq(buildOrders.id, order.id)).run();
   refreshPopulation(q, order.villageId);
+  // Finishing a Palace makes this village the capital (T3.6: the Palace can stand in any village).
+  if (order.building === 'palace' && order.toLevel === 1 && !order.demolish) moveCapital(q, order.villageId, order.finishAt);
 }
 
 function handleResearchDone(q: Q, order: typeof researchOrders.$inferSelect): void {

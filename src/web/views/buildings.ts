@@ -84,12 +84,13 @@ export function marketPanel(d: {
         <tr><td>Offering:</td><td><input type="number" name="offerAmount" min="1" required inputmode="numeric"> <select name="offerRes">${resOptions('wood')}</select></td></tr>
         <tr><td>Searching:</td><td><input type="number" name="wantAmount" min="1" required inputmode="numeric"> <select name="wantRes">${resOptions('iron')}</select></td></tr>
         <tr><td>Max. time of transport:</td><td><input type="number" name="maxHours" min="1" max="96" inputmode="numeric"> hours</td></tr>
+        <tr><td>Own alliance only:</td><td><label><input type="checkbox" name="allianceOnly" value="1"> only members of my alliance may accept</label></td></tr>
       </tbody></table>
       <button type="submit">OK</button>
     </form>
     ${d.mine.length
       ? html`<table class="tb"><thead><tr><th>Own offers</th><th>Searching</th><th></th></tr></thead><tbody>${d.mine.map(
-          (o) => html`<tr><td>${ri(o.offerRes)} ${fmtNum(o.offerAmount)}</td><td>${ri(o.wantRes)} ${fmtNum(o.wantAmount)}</td>
+          (o) => html`<tr><td>${ri(o.offerRes)} ${fmtNum(o.offerAmount)}${o.allianceOnly ? html` <span class="small muted">(alliance)</span>` : ''}</td><td>${ri(o.wantRes)} ${fmtNum(o.wantAmount)}</td>
             <td><form method="post" action="/market/cancel">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="small secondary">cancel</button></form></td></tr>`,
         )}</tbody></table>`
       : ''}
@@ -173,4 +174,18 @@ export function trapperPanel(d: {
           <span class="small muted">They walk home and all your traps are ready again.</span></form>`
       : ''}
     <p class="small muted">Each trap catches one attacker before the battle. A successful attack by the prisoners' side frees them: a quarter die escaping and only a third of their broken traps can be repaired.</p>`;
+}
+
+/** Main Building: demolish one level of a building (from level 10). */
+export function demolishPanel(d: { mainLevel: number; buildings: { slot: number; name: string; level: number }[]; busy: string | null; csrf: string }): SafeHtml {
+  if (d.mainLevel < 10) return html`<p class="small muted">From level 10 you can demolish buildings here, one level at a time.</p>`;
+  return html`<h2>Demolish a building</h2>
+    ${d.busy
+      ? html`<p class="small">Demolishing ${d.busy}. Only one building can be demolished at a time.</p>`
+      : d.buildings.length === 0
+        ? html`<p class="small muted">Nothing to demolish.</p>`
+        : html`<form method="post" action="/build/demolish" class="block">${csrfField(d.csrf)}
+            <select name="slot" aria-label="Building to demolish">${d.buildings.map((b) => html`<option value="${b.slot}">${b.name} (level ${b.level})</option>`)}</select>
+            <button type="submit" class="secondary">Demolish one level</button>
+            <p class="small muted">Takes half the time the level took to build; nothing is refunded.</p></form>`}`;
 }

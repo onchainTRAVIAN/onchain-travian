@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { heroes, movements, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
@@ -50,6 +50,14 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
   const state = catchUp(q, villageId, now);
   assertGame(state, 'Village not found');
   assertGame(levelOf(state, 'rally') >= 1, 'Build a Rally Point first');
+  // T3.6: a Rally Point handles 5 outgoing troop movements per level.
+  const outgoing = q
+    .select({ id: movements.id })
+    .from(movements)
+    .where(and(eq(movements.fromVillageId, villageId), inArray(movements.kind, ['attack', 'raid', 'reinforce', 'scout', 'settle'])))
+    .all().length;
+  const limit = 5 * levelOf(state, 'rally');
+  assertGame(outgoing < limit, `Your Rally Point (level ${levelOf(state, 'rally')}) can handle ${limit} troop movements at a time`);
 
   const x = wrapCoord(input.x, config.MAP_RADIUS);
   const y = wrapCoord(input.y, config.MAP_RADIUS);

@@ -138,6 +138,8 @@ export const buildOrders = sqliteTable(
     toLevel: integer('to_level').notNull(),
     startAt: integer('start_at').notNull(),
     finishAt: integer('finish_at').notNull(),
+    /** Demolition (Main Building 10+): takes the building down one level; doesn't use a builder. */
+    demolish: integer('demolish', { mode: 'boolean' }).notNull().default(false),
   },
   (t) => [index('build_orders_finish_idx').on(t.finishAt), index('build_orders_village_idx').on(t.villageId)],
 );
@@ -288,6 +290,8 @@ export const marketOffers = sqliteTable(
     wantAmount: integer('want_amount').notNull(),
     merchants: integer('merchants').notNull(),
     maxHours: integer('max_hours'),
+    /** Only members of the seller's alliance may accept. */
+    allianceOnly: integer('alliance_only', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('market_offers_village_idx').on(t.villageId)],

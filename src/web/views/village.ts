@@ -56,7 +56,7 @@ export function buildQueue(orders: BuildOrderRow[], now: number, csrf: string): 
     return html`<tr>
       <td><form method="post" action="/build/cancel" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
         <button type="submit" class="small secondary" title="Cancel" aria-label="Cancel ${l.name}">${icon('ui/del', 'cancel', 12)}</button></form></td>
-      <td>${l.name} (level ${o.toLevel})</td>
+      <td>${o.demolish ? html`Demolishing ${l.name} (to level ${o.toLevel})` : html`${l.name} (level ${o.toLevel})`}</td>
       <td class="num">in ${timer(o.finishAt, now)} h · done at ${fmtClock(o.finishAt).slice(0, 5)}</td>
       <td><form method="post" action="/shop/finish/build" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
         <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(o.finishAt - now)}</button></form></td>

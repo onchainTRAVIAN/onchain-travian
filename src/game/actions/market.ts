@@ -1,6 +1,6 @@
 import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
-import { marketOffers, movements, users, villages } from '../../db/schema.js';
+import { marketOffers, movements, users, villages, allianceMembers } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { distance, travelTimeMs, wrapCoord } from '../rules/map.js';
 import { RESOURCE_KEYS, canAfford, res, subRes, addRes, sumRes, type ResourceKey, type Resources } from '../rules/resources.js';
@@ -69,7 +69,7 @@ export function sendResources(db: DB, userId: number, villageId: number, x: numb
 
 const ONE = (k: ResourceKey, n: number): Resources => ({ ...res(), [k]: n });
 
-export function createOffer(db: DB, userId: number, villageId: number, offer: { res: ResourceKey; amount: number }, want: { res: ResourceKey; amount: number }, maxHours: number | null, now: number): OfferRow {
+export function createOffer(db: DB, userId: number, villageId: number, offer: { res: ResourceKey; amount: number }, want: { res: ResourceKey; amount: number }, maxHours: number | null, now: number, allianceOnly = false): OfferRow {
   return db.transaction((tx) => {
     ownedVillage(tx, userId, villageId);
     const state = catchUp(tx, villageId, now);
@@ -84,10 +84,11 @@ export function createOffer(db: DB, userId: number, villageId: number, offer: { 
     assertGame(m.total > 0, 'Build a Marketplace first');
     const need = merchantsNeeded(offer.amount, m.capacity);
     assertGame(need <= m.free, `You need ${need} merchants but only ${m.free} are free`);
+    if (allianceOnly) assertGame(allianceOf(tx, userId) !== null, 'Join an alliance to make alliance-only offers');
     setResources(tx, villageId, subRes(stockOf(state.village), goods));
     return tx
       .insert(marketOffers)
-      .values({ villageId, offerRes: offer.res, offerAmount: offer.amount, wantRes: want.res, wantAmount: want.amount, merchants: need, maxHours, createdAt: now })
+      .values({ villageId, offerRes: offer.res, offerAmount: offer.amount, wantRes: want.res, wantAmount: want.amount, merchants: need, maxHours, allianceOnly, createdAt: now })
       .returning()
       .get();
   });
@@ -114,6 +115,10 @@ export function acceptOffer(db: DB, userId: number, villageId: number, offerId: 
     const buyer = catchUp(tx, villageId, now);
     assertGame(seller && buyer, 'Village not found');
     assertGame(seller.userId !== userId, 'You cannot accept your own offer');
+    if (o.allianceOnly) {
+      const mine = allianceOf(tx, userId);
+      assertGame(mine !== null && seller.userId !== null && mine === allianceOf(tx, seller.userId), 'This offer is only for members of the seller’s alliance');
+    }
     const pay = ONE(o.wantRes as ResourceKey, o.wantAmount);
     assertGame(canAfford(stockOf(buyer.village), pay), 'Not enough resources');
     const m = merchantInfo(tx, buyer);
@@ -142,6 +147,10 @@ export interface OfferView extends OfferRow {
   hours: number;
 }
 
+function allianceOf(q: Q, userId: number): number | null {
+  return q.select({ a: allianceMembers.allianceId }).from(allianceMembers).where(eq(allianceMembers.userId, userId)).get()?.a ?? null;
+}
+
 export function listOffers(q: Q, viewer: VillageState, mineOnly: boolean): OfferView[] {
   const rows = q
     .select({ o: marketOffers, name: villages.name, x: villages.x, y: villages.y, owner: users.username, tribe: users.tribe, userId: villages.userId })
@@ -152,7 +161,9 @@ export function listOffers(q: Q, viewer: VillageState, mineOnly: boolean): Offer
     .orderBy(marketOffers.createdAt)
     .limit(100)
     .all();
+  const myAlliance = viewer.userId !== null ? allianceOf(q, viewer.userId) : null;
   return rows
+    .filter((r) => mineOnly || !r.o.allianceOnly || (myAlliance !== null && r.userId !== null && allianceOf(q, r.userId) === myAlliance))
     .map((r) => {
       const tribe = r.tribe ?? 'romans';
       const dist = distance(viewer.village.x, viewer.village.y, r.x, r.y, config.MAP_RADIUS);
