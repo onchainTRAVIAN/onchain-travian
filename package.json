@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "chain:deploy": "tsx scripts/deploy-local.ts"
+    "chain:deploy": "tsx scripts/deploy-local.ts",
+    "deploy": "railway up --service game --ci"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",
