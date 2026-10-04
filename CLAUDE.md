@@ -20,6 +20,7 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Avatars: `src/game/actions/avatar.ts` stores WebP next to the DB (`<dir of DATABASE_PATH>/avatars`); multipart forms pass `_csrf` in the query string.
 - Gold economy: all Gold lives in `credits_ledger` (sum per user); transfers/market write paired rows with unique idem keys. Gold market: `src/game/actions/goldmarket.ts` (escrow on listing, `delivery` movement handled like `return`).
 - World speed scales production, build/train/research/travel times, culture points, loyalty and hero regen — NOT crop consumption (`cropUpkeep`).
+- Live endgame schedule: ARTIFACT_DAY=3 (artifacts appear 2026-10-07 ~11:04 UTC, 3 days after world start); WONDER_DAY not set (World Wonders by admin button).
 - Live ops: change world speed with Railway vars `WORLD_SPEED`/`TROOP_SPEED`; one-off DB fixes via SSH (script in /app, `node script.mjs`, uses `DATABASE_PATH`).
 - Combat follows Kirilloid's T3 model (`src/game/rules/battle.ts`: moraleMalus, demolishPoints/demolish, wallDuringBattle, catapultTargetAllowed); reference values pinned in `tests/rules.test.ts`, scenarios in `tests/combat.test.ts`. Rule decisions: memory `project-classic-rules`.
 - Endgame: `src/game/actions/endgame.ts` (Natars, release, capture, Wonder rules, winner in meta `winner`); artifact effects in `src/game/engine/artifacts.ts` (`artifactValue(q, villageId, kind, now)`, used by combat/movement/training/upkeep/cranny). New building SVGs → rerun `scripts/gen-masks.py`.
