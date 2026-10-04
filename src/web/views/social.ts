@@ -183,7 +183,7 @@ export function playerView(d: {
       (v) => html`<tr><td><a href="/map/tile?x=${v.x}&amp;y=${v.y}">${v.name}</a>${v.isCapital ? html` <span class="c2 small">(capital)</span>` : ''}</td>
         <td class="num">${fmtNum(v.pop)}</td><td class="center">(${v.x}|${v.y})</td></tr>`,
     )}</tbody></table>
-    <p>${d.isMe ? html`<a href="/account">» Edit profile</a>` : html`<a href="/messages/new?to=${encodeURIComponent(d.user.username)}">» Write message</a>`}</p>`;
+    <p>${d.isMe ? html`<a href="/account">» Edit profile</a>` : html`<a href="/messages/new?to=${encodeURIComponent(d.user.username)}">» Write message</a> | <a href="/shop?to=${encodeURIComponent(d.user.username)}#gold">» Send Gold</a>`}</p>`;
 }
 
 /* ---------- Account & help ---------- */

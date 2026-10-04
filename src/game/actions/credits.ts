@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
-import { buildOrders, creditsLedger, perks, researchOrders, tickerMessages, trainOrders, users } from '../../db/schema.js';
+import { buildOrders, creditsLedger, messages, perks, researchOrders, tickerMessages, trainOrders, users } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { RESOURCE_KEYS, sumRes, type Resources } from '../rules/resources.js';
 import type { PerkKind } from '../modifiers.js';
@@ -202,6 +202,54 @@ export function npcTrade(db: DB, userId: number, villageId: number, target: Reso
     spend(tx, userId, NPC_TRADE_PRICE, 'NPC merchant', now);
     setResources(tx, villageId, result);
     return result;
+  });
+}
+
+/* ---------- Gold transfers between players ---------- */
+
+export const TRANSFER_MAX = 1_000_000;
+
+/**
+ * Send Gold to another player. Both ledger rows are written in one transaction, and the
+ * receiver gets an in-game message so they know who sent it.
+ */
+export function transferGold(
+  db: DB,
+  fromUserId: number,
+  toUsername: string,
+  amount: number,
+  note: string,
+  now: number,
+): { toUserId: number; toName: string; balance: number } {
+  return db.transaction((tx) => {
+    assertGame(Number.isInteger(amount) && amount >= 1, 'Enter a whole amount of at least 1 Gold');
+    assertGame(amount <= TRANSFER_MAX, `At most ${TRANSFER_MAX.toLocaleString('en-US')} Gold per transfer`);
+    const from = tx.select({ username: users.username }).from(users).where(eq(users.id, fromUserId)).get();
+    assertGame(from, 'Player not found');
+    const to = tx
+      .select({ id: users.id, username: users.username, banned: users.banned })
+      .from(users)
+      .where(eq(users.usernameLower, toUsername.trim().toLowerCase()))
+      .get();
+    assertGame(to, `No player called "${toUsername.trim()}"`);
+    assertGame(to.id !== fromUserId, 'You cannot send Gold to yourself');
+    assertGame(!to.banned, 'That player is banned');
+    const bal = creditBalance(tx, fromUserId);
+    assertGame(bal >= amount, `You only have ${bal} Gold`);
+    const key = `transfer:${fromUserId}:${to.id}:${now}:${Math.random().toString(36).slice(2)}`;
+    tx.insert(creditsLedger).values({ userId: fromUserId, amount: -amount, reason: `Sent to ${to.username}`, idemKey: `${key}:out`, createdAt: now }).run();
+    tx.insert(creditsLedger).values({ userId: to.id, amount, reason: `From ${from.username}`, idemKey: `${key}:in`, createdAt: now }).run();
+    const clean = note.trim().slice(0, 200);
+    tx.insert(messages)
+      .values({
+        fromUserId,
+        toUserId: to.id,
+        subject: `You received ${amount} Gold`,
+        body: `${from.username} sent you ${amount} Gold.${clean ? `\n\n${clean}` : ''}`,
+        createdAt: now,
+      })
+      .run();
+    return { toUserId: to.id, toName: to.username, balance: bal - amount };
   });
 }
 

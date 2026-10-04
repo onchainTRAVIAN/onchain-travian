@@ -12,6 +12,7 @@ import {
   finishTrainingNow,
   myTickerBookings,
   npcTrade,
+  transferGold,
   tickerAvailability,
 } from '../../game/actions/credits.js';
 import { capacityFor, stockOf } from '../../game/engine/state.js';
@@ -35,12 +36,27 @@ shopRouter.get('/shop', (req, res_) => {
       stock: stockOf(page.state.village),
       capacity: capacityFor(page.state),
       history: creditHistory(db, ctx.user.id, 20),
+      sendTo: typeof req.query.to === 'string' ? req.query.to.slice(0, 20) : '',
       csrf: ctx.csrf,
       now: ctx.now,
     }),
     { nav: 'shop', chrome: page.chrome },
   );
 });
+
+shopRouter.post(
+  '/shop/transfer',
+  formAction(
+    z.object({ to: z.string().trim().min(1).max(20), amount: z.coerce.number().int().min(1), note: z.string().max(200).default('') }),
+    (req, r, d) => {
+      const ctx = authed(req);
+      const t = transferGold(db, ctx.user.id, d.to, d.amount, d.note, ctx.now);
+      setFlash(r, 'ok', `Sent ${d.amount} Gold to ${t.toName}. Your balance: ${t.balance} Gold.`);
+      r.redirect(303, '/shop#gold');
+    },
+    '/shop#gold',
+  ),
+);
 
 shopRouter.post(
   '/shop/boost',

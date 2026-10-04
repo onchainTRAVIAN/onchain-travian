@@ -1,5 +1,5 @@
 import { config } from '../../config.js';
-import { NPC_TRADE_PRICE, PRODUCTS, TICKER_MAX_HOURS, TICKER_MAX_LENGTH } from '../../game/actions/credits.js';
+import { TRANSFER_MAX, NPC_TRADE_PRICE, PRODUCTS, TICKER_MAX_HOURS, TICKER_MAX_LENGTH } from '../../game/actions/credits.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
 import { fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
@@ -11,6 +11,7 @@ export function shopView(d: {
   stock: Resources;
   capacity: Resources;
   history: { amount: number; reason: string; createdAt: number }[];
+  sendTo: string;
   csrf: string;
   now: number;
 }): SafeHtml {
@@ -19,6 +20,15 @@ export function shopView(d: {
   return html`<h1>Plus &amp; Gold</h1>
     <div class="card cardrow"><span>Your balance</span><span class="price">${fmtNum(d.balance)} Gold</span>
       <a class="btn gold" href="/shop/topup">Buy Gold</a></div>
+    <h2 id="gold">Send Gold to a player</h2>
+    <form method="post" action="/shop/transfer" class="block">${csrfField(d.csrf)}
+      <table class="tb"><tbody>
+        <tr><th><label for="gto">Player</label></th><td><input id="gto" type="text" name="to" value="${d.sendTo}" required maxlength="20" autocomplete="off" placeholder="Player name"></td></tr>
+        <tr><th><label for="gamt">Amount</label></th><td><input id="gamt" type="number" name="amount" min="1" max="${Math.min(TRANSFER_MAX, Math.max(1, d.balance))}" required inputmode="numeric"> Gold <span class="small muted">(you have ${fmtNum(d.balance)})</span></td></tr>
+        <tr><th><label for="gnote">Note</label></th><td><input id="gnote" type="text" name="note" maxlength="200" placeholder="optional"></td></tr>
+      </tbody></table>
+      <p><button type="submit">Send Gold</button> <span class="small muted">The player gets a message from you. Transfers can't be undone.</span></p>
+    </form>
     <h2>Gold features</h2>
     ${PRODUCTS.map((p) => {
       const active = d.boosts.find((b) => b.source === `shop:${p.id}`);

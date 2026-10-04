@@ -31,6 +31,7 @@ import {
   finishConstructionNow,
   grantCredits,
   npcTrade,
+  transferGold,
   removeTicker,
   tickerAvailability,
 } from '../src/game/actions/credits.js';
@@ -365,6 +366,22 @@ describe('credits shop & news ticker', () => {
     const before = creditBalance(db, a.userId);
     expect(() => npcTrade(db, a.userId, a.villageId, res(10_000_000, 0, 0, 0), clock.now())).toThrow(/storage/);
     expect(creditBalance(db, a.userId)).toBe(before);
+  });
+
+  it('players can send Gold to each other', () => {
+    grantCredits(db, a.userId, 500, 'test', 'test-transfer-grant', clock.now());
+    const fromBefore = creditBalance(db, a.userId);
+    const toBefore = creditBalance(db, b.userId);
+    const r = transferGold(db, a.userId, 'bjorn', 120, 'for the wood', clock.now());
+    expect(r.toName).toBe('Bjorn');
+    expect(creditBalance(db, a.userId)).toBe(fromBefore - 120);
+    expect(creditBalance(db, b.userId)).toBe(toBefore + 120);
+    expect(() => transferGold(db, a.userId, 'Arthur', 1, '', clock.now())).toThrow(/yourself/);
+    expect(() => transferGold(db, a.userId, 'Bjorn', 0, '', clock.now())).toThrow();
+    expect(() => transferGold(db, a.userId, 'Bjorn', 1.5, '', clock.now())).toThrow();
+    expect(() => transferGold(db, a.userId, 'nobody', 1, '', clock.now())).toThrow(/No player/);
+    expect(() => transferGold(db, a.userId, 'Bjorn', fromBefore, '', clock.now())).toThrow(/only have/);
+    expect(creditBalance(db, a.userId)).toBe(fromBefore - 120);
   });
 
   it('players book ticker slots that show for everyone and can be removed with a refund', () => {
