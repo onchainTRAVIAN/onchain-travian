@@ -37,9 +37,16 @@ export function creditHistory(q: Q, userId: number, limit = 30) {
 /* ---------- Instant finish ---------- */
 
 /** 2 credits per hour left, minimum 2. */
-/** "Finish now" price: 1 Gold per started minute still to go (at least 2). */
-export function instantPrice(msLeft: number): number {
-  return Math.max(2, Math.ceil(msLeft / 60_000));
+/**
+ * "Finish now" price follows the world speed: it is based on how long the remaining work
+ * would take on a normal-speed (x1) world — 1 Gold per 100 minutes at x1, at least 2.
+ * (At x100 that is 1 Gold per real minute.)
+ */
+export const FINISH_X1_MINUTES_PER_GOLD = 100;
+
+export function instantPrice(msLeft: number, worldSpeed: number = config.WORLD_SPEED): number {
+  const x1Minutes = (Math.max(0, msLeft) * worldSpeed) / 60_000;
+  return Math.max(2, Math.ceil(x1Minutes / FINISH_X1_MINUTES_PER_GOLD));
 }
 
 export function finishConstructionNow(db: DB, userId: number, orderId: number, now: number): number {

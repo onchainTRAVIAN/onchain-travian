@@ -441,10 +441,13 @@ describe('credits shop & news ticker', () => {
     expect(buyProtection(db, u.userId, clock.now())).toBeGreaterThan(clock.now());
   });
 
-  it('finish-now price grows with the time left (1 Gold per minute)', () => {
-    expect(instantPrice(30_000)).toBe(2);
-    expect(instantPrice(45 * 60_000)).toBe(45);
-    expect(instantPrice(2 * HOUR + 1)).toBe(121);
+  it('finish-now price grows with the time left and follows the world speed', () => {
+    // x100: 1 Gold per real minute.
+    expect(instantPrice(30_000, 100)).toBe(2);
+    expect(instantPrice(45 * 60_000, 100)).toBe(45);
+    // x20: a 30-minute job is 10 hours at x1 → 6 Gold; x1: 10 hours → 6 Gold.
+    expect(instantPrice(30 * 60_000, 20)).toBe(6);
+    expect(instantPrice(10 * HOUR, 1)).toBe(6);
   });
 
   it('players book ticker slots that show for everyone and can be removed with a refund', () => {
