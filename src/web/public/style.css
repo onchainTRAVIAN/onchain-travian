@@ -205,16 +205,25 @@ legend { font-weight: bold; padding: 0; margin-bottom: 4px; }
 .mapsvg .other { fill: none; stroke: #c00; stroke-width: 1.5; stroke-dasharray: 4 3; }
 .mapsvg .ctr { fill: rgba(255, 255, 255, 0.35); stroke: #fff; stroke-width: 2; }
 .mapsvg .hit { fill: transparent; }
+/* Only the diamond/square hit shape takes clicks: tile pictures overlap their neighbours. */
+.mapsvg image, .mapsvg .own, .mapsvg .other, .mapsvg .ctr, .mapsvg text { pointer-events: none; }
 .mapsvg .hit.gl { stroke: #b9d18f; stroke-width: 1; }
 .mapsvg a.tile:hover .hit { fill: rgba(255, 255, 255, 0.3); stroke: #71d000; stroke-width: 1.5; }
 .mapsvg text.lbl { font: 11px Verdana, Arial, sans-serif; fill: #777; text-anchor: middle; }
-.mapsvg a.arrow polygon { fill: #71d000; stroke: #4c8c00; stroke-width: 1; }
-.mapsvg a.arrow:hover polygon { fill: #00bc00; }
 .mapopts a.on { color: #000; }
 .mapopts .sep { margin-left: 12px; color: #999; }
 #map_coords { display: block; margin: 0 0 8px; }
-#map_coords .home { margin-left: 12px; font-size: 11px; }
-#map_info { width: 260px; }
+#map_info { width: 100%; }
+.mapsvg a.tile.hov .hit, .mapsvg a.tile:focus .hit { fill: rgba(255, 255, 255, 0.3); stroke: #71d000; stroke-width: 1.5; }
+.mapctl { display: flex; gap: 16px; align-items: flex-start; margin: 4px 0 14px; }
+.mapside { flex: 1; min-width: 0; }
+.mappad { display: grid; grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 34px); gap: 3px; padding: 6px; background: #fbfaf5; border: 1px solid #dcd6c3; border-radius: 8px; box-shadow: 0 1px 2px rgba(60, 50, 20, 0.08); flex: none; }
+.mappad a { display: flex; align-items: center; justify-content: center; position: relative; border-radius: 6px; background: linear-gradient(#ffffff, #eef0e6); border: 1px solid #cfd6bd; color: #4c8c00; }
+.mappad a:hover, .mappad a:focus { background: linear-gradient(#f3fbe4, #dff0c2); border-color: #71d000; }
+.mappad a:active { background: #d4ebaf; }
+.mappad svg path { fill: none; stroke: #4c8c00; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.mappad .mp-l { position: absolute; right: 3px; bottom: 1px; font-size: 8px; color: #9a9277; font-weight: normal; }
+.mappad .mp-home img { opacity: 0.8; }
 #map_info td, #map_info th { font-size: 11px; padding: 1px 4px; }
 
 /* ---------- Building pages ---------- */

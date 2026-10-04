@@ -23,6 +23,24 @@ function cellImage(c: MapCell): string {
   return (c.x * 7 + c.y * 13) % 5 === 0 ? 'grass2' : 'grass';
 }
 
+/** Direction pad under the map. Classic view: north points up-right, so arrows sit on the diagonals. */
+function mapPad(style: MapStyle, to: { n: string; e: string; s: string; w: string; home: string }): SafeHtml {
+  const diag = style === 'diamond';
+  // 3×3 cells, row by row: NW N NE / W C E / SW S SE.
+  const at: Record<string, { href: string; title: string; rot: number; key: string }> = diag
+    ? { NE: { href: to.n, title: 'North', rot: -45, key: 'n' }, SE: { href: to.e, title: 'East', rot: 45, key: 'e' }, SW: { href: to.s, title: 'South', rot: 135, key: 's' }, NW: { href: to.w, title: 'West', rot: -135, key: 'w' } }
+    : { N: { href: to.n, title: 'North', rot: -90, key: 'n' }, E: { href: to.e, title: 'East', rot: 0, key: 'e' }, S: { href: to.s, title: 'South', rot: 90, key: 's' }, W: { href: to.w, title: 'West', rot: 180, key: 'w' } };
+  const cells = ['NW', 'N', 'NE', 'W', 'C', 'E', 'SW', 'S', 'SE'].map((c) => {
+    if (c === 'C') return html`<a href="${to.home}" class="mp-home" title="Back to my village" aria-label="Back to my village"><img src="/static/img/menu/home.svg" width="16" height="16" alt=""></a>`;
+    const a = at[c];
+    if (!a) return html`<span></span>`;
+    return html`<a href="${a.href}" class="mp-dir" id="mp-${a.key}" title="${a.title}" aria-label="Move ${a.title.toLowerCase()}">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4" transform="rotate(${a.rot} 8 8)"></path></svg>
+      <span class="mp-l">${a.title[0]}</span></a>`;
+  });
+  return html`<nav class="mappad" aria-label="Move the map">${cells}</nav>`;
+}
+
 export const MAP_SIZES = [7, 11, 15, 21] as const;
 export type MapSize = (typeof MAP_SIZES)[number];
 export type MapStyle = 'diamond' | 'grid';
@@ -56,12 +74,11 @@ export function mapView(d: {
   const ys = [...new Set(d.grid.map((row) => row[0]?.y ?? 0))].reverse(); // ascending y
   const step = Math.max(1, Math.floor(n / 2));
   const link = (x: number, y: number) => `/map?x=${x}&y=${y}`;
-  const m = 46; // margin for labels and arrows
+  const m = 28; // margin for the coordinate labels
   let W: number;
   let H: number;
   const placed: Placed[] = [];
   const labels: SafeHtml[] = [];
-  let arrows: { x: number; y: number; rot: number; href: string; title: string }[];
 
   if (d.style === 'diamond') {
     // Tile (i, j): centre = (37·(i+j), 20·(i−j)) — x grows down-right, y grows up-right (north).
@@ -78,17 +95,6 @@ export function mapView(d: {
       if (j === 0) labels.push(html`<text x="${cxp - 26}" y="${cyp + 34}" class="lbl">${c.x}</text>`);
       if (i === n - 1) labels.push(html`<text x="${cxp + 26}" y="${cyp + 34}" class="lbl">${c.y}</text>`);
     }
-    const left = { x: ox, y: oy + 37 };
-    const top = { x: ox + 37 + 37 * (n - 1), y: oy + 37 - 20 * (n - 1) - 20 };
-    const right = { x: ox + 74 * n, y: oy + 37 };
-    const bottom = { x: ox + 37 + 37 * (n - 1), y: oy + 37 + 20 * (n - 1) + 20 };
-    const mid = (a: { x: number; y: number }, b: { x: number; y: number }, dx: number, dy: number) => ({ x: (a.x + b.x) / 2 + dx, y: (a.y + b.y) / 2 + dy });
-    arrows = [
-      { ...mid(top, right, 22, -14), rot: -30, href: link(d.cx, d.cy + step), title: 'North' },
-      { ...mid(right, bottom, 22, 14), rot: 30, href: link(d.cx + step, d.cy), title: 'East' },
-      { ...mid(bottom, left, -22, 14), rot: 150, href: link(d.cx, d.cy - step), title: 'South' },
-      { ...mid(left, top, -22, -14), rot: 210, href: link(d.cx - step, d.cy), title: 'West' },
-    ];
   } else {
     const t = 60;
     W = t * n + 2 * m;
@@ -102,12 +108,6 @@ export function mapView(d: {
       if (j === 0) labels.push(html`<text x="${x + t / 2}" y="${m + n * t + 16}" class="lbl">${c.x}</text>`);
       if (i === 0) labels.push(html`<text x="${m - 16}" y="${y + t / 2 + 4}" class="lbl">${c.y}</text>`);
     }
-    arrows = [
-      { x: W / 2, y: m / 2 - 4, rot: -90, href: link(d.cx, d.cy + step), title: 'North' },
-      { x: W - m / 2 + 4, y: H / 2, rot: 0, href: link(d.cx + step, d.cy), title: 'East' },
-      { x: W / 2, y: H - m / 2 + 4, rot: 90, href: link(d.cx, d.cy - step), title: 'South' },
-      { x: m / 2 - 4, y: H / 2, rot: 180, href: link(d.cx - step, d.cy), title: 'West' },
-    ];
   }
 
   // Draw back-to-front so taller tiles overlap correctly.
@@ -123,7 +123,9 @@ export function mapView(d: {
         : `Abandoned valley (${c.x}|${c.y})`;
     const own = c.village?.userId === d.myId;
     const ctr = c.x === d.cx && c.y === d.cy;
-    return html`<a href="/map/tile?x=${c.x}&amp;y=${c.y}" class="tile"><title>${label}</title>
+    const kind = c.village ? 'village' : c.kind === 'oasis' ? 'oasis' : 'valley';
+    return html`<a href="/map/tile?x=${c.x}&amp;y=${c.y}" class="tile" data-x="${c.x}" data-y="${c.y}" data-k="${kind}"
+      data-n="${c.village?.name ?? ''}" data-o="${c.village?.owner ?? ''}" data-p="${c.village?.pop ?? ''}"><title>${label}</title>
       <image href="/static/img/${art}/${cellImage(c)}.svg" x="${p.x}" y="${p.y}" width="${tileSize}" height="${tileSize}"></image>
       ${c.village ? html`<polygon points="${p.shape}" class="${own ? 'own' : 'other'}"></polygon>` : ''}
       ${ctr ? html`<polygon points="${p.shape}" class="ctr"></polygon>` : ''}
@@ -137,32 +139,41 @@ export function mapView(d: {
   return html`<h1>Map <span class="lvl">(${d.cx}|${d.cy})</span></h1>
     <p class="tabs mapopts">Size: ${MAP_SIZES.map((sz) => opt(sz, d.style, `${sz}×${sz}`, sz === n))}
       <span class="sep">View:</span> ${opt(n, 'diamond', 'Classic', d.style === 'diamond')}${opt(n, 'grid', 'Flat', d.style === 'grid')}</p>
-    <svg class="mapsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map around ${d.cx}|${d.cy}">
+    <svg class="mapsvg ${d.style}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map around ${d.cx}|${d.cy}">
       ${tiles}
       ${labels}
-      ${arrows.map((a) => html`<a href="${a.href}" class="arrow"><title>${a.title}</title>
-        <polygon points="-10,-9 10,0 -10,9" transform="translate(${a.x} ${a.y}) rotate(${a.rot})"></polygon></a>`)}
     </svg>
-    <form id="map_coords" method="get" action="/map">
-      <input type="hidden" name="size" value="${n}"><input type="hidden" name="view" value="${d.style}">
-      <b>x</b> <input type="text" name="x" value="${d.cx}" class="w30" inputmode="numeric">
-      <b>y</b> <input type="text" name="y" value="${d.cy}" class="w30" inputmode="numeric">
-      <button type="submit" class="small">OK</button>
-      <a href="${link(d.homeX, d.homeY)}" class="home">» back to my village</a>
-    </form>
-    <table id="map_info"><thead><tr><th colspan="2">Details (${d.cx}|${d.cy}):</th></tr></thead><tbody>
-      ${center?.village
-        ? html`<tr><th>Village</th><td>${center.village.name}</td></tr><tr><th>Player</th><td>${center.village.owner}</td></tr><tr><th>Population</th><td>${fmtNum(center.village.pop)}</td></tr>`
-        : html`<tr><th>Field</th><td>${center?.kind === 'oasis' ? 'Oasis' : 'Abandoned valley'}</td></tr>`}
-    </tbody></table>
-    <table><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
+    <div class="mapctl">
+      ${mapPad(d.style, {
+        n: link(d.cx, d.cy + step),
+        e: link(d.cx + step, d.cy),
+        s: link(d.cx, d.cy - step),
+        w: link(d.cx - step, d.cy),
+        home: link(d.homeX, d.homeY),
+      })}
+      <div class="mapside">
+        <form id="map_coords" method="get" action="/map">
+          <input type="hidden" name="size" value="${n}"><input type="hidden" name="view" value="${d.style}">
+          <label for="mx"><b>x</b></label> <input id="mx" type="text" name="x" value="${d.cx}" class="w30" inputmode="numeric">
+          <label for="my"><b>y</b></label> <input id="my" type="text" name="y" value="${d.cy}" class="w30" inputmode="numeric">
+          <button type="submit" class="small">OK</button>
+        </form>
+        <table id="map_info" data-cx="${d.cx}" data-cy="${d.cy}"><thead><tr><th colspan="2" id="mi-h">Details (${d.cx}|${d.cy}):</th></tr></thead><tbody id="mi-b">
+          ${center?.village
+            ? html`<tr><th>Village</th><td>${center.village.name}</td></tr><tr><th>Player</th><td>${center.village.owner}</td></tr><tr><th>Population</th><td>${fmtNum(center.village.pop)}</td></tr>`
+            : html`<tr><th>Field</th><td>${center?.kind === 'oasis' ? 'Oasis' : 'Abandoned valley'}</td></tr>`}
+        </tbody></table>
+        <p class="small muted">Click a field to open it. Arrow keys move the map.</p>
+      </div>
+    </div>
+    <div class="tblwrap"><table><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
     ${villages.length === 0
       ? html`<tr><td colspan="4" class="none center">none</td></tr>`
       : villages.map(
           (c) => html`<tr><td><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a></td><td>${c.village?.owner}</td>
             <td class="num">${fmtNum(c.village?.pop ?? 0)}</td><td class="center">(${c.x}|${c.y})</td></tr>`,
         )}
-    </tbody></table>`;
+    </tbody></table></div>`;
 }
 
 export interface TileViewData {

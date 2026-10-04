@@ -56,6 +56,53 @@
     }, 6000);
   }
 
+  // Map: hover/focus a field to see its details; arrow keys move the map.
+  var info = document.getElementById('mi-b');
+  if (info) {
+    var head = document.getElementById('mi-h');
+    var row = function (k, v) {
+      var tr = document.createElement('tr');
+      var th = document.createElement('th');
+      var td = document.createElement('td');
+      th.textContent = k;
+      td.textContent = v;
+      tr.appendChild(th);
+      tr.appendChild(td);
+      return tr;
+    };
+    var show = function (a) {
+      var prev = document.querySelector('.mapsvg a.tile.hov');
+      if (prev) prev.classList.remove('hov');
+      a.classList.add('hov');
+      head.textContent = 'Details (' + a.getAttribute('data-x') + '|' + a.getAttribute('data-y') + '):';
+      while (info.firstChild) info.removeChild(info.firstChild);
+      var k = a.getAttribute('data-k');
+      if (k === 'village') {
+        info.appendChild(row('Village', a.getAttribute('data-n')));
+        info.appendChild(row('Player', a.getAttribute('data-o')));
+        info.appendChild(row('Population', a.getAttribute('data-p')));
+      } else {
+        info.appendChild(row('Field', k === 'oasis' ? 'Oasis' : 'Abandoned valley'));
+      }
+    };
+    var tiles = document.querySelectorAll('.mapsvg a.tile');
+    for (var ti = 0; ti < tiles.length; ti++) {
+      tiles[ti].addEventListener('mouseenter', function (e) { show(e.currentTarget); });
+      tiles[ti].addEventListener('focus', function (e) { show(e.currentTarget); });
+    }
+    document.addEventListener('keydown', function (e) {
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var dir = { ArrowUp: 'n', ArrowRight: 'e', ArrowDown: 's', ArrowLeft: 'w' }[e.key];
+      var a = dir && document.getElementById('mp-' + dir);
+      if (a) {
+        e.preventDefault();
+        window.location.href = a.getAttribute('href');
+      }
+    });
+  }
+
   // NPC merchant: live "Rest" counter and "Distribute remaining" button.
   var npc = document.getElementById('npc');
   if (npc) {
