@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
-import { tiles, villages } from '../../db/schema.js';
+import { slots, tiles, villages } from '../../db/schema.js';
 import type { OasisType } from '../rules/map.js';
 import { initialAnimals, OASIS_RES_CAP, OASIS_RES_CAP_MAX, OASIS_RES_PER_25, regrowAnimals } from '../rules/oasis.js';
 import { oasisBonus } from '../rules/map.js';
@@ -95,4 +95,25 @@ export function oasisStock(q: Q, tile: TileRow, now: number): Resources {
 
 export function setOasisStock(q: Q, x: number, y: number, stock: Resources, now: number): void {
   q.update(tiles).set({ oasisRes: JSON.stringify(stock), oasisResAt: now }).where(and(eq(tiles.x, x), eq(tiles.y, y))).run();
+}
+
+/**
+ * Loyalty of an owned oasis (T3.6): starts at 100 and regrows by the owner's Hero's Mansion level
+ * per hour (× world speed).
+ */
+export function oasisLoyaltyNow(q: Q, tile: TileRow, now: number): number {
+  if (tile.villageId === null) return 100;
+  const at = tile.oasisLoyaltyAt ?? now;
+  const mansion =
+    q.select({ l: slots.level }).from(slots).where(and(eq(slots.villageId, tile.villageId), eq(slots.building, 'heromansion'))).get()?.l ?? 0;
+  return Math.min(100, tile.oasisLoyalty + ((now - at) / 3_600_000) * mansion * config.WORLD_SPEED);
+}
+
+/** Loyalty lost per successful hero attack: ⌊100 / min(3, 4 − owner's oasis count)⌋. */
+export function oasisLoyaltyHit(ownerOases: number): number {
+  return Math.floor(100 / Math.max(1, Math.min(3, 4 - ownerOases)));
+}
+
+export function setOasisLoyalty(q: Q, x: number, y: number, loyalty: number, now: number): void {
+  q.update(tiles).set({ oasisLoyalty: loyalty, oasisLoyaltyAt: now }).where(and(eq(tiles.x, x), eq(tiles.y, y))).run();
 }

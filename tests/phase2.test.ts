@@ -10,7 +10,9 @@ import { registerPlayer } from '../src/game/actions/account.js';
 import { startResearch, academyOptions } from '../src/game/actions/research.js';
 import { startTraining } from '../src/game/actions/train.js';
 import { sendTroops } from '../src/game/actions/troops.js';
-import { addSkillPoints, getHero, reviveHero } from '../src/game/actions/hero.js';
+import { getHero, reviveHero, setSkills, trainHero } from '../src/game/actions/hero.js';
+import { heroCombat, heroPoints, heroReviveCost } from '../src/game/rules/hero.js';
+import { oasisLoyaltyHit } from '../src/game/engine/oasis.js';
 import { acceptOffer, createOffer, sendResources } from '../src/game/actions/market.js';
 import {
   acceptInvite,
@@ -39,7 +41,7 @@ import {
 } from '../src/game/actions/credits.js';
 import { startBuild } from '../src/game/actions/build.js';
 import { getModifiers } from '../src/game/modifiers.js';
-import { emptyUnits } from '../src/game/rules/units.js';
+import { TRIBES, emptyUnits } from '../src/game/rules/units.js';
 import { res } from '../src/game/rules/resources.js';
 import { config } from '../src/config.js';
 import { oasisStock } from '../src/game/engine/oasis.js';
@@ -138,24 +140,45 @@ describe('academy & smithy', () => {
   });
 });
 
-describe('hero', () => {
-  it('exists for every player and can spend skill points', () => {
+function trainHeroFor(p: P): void {
+  rich(p.villageId);
+  setSlot(p.villageId, 30, 'heromansion', 1);
+  const units = troopsAtHome(p.villageId);
+  units[0] = (units[0] ?? 0) + 1;
+  setTroopsAt(db, p.villageId, p.villageId, units);
+  const h = trainHero(db, p.userId, p.villageId, 0, clock.now());
+  advance((h.reviveAt ?? 0) - clock.now() + 1);
+}
+function troopsAtHome(v: number) {
+  return troopsAt(db, v, v);
+}
+
+describe('hero (classic T3.6)', () => {
+  it('is trained in the Hero’s Mansion from a soldier and keeps that unit’s strengths', () => {
+    expect(getHero(db, a.userId, clock.now())).toBeUndefined();
+    db.update(slots).set({ building: null, level: 0 }).where(and(eq(slots.villageId, a.villageId), eq(slots.building, 'heromansion'))).run();
+    expect(() => trainHero(db, a.userId, a.villageId, 0, clock.now())).toThrow(/Hero's Mansion/);
+    trainHeroFor(a);
     const h = getHero(db, a.userId, clock.now());
-    expect(h.status).toBe('home');
-    addSkillPoints(db, a.userId, { strength: 3, offBonus: 2, defBonus: 0, production: 0 });
-    expect(() => addSkillPoints(db, a.userId, { strength: 1, offBonus: 0, defBonus: 0, production: 0 })).toThrow(/free points/);
+    expect(h?.status).toBe('home');
+    expect(h?.unitSlot).toBe(0);
+    // Legionnaire (40/35/50) at 0 points: attack round5(5·40/4) = 50, defence 60 / 85.
+    expect(heroCombat(TRIBES.romans.units[0]!, 0, 0)).toEqual({ off: 50, defInf: 60, defCav: 85 });
+    expect(() => trainHero(db, a.userId, a.villageId, 0, clock.now())).toThrow(/already have a hero/);
+    expect(() => trainHero(db, c.userId, c.villageId, 3, clock.now())).toThrow();
   });
 
-  it('production points add resources to the home village', () => {
-    const state = loadVillage(db, b.villageId);
-    if (!state) throw new Error();
-    const before = economyOf(db, state, clock.now()).gross.wood;
-    addSkillPoints(db, b.userId, { strength: 0, offBonus: 0, defBonus: 0, production: 5 });
-    const after = economyOf(db, state, clock.now()).gross.wood;
-    expect(after).toBeGreaterThan(before);
+  it('gets 5 points per level, movable freely at level 0', () => {
+    setSkills(db, a.userId, { strength: 3, defPoints: 0, offBonus: 2, defBonus: 0, regen: 0 });
+    setSkills(db, a.userId, { strength: 0, defPoints: 5, offBonus: 0, defBonus: 0, regen: 0 });
+    expect(() => setSkills(db, a.userId, { strength: 6, defPoints: 0, offBonus: 0, defBonus: 0, regen: 0 })).toThrow(/5 points/);
+    expect(heroPoints(3)).toBe(20);
+    db.update(heroes).set({ level: 1, xp: 100 }).where(eq(heroes.userId, a.userId)).run();
+    expect(() => setSkills(db, a.userId, { strength: 5, defPoints: 0, offBonus: 0, defBonus: 0, regen: 0 })).toThrow(/level 0/);
+    setSkills(db, a.userId, { strength: 5, defPoints: 5, offBonus: 0, defBonus: 0, regen: 0 });
   });
 
-  it('fights in a raid, gains XP and comes home', () => {
+  it('fights in a raid, gains XP and comes home at its unit’s speed', () => {
     rich(a.villageId);
     const units = emptyUnits();
     units[0] = 50;
@@ -163,22 +186,29 @@ describe('hero', () => {
     const target = village(b.villageId);
     const mv = sendTroops(db, a.userId, a.villageId, { x: target.x, y: target.y, kind: 'raid', units, hero: true }, clock.now());
     expect(mv.hero).toBe(true);
-    expect(getHero(db, a.userId, clock.now()).status).toBe('moving');
+    expect(getHero(db, a.userId, clock.now())?.status).toBe('moving');
     advance(mv.arriveAt - clock.now() + 1);
     const ret = db.select().from(movements).where(eq(movements.fromVillageId, a.villageId)).get();
     expect(ret?.hero).toBe(true);
     advance((ret?.arriveAt ?? 0) - clock.now() + 1);
     const h = getHero(db, a.userId, clock.now());
-    expect(h.status).toBe('home');
-    expect(h.locationId).toBe(a.villageId);
+    expect(h?.status).toBe('home');
+    expect(h?.locationId).toBe(a.villageId);
   });
 
-  it('a dead hero can be revived for resources', () => {
-    db.update(heroes).set({ status: 'dead', health: 0, locationId: null }).where(eq(heroes.userId, c.userId)).run();
+  it('a fallen hero can be revived for resources based on its unit and level', () => {
+    trainHeroFor(c);
+    db.update(heroes).set({ status: 'dead', health: 0, locationId: null, level: 2 }).where(eq(heroes.userId, c.userId)).run();
+    // Phalanx 100/130/55/30 at level 2: (2·cost + 30)·3^1.25
+    expect(heroReviveCost(TRIBES.gauls.units[0]!, 2)).toEqual(res(908, 1145, 553, 355));
     const h = reviveHero(db, c.userId, clock.now());
     expect(h.status).toBe('reviving');
     advance((h.reviveAt ?? 0) - clock.now() + 1);
-    expect(getHero(db, c.userId, clock.now()).status).toBe('home');
+    expect(getHero(db, c.userId, clock.now())?.status).toBe('home');
+  });
+
+  it('owned oases lose 33 / 50 / 100 loyalty per hero attack depending on how many the owner holds', () => {
+    expect([1, 2, 3].map(oasisLoyaltyHit)).toEqual([33, 50, 100]);
   });
 });
 
@@ -187,6 +217,7 @@ describe('oases', () => {
     const v = village(a.villageId);
     const oasis = freeTileNear(v.x, v.y, 'oasis');
     const near = Math.max(Math.abs(oasis.x - v.x), Math.abs(oasis.y - v.y)) <= 3;
+    setSlot(a.villageId, 30, 'heromansion', 10); // one oasis slot
     rich(a.villageId);
     const units = emptyUnits();
     units[0] = 3000;

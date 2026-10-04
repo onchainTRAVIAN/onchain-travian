@@ -8,8 +8,10 @@ export interface ArmyGroup {
   units: UnitCounts;
   /** Blacksmith (when attacking) or Armoury (when defending) level per unit slot. */
   upgrades?: number[];
-  /** Fighting strength of a hero travelling with this group (0/undefined = no hero). */
-  heroStrength?: number;
+  /** A hero fighting with this group (T3: values from the unit it was trained from). */
+  hero?: { off: number; defInf: number; defCav: number; cav: boolean };
+  /** Multiplier on this group's defence (its own hero's defence bonus). */
+  defBonus?: number;
 }
 
 export interface BattleInput {
@@ -145,8 +147,8 @@ function isInfantryLike(tribe: TribeId, slot: number): boolean {
 }
 
 export function attackPower(group: ArmyGroup): { inf: number; cav: number } {
-  let inf = group.heroStrength ?? 0;
-  let cav = 0;
+  let inf = group.hero && !group.hero.cav ? group.hero.off : 0;
+  let cav = group.hero?.cav ? group.hero.off : 0;
   group.units.forEach((n, i) => {
     if (n <= 0) return;
     const u = unitDef(group.tribe, i);
@@ -162,13 +164,14 @@ export function defensePower(groups: ArmyGroup[], infShare: number): number {
   const cavShare = 1 - infShare;
   let total = 0;
   for (const g of groups) {
-    total += g.heroStrength ?? 0;
+    let group = g.hero ? g.hero.defInf * infShare + g.hero.defCav * cavShare : 0;
     g.units.forEach((n, i) => {
       if (n <= 0) return;
       const u = unitDef(g.tribe, i);
       const lvl = g.upgrades?.[i] ?? 0;
-      total += n * (upgradedStat(u, u.defInf, lvl) * infShare + upgradedStat(u, u.defCav, lvl) * cavShare);
+      group += n * (upgradedStat(u, u.defInf, lvl) * infShare + upgradedStat(u, u.defCav, lvl) * cavShare);
     });
+    total += group * (g.defBonus ?? 1);
   }
   return total;
 }

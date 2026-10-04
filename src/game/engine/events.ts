@@ -30,6 +30,7 @@ import {
 import { addReport, type BattleReportData, type ReportSide } from './reports.js';
 import { scheduleReturn, sendTroopsHome, villageInfo, type VillageInfo } from './movement.js';
 import { canExpand, conquerVillage, destroyVillage } from './expansion.js';
+import { HERO_XP_VALUE } from '../rules/hero.js';
 import { createVillage } from './world.js';
 import {
   damageHero,
@@ -37,12 +38,13 @@ import {
   heroDefMultiplier,
   heroOf,
   heroOffMultiplier,
-  heroStrength,
+  heroCombatOf,
+  heroTribe,
   heroesStationedIn,
   processHeroRevivals,
   type HeroRow,
 } from './hero.js';
-import { oasesOwnedBy, oasisAnimals, oasisStock, setOasisAnimals, setOasisStock, tileAt } from './oasis.js';
+import { type TileRow, oasesOwnedBy, oasisAnimals, oasisLoyaltyHit, oasisLoyaltyNow, oasisStock, setOasisAnimals, setOasisLoyalty, setOasisStock, tileAt } from './oasis.js';
 
 type MovementRow = typeof movements.$inferSelect;
 
@@ -276,7 +278,20 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const fighting = subUnits(attackerUnits, trapped);
   if (totalUnits(trapped) > 0) notes.push(`${totalUnits(trapped)} attacking soldiers were caught in traps.`);
 
-  const heroGroups: ArmyGroup[] = defHeroes.map((h) => ({ tribe: 'romans', units: emptyUnits(), heroStrength: heroStrength(h) }));
+  // Each hero fights with its own army (T3): the owner's hero with the village troops, a reinforcing
+  // hero with the army it came with; its defence bonus strengthens only that army.
+  const extraGroups: ArmyGroup[] = [];
+  for (const h of defHeroes) {
+    const tribe = heroTribe(q, h);
+    const hero = heroCombatOf(tribe, h);
+    const own = defenders.find((d) => d.row.ownerVillageId === h.homeVillageId && !d.group.hero);
+    if (own) {
+      own.group.hero = hero;
+      own.group.defBonus = heroDefMultiplier(h);
+    } else {
+      extraGroups.push({ tribe, units: emptyUnits(), hero, defBonus: heroDefMultiplier(h) });
+    }
+  }
   const slotOf = (type: string) => TRIBES[home.tribe].units.findIndex((u) => u.type === type);
   const ramSlot = slotOf('ram');
   const cataSlot = slotOf('catapult');
@@ -286,12 +301,12 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const defenderPop = playerPop(q, target.userId);
   const result = resolveBattle({
     mode,
-    attacker: { tribe: home.tribe, units: fighting, upgrades: home.attackUpgrades, heroStrength: aHero ? heroStrength(aHero) : 0 },
-    defenders: [...defenders.map((d) => d.group), ...heroGroups],
+    attacker: { tribe: home.tribe, units: fighting, upgrades: home.attackUpgrades, hero: aHero ? heroCombatOf(home.tribe, aHero) : undefined },
+    defenders: [...defenders.map((d) => d.group), ...extraGroups],
     defenderTribe: target.userId !== null ? target.tribe : null,
     wallLevel,
     attackMultiplier: attackerMods.attack * heroOffMultiplier(aHero) * breweryBonus(q, home),
-    defenseMultiplier: defenderMods.defense * heroDefMultiplier(ownerHero),
+    defenseMultiplier: defenderMods.defense,
     residenceLevel: Math.max(levelOf(target, 'residence'), levelOf(target, 'palace')),
     attackerPop,
     defenderPop,
@@ -320,17 +335,22 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const defenderLossValue = defenders.reduce((s, d, idx) => s + upkeepOf(d.group.tribe, result.defenderLosses[idx] ?? emptyUnits()), 0);
   const attackerLossValue = upkeepOf(home.tribe, result.attackerLosses);
 
-  // Heroes take damage in proportion to their side's losses and learn from the fight.
+  // Heroes take damage in proportion to their side's losses and learn from the fight: XP is the
+  // upkeep of the enemies killed (a hero counts 6); defending heroes share theirs.
   const heroReports: NonNullable<BattleReportData['heroes']> = [];
   let attackerHeroAlive = false;
+  const defHeroesDie = defHeroes.filter(() => result.defenderLossRatio * 100 > 90 || result.defenderLossRatio >= 1).length;
+  const attackerHeroDies = !!aHero && (result.attackerLossRatio * 100 > 90 || result.attackerLossRatio >= 1);
   if (aHero) {
-    const after = damageHero(q, aHero, result.attackerLossRatio, defenderLossValue, t);
+    const xp = defenderLossValue + defHeroesDie * HERO_XP_VALUE;
+    const after = damageHero(q, aHero, result.attackerLossRatio, xp, t);
     attackerHeroAlive = after.status !== 'dead';
-    heroReports.push({ name: after.name, side: 'attacker', health: Math.round(after.health), died: !attackerHeroAlive, xp: defenderLossValue });
+    heroReports.push({ name: after.name, side: 'attacker', health: Math.round(after.health), died: !attackerHeroAlive, xp });
   }
   for (const h of defHeroes) {
-    const after = damageHero(q, h, result.defenderLossRatio, attackerLossValue, t);
-    heroReports.push({ name: after.name, side: 'defender', health: Math.round(after.health), died: after.status === 'dead', xp: attackerLossValue });
+    const xp = Math.round((attackerLossValue + (attackerHeroDies ? HERO_XP_VALUE : 0)) / defHeroes.length);
+    const after = damageHero(q, h, result.defenderLossRatio, xp, t);
+    heroReports.push({ name: after.name, side: 'defender', health: Math.round(after.health), died: after.status === 'dead', xp });
   }
 
   let wallChange: BattleReportData['wall'];
@@ -482,6 +502,19 @@ function floorRes(r: Resources): Resources {
   return res(Math.floor(r.wood), Math.floor(r.clay), Math.floor(r.iron), Math.floor(r.crop));
 }
 
+/**
+ * A hero attack on an oasis someone else holds lowers its loyalty (T3.6). Returns true when the
+ * loyalty is gone and the oasis can change hands.
+ */
+function breakOasisLoyalty(q: Q, tile: TileRow, t: number, notes: string[]): boolean {
+  if (tile.villageId === null) return true;
+  const before = oasisLoyaltyNow(q, tile, t);
+  const after = Math.max(0, before - oasisLoyaltyHit(oasesOwnedBy(q, tile.villageId).length));
+  setOasisLoyalty(q, tile.x, tile.y, after, t);
+  if (after > 0) notes.push(`The oasis loyalty drops from ${Math.round(before)} to ${Math.round(after)}. Attack again with your hero to take it.`);
+  return after <= 0;
+}
+
 function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUnits: UnitCounts, aHero: HeroRow | undefined, t: number): void {
   const tile = tileAt(q, mv.toX, mv.toY);
   if (!tile) return;
@@ -506,7 +539,7 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
   const attackerMods = getModifiers(q, home.userId, t);
   const result = resolveBattle({
     mode,
-    attacker: { tribe: home.tribe, units: attackerUnits, upgrades: home.attackUpgrades, heroStrength: aHero ? heroStrength(aHero) : 0 },
+    attacker: { tribe: home.tribe, units: attackerUnits, upgrades: home.attackUpgrades, hero: aHero ? heroCombatOf(home.tribe, aHero) : undefined },
     defenders: [{ tribe: 'nature', units: animals }],
     defenderTribe: null,
     wallLevel: 0,
@@ -533,10 +566,10 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
   const heroReports: NonNullable<BattleReportData['heroes']> = [];
   let heroAlive = false;
   if (aHero) {
-    // Hunting animals is how heroes gain most of their experience.
-    const after = damageHero(q, aHero, result.attackerLossRatio, killedValue * 2, t);
+    // Animals give experience like soldiers: their upkeep.
+    const after = damageHero(q, aHero, result.attackerLossRatio, killedValue, t);
     heroAlive = after.status !== 'dead';
-    heroReports.push({ name: after.name, side: 'attacker', health: Math.round(after.health), died: !heroAlive, xp: killedValue * 2 });
+    heroReports.push({ name: after.name, side: 'attacker', health: Math.round(after.health), died: !heroAlive, xp: killedValue });
   }
 
   const notes: string[] = [];
@@ -553,9 +586,11 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
       if (tile.villageId === home.id) notes.push('This oasis is already yours.');
       else if (dx > OASIS_RANGE || dy > OASIS_RANGE) notes.push(`Oases must be within ${OASIS_RANGE} fields of the village.`);
       else if (slotsFree <= 0) notes.push("Upgrade your Hero's Mansion (level 10/15/20) to hold more oases.");
-      else {
+      else if (tile.villageId !== null && !breakOasisLoyalty(q, tile, t, notes)) {
+        // The owner's hold on the oasis is weakened but not yet broken.
+      } else {
         const previous = tile.villageId;
-        q.update(tiles).set({ villageId: home.id }).where(and(eq(tiles.x, tile.x), eq(tiles.y, tile.y))).run();
+        q.update(tiles).set({ villageId: home.id, oasisLoyalty: 100, oasisLoyaltyAt: t }).where(and(eq(tiles.x, tile.x), eq(tiles.y, tile.y))).run();
         captured = true;
         notes.push('The oasis is now yours! Its bonus applies to your village.');
         if (previous !== null) {

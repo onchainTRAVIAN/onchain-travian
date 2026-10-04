@@ -145,7 +145,7 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
       return [embassyPanel(m ? { id: m.a.id, name: m.a.name, tag: m.a.tag } : null)];
     }
     case 'heromansion':
-      return [mansionPanel(oasesOwnedBy(db, state.village.id), oasisSlots(levelOf(state, 'heromansion')))];
+      return [mansionPanel(oasesOwnedBy(db, state.village.id), oasisSlots(levelOf(state, 'heromansion')), ctx.csrf)];
     case 'trapper':
       return [trapperPanel({ ...trapPanelData(db, state), have, csrf: ctx.csrf })];
     default:

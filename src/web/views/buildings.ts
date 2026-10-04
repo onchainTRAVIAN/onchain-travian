@@ -133,13 +133,14 @@ export function embassyPanel(alliance: { id: number; name: string; tag: string }
     : html`<p>You are not in an alliance. <a href="/alliance">» Alliance overview</a></p>`;
 }
 
-export function mansionPanel(oases: { x: number; y: number; oasis: string | null }[], slots: number): SafeHtml {
+export function mansionPanel(oases: { x: number; y: number; oasis: string | null }[], slots: number, csrf: string): SafeHtml {
   return html`<table class="tb"><thead><tr><th colspan="2">Oases (${oases.length}/${slots})</th></tr></thead><tbody>
     ${oases.length === 0
-      ? html`<tr><td colspan="2" class="muted">No oases annexed. Clear an oasis within 3 fields with an attack that includes your hero.</td></tr>`
-      : oases.map((o) => html`<tr><td><a href="/map/tile?x=${o.x}&amp;y=${o.y}">(${o.x}|${o.y})</a></td><td>${OASIS_LABEL[(o.oasis ?? 'wood') as OasisType]}</td></tr>`)}
+      ? html`<tr><td colspan="3" class="muted">No oases annexed. Clear an oasis within 3 fields with an attack that includes your hero. An oasis held by another player takes 1–3 such attacks (its loyalty must fall to 0).</td></tr>`
+      : oases.map((o) => html`<tr><td><a href="/map/tile?x=${o.x}&amp;y=${o.y}">(${o.x}|${o.y})</a></td><td>${OASIS_LABEL[(o.oasis ?? 'wood') as OasisType]}</td>
+        <td><form method="post" action="/oasis/release">${csrfField(csrf)}<input type="hidden" name="x" value="${o.x}"><input type="hidden" name="y" value="${o.y}"><button type="submit" class="small secondary">Release</button></form></td></tr>`)}
   </tbody></table>
-  <p><a href="/hero">» Your hero</a></p>`;
+  <p><a href="/hero">» Your hero</a> (train a hero here from one of your soldiers)</p>`;
 }
 
 export function trapperPanel(d: {

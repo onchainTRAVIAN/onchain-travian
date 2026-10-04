@@ -2,10 +2,9 @@ import { and, eq } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
 import { heroes, movements, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
-import { HERO_SPEED } from '../rules/hero.js';
 import { distance, travelTimeArenaMs } from '../rules/map.js';
 import { sumRes, type Resources } from '../rules/resources.js';
-import { emptyUnits, slowestSpeed, totalUnits, type TribeId, type UnitCounts } from '../rules/units.js';
+import { TRIBES, emptyUnits, slowestSpeed, totalUnits, type TribeId, type UnitCounts } from '../rules/units.js';
 import { buildingLevelIn, catchUp, parseLevels, setTroopsAt, troopsAt } from './state.js';
 
 export interface VillageInfo {
@@ -44,11 +43,18 @@ export function villageInfo(q: Q, villageId: number): VillageInfo | undefined {
   };
 }
 
-/** Group speed: slowest unit, and the hero if it rides along. */
-export function groupSpeed(tribe: TribeId, units: UnitCounts, withHero: boolean): number {
+/** Group speed: slowest unit, and the hero (as fast as the unit it was trained from) if it rides along. */
+export function groupSpeed(tribe: TribeId, units: UnitCounts, heroSpeed: number | false): number {
   const unitSpeed = totalUnits(units) > 0 ? slowestSpeed(tribe, units) : Infinity;
-  const speed = Math.min(unitSpeed, withHero ? HERO_SPEED : Infinity);
-  return Number.isFinite(speed) ? speed : HERO_SPEED;
+  const speed = Math.min(unitSpeed, heroSpeed || Infinity);
+  return Number.isFinite(speed) ? speed : heroSpeed || 1;
+}
+
+/** Speed of the user's hero (false when the hero isn't travelling). */
+export function heroSpeedFor(q: Q, userId: number | null, withHero: boolean, tribe: TribeId): number | false {
+  if (!withHero || userId === null) return false;
+  const h = q.select({ unitSlot: heroes.unitSlot }).from(heroes).where(eq(heroes.userId, userId)).get();
+  return h ? (TRIBES[tribe].units[h.unitSlot]?.speed ?? 6) : false;
 }
 
 /** Send survivors (and the hero) home from (fromX, fromY), carrying loot. */
@@ -64,7 +70,7 @@ export function scheduleReturn(
 ): void {
   if (totalUnits(units) <= 0 && !withHero) return;
   const dist = distance(fromX, fromY, home.x, home.y, config.MAP_RADIUS);
-  const travel = travelTimeArenaMs(dist, groupSpeed(home.tribe, units, withHero), buildingLevelIn(q, home.id, 'tournament'), config.TROOP_SPEED);
+  const travel = travelTimeArenaMs(dist, groupSpeed(home.tribe, units, heroSpeedFor(q, home.userId, withHero, home.tribe)), buildingLevelIn(q, home.id, 'tournament'), config.TROOP_SPEED);
   q.insert(movements)
     .values({
       kind: 'return',

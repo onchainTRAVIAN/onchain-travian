@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1 — 2026-10-04 (classic T3.6 rules, phase 2: hero)
+- Classic hero: trained in the Hero's Mansion from a researched fighting unit at home (2× unit cost, 1.6× its time); keeps the unit's stats and speed. Five skills (attack, defence, attack bonus, defence bonus, regeneration), 5 points per level, free redistribution at level 0. Attack round5((2a/3+27.5)·pts + 5a/4), defence with k = (di/dc)^0.2 (Kirilloid t3/hero). No production skill.
+- Hero fights with its own army and its bonuses boost only that army; dies at > 90% damage or when its army is wiped out; regenerates (10 + 5·points)%/day; revive cost 2·cost(+30)·(level+1)^1.25, time 1.6·time·(level+1); XP = upkeep killed (hero 6), shared by defending heroes; animals ×1.
+- Oases held by another player have loyalty: each hero attack takes ⌊100/min(3, 4 − owner's oases)⌋; it regrows by the owner's Hero's Mansion level per hour. Oases can be released.
+- Existing heroes keep level and XP and get their points back to redistribute.
+
 ## 0.8.0 — 2026-10-04 (classic T3.6 rules, phase 1: combat)
 - Siege uses the T3 formula (Kirilloid/TravianZ): demolition points 4·σ(att/def)·⌊engines/durability⌋·1.0205^upgrade, all engines sent count; rams strike the wall before the fight (battle recomputed at the lower wall) and damage it even in lost attacks; tribe wall sturdiness (Romans 1, Gauls 2, Teutons 5); Stonemason in the capital.
 - Catapult targets by Rally Point level (random < 3, storage at 3, fields & bonus buildings at 5, all but cranny/stonemason/trapper/walls at 10), two targets at Rally Point 20 with ≥ 20 catapults; random hits can land on fields; catapult morale; Teuton Brewery makes catapults random and halves chief persuasion.

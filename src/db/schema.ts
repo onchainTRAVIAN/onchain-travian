@@ -61,6 +61,9 @@ export const tiles = sqliteTable(
     animals: text('animals'),
     animalsAt: integer('animals_at'),
     /** Unoccupied oases: JSON resources stored there (lootable) and when they were last updated. */
+    /** Owned oases: loyalty (100 = firmly held) and when it was last updated. */
+    oasisLoyalty: real('oasis_loyalty').notNull().default(100),
+    oasisLoyaltyAt: integer('oasis_loyalty_at'),
     oasisRes: text('oasis_res'),
     oasisResAt: integer('oasis_res_at'),
   },
@@ -258,9 +261,15 @@ export const heroes = sqliteTable(
     xp: integer('xp').notNull().default(0),
     health: real('health').notNull().default(100),
     healthAt: integer('health_at').notNull(),
+    /** T3 hero: the unit it was trained from (slot of the owner's tribe) sets its base stats and speed. */
+    unitSlot: integer('unit_slot').notNull().default(0),
+    /** Skill points: attack (`strength`), defence, attack bonus, defence bonus, regeneration. */
     strength: integer('strength').notNull().default(0),
+    defPoints: integer('def_points').notNull().default(0),
     offBonus: integer('off_bonus').notNull().default(0),
     defBonus: integer('def_bonus').notNull().default(0),
+    regen: integer('regen').notNull().default(0),
+    /** Unused since the classic hero (T4 production skill); kept for old rows. */
     production: integer('production').notNull().default(0),
     reviveAt: integer('revive_at'),
     createdAt: integer('created_at').notNull(),

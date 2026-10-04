@@ -63,7 +63,7 @@ export function createApp() {
   app.use(communityRouter);
   app.use(adminRouter);
   app.use(walletRouter);
-  app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map', '/research', '/market', '/hero', '/shop', '/celebrate', '/goldmarket', '/traps'], requireAuth);
+  app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map', '/research', '/market', '/hero', '/shop', '/celebrate', '/goldmarket', '/traps', '/oasis'], requireAuth);
   app.use(villageRouter);
   app.use(troopsRouter);
   app.use(mapRouter);

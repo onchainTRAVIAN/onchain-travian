@@ -9,7 +9,7 @@ import { distance, travelTimeArenaMs, wrapCoord } from '../rules/map.js';
 import { TRIBES, UNIT_SLOTS, subUnits, totalUnits, unitDef, type UnitCounts } from '../rules/units.js';
 import { assertGame } from '../errors.js';
 import { catchUp, levelOf, loadVillage, setTroopsAt, troopsAt } from '../engine/state.js';
-import { groupSpeed, sendTroopsHome } from '../engine/movement.js';
+import { groupSpeed, heroSpeedFor, sendTroopsHome } from '../engine/movement.js';
 import { heroAtHome } from '../engine/hero.js';
 import { canExpand } from '../engine/expansion.js';
 import { oasisOwner, tileAt } from '../engine/oasis.js';
@@ -130,7 +130,7 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
   }
 
   const dist = distance(home.x, home.y, x, y, config.MAP_RADIUS);
-  const travelMs = travelTimeArenaMs(dist, groupSpeed(me.tribe, units, withHero), levelOf(state, 'tournament'), config.TROOP_SPEED);
+  const travelMs = travelTimeArenaMs(dist, groupSpeed(me.tribe, units, heroSpeedFor(q, userId, withHero, me.tribe)), levelOf(state, 'tournament'), config.TROOP_SPEED);
   return { targetVillageId, targetName, targetOwner, targetKind, distance: dist, travelMs, x, y };
 }
 
