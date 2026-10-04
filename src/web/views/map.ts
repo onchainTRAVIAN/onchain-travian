@@ -62,7 +62,7 @@ export function mapView(d: { grid: MapCell[][]; cx: number; cy: number; myId: nu
     ${villages.length === 0
       ? html`<p class="muted small">No villages nearby.</p>`
       : html`<ul class="list">${villages.map(
-          (c) => html`<li><span class="grow"><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a> <span class="sub">${c.village?.owner} · ${TRIBES[c.village?.tribe ?? 'legion'].name} · ${fmtNum(c.village?.pop ?? 0)} pop</span></span><span class="small muted">(${c.x}|${c.y})</span></li>`,
+          (c) => html`<li><span class="grow"><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a> <span class="sub">${c.village?.owner} · ${TRIBES[c.village?.tribe ?? 'romans'].name} · ${fmtNum(c.village?.pop ?? 0)} pop</span></span><span class="small muted">(${c.x}|${c.y})</span></li>`,
         )}</ul>`}
     <p class="small muted">The world spans ${-config.MAP_RADIUS}…${config.MAP_RADIUS} and wraps around at the edges.</p>`;
 }

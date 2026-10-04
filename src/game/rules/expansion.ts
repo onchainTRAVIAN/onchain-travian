@@ -1,11 +1,8 @@
-/** Culture points needed to own `n` villages (n = 1 is free). */
+/** Culture points needed to own `n` villages (classic formula: 2000, 8000, 20000, 39000, 65000…). */
 export function culturePointsRequired(n: number): number {
   if (n <= 1) return 0;
-  return 1000 * Math.pow(n - 1, 2);
+  return Math.round(1.6 * Math.pow(n - 1, 2.3)) * 1000;
 }
-
-/** Culture points per day a building level produces (before world speed). */
-export const CULTURE_PER_LEVEL = 4;
 
 /** Expansion slots a village gets from its residence or palace. */
 export function expansionSlots(residenceLevel: number, palaceLevel: number): number {

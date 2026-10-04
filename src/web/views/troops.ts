@@ -1,4 +1,4 @@
-import { BUILDINGS, TOWN_BUILDING_IDS } from '../../game/rules/buildings.js';
+import { BUILDINGS, TOWN_BUILDING_IDS, WALL_IDS } from '../../game/rules/buildings.js';
 import { TRIBES, type TribeId, type UnitCounts } from '../../game/rules/units.js';
 import type { SendInput, SendPreview } from '../../game/actions/troops.js';
 import type { MovementView, StationedView } from '../../game/queries.js';
@@ -89,7 +89,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
       </fieldset>
       ${d.home.some((n, i) => n > 0 && units[i]?.type === 'catapult')
         ? html`<label for="ct">Catapult target</label>
-          <select id="ct" name="catapultTarget"><option value="">Random building</option>${TOWN_BUILDING_IDS.filter((b) => b !== 'wall' && b !== 'rally').map(
+          <select id="ct" name="catapultTarget"><option value="">Random building</option>${TOWN_BUILDING_IDS.filter((b) => !WALL_IDS.includes(b) && b !== 'rally').map(
             (b) => html`<option value="${b}"${d.values.catapultTarget === b ? html` selected` : ''}>${BUILDINGS[b].name}</option>`,
           )}</select>`
         : ''}

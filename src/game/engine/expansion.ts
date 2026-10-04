@@ -99,7 +99,8 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
       isCapital: false,
       parentId: fromVillageId,
       research: '[1,0,0,0,0,0,0,0,0,0]',
-      smithy: '[0,0,0,0,0,0,0,0,0,0]',
+      blacksmith: '[0,0,0,0,0,0,0,0,0,0]',
+      armoury: '[0,0,0,0,0,0,0,0,0,0]',
       expansions: 0,
       resAt: now,
     })

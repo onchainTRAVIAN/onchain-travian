@@ -53,7 +53,7 @@ export function villageMovements(q: Q, villageId: number): MovementView[] {
       .leftJoin(users, eq(users.id, villages.userId))
       .where(inArray(villages.id, [...ids]))
       .all()) {
-      info.set(v.id, { name: v.name, x: v.x, y: v.y, tribe: v.tribe ?? 'legion', owner: v.owner ?? 'Nature' });
+      info.set(v.id, { name: v.name, x: v.x, y: v.y, tribe: v.tribe ?? 'romans', owner: v.owner ?? 'Nature' });
     }
   }
   const out: MovementView[] = [];
@@ -63,21 +63,21 @@ export function villageMovements(q: Q, villageId: number): MovementView[] {
       if (r.fromVillageId !== villageId) continue;
       out.push({
         id: r.id, kind: r.kind, hero: r.hero, merchants: r.merchants, direction: 'home', arriveAt: r.arriveAt, departAt: r.departAt,
-        units: parseUnits(r.units), tribe: from?.tribe ?? 'legion',
+        units: parseUnits(r.units), tribe: from?.tribe ?? 'romans',
         otherName: `(${r.originX}|${r.originY})`, otherX: r.originX, otherY: r.originY, otherVillageId: null, ownerName: from?.owner ?? '',
       });
     } else if (r.fromVillageId === villageId) {
       const to = r.toVillageId !== null ? info.get(r.toVillageId) : undefined;
       out.push({
         id: r.id, kind: r.kind, hero: r.hero, merchants: r.merchants, direction: 'out', arriveAt: r.arriveAt, departAt: r.departAt,
-        units: parseUnits(r.units), tribe: from?.tribe ?? 'legion',
+        units: parseUnits(r.units), tribe: from?.tribe ?? 'romans',
         otherName: to?.name ?? (r.kind === 'settle' ? `new land (${r.toX}|${r.toY})` : `oasis (${r.toX}|${r.toY})`), otherX: r.toX, otherY: r.toY, otherVillageId: r.toVillageId, ownerName: to?.owner ?? '',
       });
     } else {
       // Incoming: hide hostile army composition (you only see that something is coming).
       out.push({
         id: r.id, kind: r.kind, hero: r.hero && r.kind === 'reinforce', merchants: r.merchants, direction: 'in', arriveAt: r.arriveAt, departAt: r.departAt,
-        units: r.kind === 'reinforce' || r.kind === 'trade' ? parseUnits(r.units) : null, tribe: from?.tribe ?? 'legion',
+        units: r.kind === 'reinforce' || r.kind === 'trade' ? parseUnits(r.units) : null, tribe: from?.tribe ?? 'romans',
         otherName: from?.name ?? '?', otherX: r.originX, otherY: r.originY, otherVillageId: r.fromVillageId, ownerName: from?.owner ?? '',
       });
     }
@@ -107,7 +107,7 @@ export function reinforcementsIn(q: Q, villageId: number): StationedView[] {
     .all()
     .map((r) => ({
       ownerVillageId: r.t.ownerVillageId, locationId: villageId, villageName: r.name, ownerName: r.owner ?? 'Nature',
-      x: r.x, y: r.y, tribe: r.tribe ?? 'legion', units: parseUnits(r.t.units),
+      x: r.x, y: r.y, tribe: r.tribe ?? 'romans', units: parseUnits(r.t.units),
     }));
 }
 
@@ -122,7 +122,7 @@ export function troopsAway(q: Q, villageId: number): StationedView[] {
     .all()
     .map((r) => ({
       ownerVillageId: villageId, locationId: r.t.villageId, villageName: r.name, ownerName: r.owner ?? 'Nature',
-      x: r.x, y: r.y, tribe: 'legion' as TribeId, units: parseUnits(r.t.units),
+      x: r.x, y: r.y, tribe: 'romans' as TribeId, units: parseUnits(r.t.units),
     }));
 }
 
@@ -203,7 +203,7 @@ export function mapWindow(q: Q, cx: number, cy: number, radius: number): MapCell
         layout: r?.tile.layout ?? null,
         oasis: r?.tile.oasis ?? null,
         village: r?.v
-          ? { id: r.v.id, name: r.v.name, pop: r.v.pop, userId: r.v.userId, owner: r.owner ?? 'Nature', tribe: r.tribe ?? 'legion' }
+          ? { id: r.v.id, name: r.v.name, pop: r.v.pop, userId: r.v.userId, owner: r.owner ?? 'Nature', tribe: r.tribe ?? 'romans' }
           : null,
       };
     }),

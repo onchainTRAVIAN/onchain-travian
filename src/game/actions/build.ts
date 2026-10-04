@@ -1,6 +1,6 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, ne } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
-import { buildOrders, villages } from '../../db/schema.js';
+import { buildOrders, slots, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
 import {
   BUILDINGS,
@@ -16,6 +16,7 @@ import {
   type BuildingId,
 } from '../rules/buildings.js';
 import { RESOURCE_KEYS, canAfford, subRes, addRes, type Resources } from '../rules/resources.js';
+import { TRIBES } from '../rules/units.js';
 import { getModifiers } from '../modifiers.js';
 import { GameError, assertGame } from '../errors.js';
 import { catchUp, economyOf, levelOf, setResources, stockOf, type VillageState } from '../engine/state.js';
@@ -104,9 +105,21 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   for (const req of def.requires) {
     if (levelOf(state, req.building) < req.level) return no(`Requires ${BUILDINGS[req.building].name} level ${req.level}`);
   }
-  if (def.id === 'palace' && !state.village.isCapital) return no('A Palace can only be built in your capital');
+  if (def.tribe && def.tribe !== state.tribe) return no(`Only the ${TRIBES[def.tribe].name} can build this`);
+  if (def.capitalOnly && !state.village.isCapital) return no('Can only be built in your capital');
+  if (def.nonCapital && state.village.isCapital) return no('Cannot be built in your capital');
+  if (def.onePerAccount && !slotRow?.building && state.userId !== null && ownsElsewhere(q, state.userId, state.village.id, def.id)) {
+    return no(`You already have a ${def.name} in another village`);
+  }
 
-  if (orders.length >= mods.buildQueue) return no('Your builders are busy');
+  // Romans may build one resource field and one village building at the same time.
+  const extra = mods.buildQueue - 1;
+  if (TRIBES[state.tribe].parallelBuild) {
+    const sameKind = orders.filter((o) => (o.slot <= FIELD_SLOTS) === (slot <= FIELD_SLOTS)).length;
+    if (sameKind >= 1 + extra) return no('Your builders are busy');
+  } else if (orders.length >= mods.buildQueue) {
+    return no('Your builders are busy');
+  }
 
   const stock = stockOf(state.village);
   if (!canAfford(stock, cost)) {
@@ -121,12 +134,25 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   return { ...base, canBuild: true };
 }
 
+function ownsElsewhere(q: Q, userId: number, villageId: number, id: BuildingId): boolean {
+  return !!q
+    .select({ v: villages.id })
+    .from(slots)
+    .innerJoin(villages, eq(villages.id, slots.villageId))
+    .where(and(eq(villages.userId, userId), eq(slots.building, id), ne(villages.id, villageId)))
+    .get();
+}
+
+/** Reasons that mean "never show this building in the list" (tribe, capital rules). */
+function hiddenReason(reason: string | undefined): boolean {
+  return !!reason && /^(Only the|Can only be built in your capital|Cannot be built in your capital|You already have|Already built|Cannot be built next to|Upgrade your existing)/.test(reason);
+}
+
 /** Buildings that could go on an empty town plot, best options first. */
 export function buildableOnEmptyPlot(q: Q, state: VillageState, slot: number, now: number): BuildOption[] {
   return TOWN_BUILDING_IDS.filter((id) => BUILDINGS[id].fixedSlot === undefined)
     .map((id) => buildOption(q, state, slot, id, now))
-    .filter((o) => o.reason !== 'Already built in this village' && !o.reason?.startsWith('Cannot be built next to'))
-    .filter((o) => !o.reason?.startsWith('Upgrade your existing'))
+    .filter((o) => !hiddenReason(o.reason))
     .sort((a, b) => rank(a) - rank(b));
 }
 

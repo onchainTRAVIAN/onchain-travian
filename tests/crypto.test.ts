@@ -90,7 +90,7 @@ describe('sign in with Ethereum', () => {
   beforeAll(async () => {
     clock.freeze(Date.UTC(2026, 5, 1));
     ensureWorld(db);
-    userId = (await registerPlayer(db, { username: 'Satoshi', password: 'password123', tribe: 'legion' }, clock.now())).userId;
+    userId = (await registerPlayer(db, { username: 'Satoshi', password: 'password123', tribe: 'romans' }, clock.now())).userId;
   });
 
   it('links a wallet with a valid signature and rejects replays', async () => {
@@ -160,7 +160,7 @@ describe.skipIf(!hasChain)('on-chain payments and holder perks (anvil)', () => {
     payments = (await client.waitForTransactionReceipt({ hash: pHash })).contractAddress as Address;
     Object.assign(config, { TOKEN_ADDRESS: token, PAYMENTS_ADDRESS: payments, CONFIRMATIONS: 2, CREDITS_PER_ETH: 10_000, CREDITS_PER_TOKEN: 1, TOKEN_BONUS: 0.2, HOLDER_MIN_SNAPSHOTS: 2 });
     db.delete(messages).run();
-    playerId = (await registerPlayer(db, { username: 'Whale', password: 'password123', tribe: 'horde' }, clock.now())).userId;
+    playerId = (await registerPlayer(db, { username: 'Whale', password: 'password123', tribe: 'teutons' }, clock.now())).userId;
   }, 30_000);
 
   afterAll(() => {

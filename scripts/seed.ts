@@ -34,7 +34,7 @@ function developVillage(villageId: number, fieldLevel: number) {
   }
 }
 
-const demo = await ensurePlayer('demo', 'demo12345', 'legion');
+const demo = await ensurePlayer('demo', 'demo12345', 'romans');
 if (demo.created) {
   developVillage(demo.villageId, 3);
   setSlot(demo.villageId, 19, 'main', 5);
@@ -54,7 +54,7 @@ if (demo.created) {
 
 const names = ['Brennus', 'Arminius', 'Boudica', 'Vercassivellaunus', 'Ragnar', 'Cassius', 'Ambiorix', 'Sigurd', 'Livia', 'Orgetorix', 'Freya', 'Marcus'];
 for (const [i, name] of names.entries()) {
-  const tribe = TRIBE_IDS[i % 3] ?? 'legion';
+  const tribe = TRIBE_IDS[i % 3] ?? 'romans';
   const p = await ensurePlayer(name, `${name.toLowerCase()}-pass-123`, tribe);
   if (!p.created) continue;
   developVillage(p.villageId, 1 + (i % 4));

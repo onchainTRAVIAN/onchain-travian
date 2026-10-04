@@ -13,7 +13,7 @@ export const users = sqliteTable(
     username: text('username').notNull(),
     usernameLower: text('username_lower').notNull(),
     passwordHash: text('password_hash').notNull(),
-    tribe: text('tribe', { enum: ['legion', 'clans', 'horde'] }).notNull(),
+    tribe: text('tribe', { enum: ['romans', 'teutons', 'gauls'] }).notNull(),
     role: text('role', { enum: ['player', 'admin'] }).notNull().default('player'),
     banned: integer('banned', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at').notNull(),
@@ -76,8 +76,12 @@ export const villages = sqliteTable(
     loyalty: real('loyalty').notNull().default(100),
     /** JSON number[10]: 1 = unit researched in the Academy. */
     research: text('research').notNull().default('[1,0,0,0,0,0,0,0,0,0]'),
-    /** JSON number[10]: Smithy upgrade level per unit. */
-    smithy: text('smithy').notNull().default('[0,0,0,0,0,0,0,0,0,0]'),
+    /** JSON number[10]: Blacksmith (attack) upgrade level per unit. */
+    blacksmith: text('blacksmith').notNull().default('[0,0,0,0,0,0,0,0,0,0]'),
+    /** JSON number[10]: Armoury (defence) upgrade level per unit. */
+    armoury: text('armoury').notNull().default('[0,0,0,0,0,0,0,0,0,0]'),
+    /** Gaul trapper: units of other villages held prisoner here (JSON {ownerVillageId: number[10]}). */
+    prisoners: text('prisoners').notNull().default('{}'),
     /** Villages founded or conquered from here (uses expansion slots). */
     expansions: integer('expansions').notNull().default(0),
     /** Village this one was founded from (null for starting villages). */
@@ -220,7 +224,7 @@ export const researchOrders = sqliteTable(
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     villageId: integer('village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
-    kind: text('kind', { enum: ['academy', 'smithy'] }).notNull(),
+    kind: text('kind', { enum: ['academy', 'blacksmith', 'armoury'] }).notNull(),
     unitSlot: integer('unit_slot').notNull(),
     toLevel: integer('to_level').notNull(),
     startAt: integer('start_at').notNull(),
@@ -409,4 +413,18 @@ export const deposits = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('deposits_user_idx').on(t.userId)],
+);
+
+/** Town Hall celebrations (one at a time per village). */
+export const celebrations = sqliteTable(
+  'celebrations',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    villageId: integer('village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['small', 'great'] }).notNull(),
+    culturePoints: integer('culture_points').notNull(),
+    startAt: integer('start_at').notNull(),
+    finishAt: integer('finish_at').notNull(),
+  },
+  (t) => [index('celebrations_finish_idx').on(t.finishAt), index('celebrations_village_idx').on(t.villageId)],
 );

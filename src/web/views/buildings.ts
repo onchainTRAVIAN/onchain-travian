@@ -8,18 +8,18 @@ import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, timer } from './layout.js';
 
-function researchList(kind: 'academy' | 'smithy', opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
+function researchList(kind: 'academy' | 'blacksmith' | 'armoury', opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
   const running = orders.find((o) => o.kind === kind);
   return html`
     ${running
       ? html`<div class="note">⏳ ${kind === 'academy' ? 'Researching' : 'Upgrading'} <b>${opts.find((o) => o.slot === running.unitSlot)?.unit.name ?? ''}</b>
-          ${kind === 'smithy' ? html` to level ${running.toLevel}` : ''} — done in ${timer(running.finishAt, now)}
+          ${kind !== 'academy' ? html` to level ${running.toLevel}` : ''} — done in ${timer(running.finishAt, now)}
           <form method="post" action="/shop/finish/research" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${running.id}">
           <button type="submit" class="small gold">⚡ ${instantPrice(running.finishAt - now)}</button></form></div>`
       : ''}
     ${opts.map(
       (o) => html`<div class="card">
-        <div class="cardrow"><b>${o.unit.icon} ${o.unit.name}</b>${kind === 'smithy' ? html`<span class="small muted">level ${o.level}</span>` : o.done ? html`<span class="good small">✔ researched</span>` : ''}</div>
+        <div class="cardrow"><b>${o.unit.icon} ${o.unit.name}</b>${kind !== 'academy' ? html`<span class="small muted">level ${o.level}</span>` : o.done ? html`<span class="good small">✔ researched</span>` : ''}</div>
         ${o.done && kind === 'academy'
           ? ''
           : html`${costLine(o.cost, have)}<div class="small muted">⏱ ${fmtDuration(o.timeMs)}</div>
@@ -35,8 +35,9 @@ export function academyPanel(opts: ResearchOption[], orders: ResearchOrderRow[],
   return html`<h2>📜 Research</h2><p class="small muted">Research a unit once to train it in every building of this village.</p>${researchList('academy', opts, orders, have, csrf, now)}`;
 }
 
-export function smithyPanel(opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
-  return html`<h2>🔨 Upgrades</h2><p class="small muted">Each level gives that unit +1.5% attack and defence. Max level = Smithy level.</p>${researchList('smithy', opts, orders, have, csrf, now)}`;
+export function smithyPanel(kind: 'blacksmith' | 'armoury', opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
+  const what = kind === 'blacksmith' ? 'attack' : 'defence';
+  return html`<h2>Upgrades</h2><p class="small muted">Each level gives that unit +1.5% ${what}. Maximum level = building level.</p>${researchList(kind, opts, orders, have, csrf, now)}`;
 }
 
 export function marketPanel(d: {

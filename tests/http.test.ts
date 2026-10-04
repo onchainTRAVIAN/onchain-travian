@@ -13,7 +13,7 @@ function csrfFrom(body: string): string {
 }
 
 /** A logged-in browser-like agent. */
-async function newPlayer(name: string, tribe = 'clans') {
+async function newPlayer(name: string, tribe = 'gauls') {
   const agent = request.agent(app);
   const page = await agent.get('/register');
   const res = await agent
@@ -61,7 +61,7 @@ describe('public pages', () => {
 
 describe('account flow', () => {
   it('rejects posts without a CSRF token', async () => {
-    const res = await request(app).post('/register').type('form').send({ username: 'Mallory', password: 'supersecret1', tribe: 'legion' });
+    const res = await request(app).post('/register').type('form').send({ username: 'Mallory', password: 'supersecret1', tribe: 'romans' });
     expect(res.status).toBe(303);
     const again = await request(app).get('/stats');
     expect(again.text).not.toContain('Mallory');
@@ -70,7 +70,7 @@ describe('account flow', () => {
   it('validates registration input', async () => {
     const agent = request.agent(app);
     const page = await agent.get('/register');
-    const res = await agent.post('/register').type('form').send({ _csrf: csrfFrom(page.text), username: 'x', password: 'short', tribe: 'legion' });
+    const res = await agent.post('/register').type('form').send({ _csrf: csrfFrom(page.text), username: 'x', password: 'short', tribe: 'romans' });
     expect(res.status).toBe(422);
     expect(res.text).toContain('at least 3 characters');
   });
@@ -91,7 +91,7 @@ describe('account flow', () => {
   });
 
   it('logs in and out', async () => {
-    await newPlayer('Boudicca', 'legion');
+    await newPlayer('Boudicca', 'romans');
     const agent = request.agent(app);
     const page = await agent.get('/login');
     const bad = await agent.post('/login').type('form').send({ _csrf: csrfFrom(page.text), username: 'Boudicca', password: 'nope-nope' });
@@ -108,7 +108,7 @@ describe('account flow', () => {
 
 describe('community and shop through the web', () => {
   it('posts in world chat and sees it in the feed', async () => {
-    const agent = await newPlayer('Chatty', 'legion');
+    const agent = await newPlayer('Chatty', 'romans');
     const page = await agent.get('/chat');
     const res = await agent.post('/chat').type('form').send({ _csrf: csrfFrom(page.text), c: 'global', body: 'Hello <b>realm</b>!' });
     expect(res.status).toBe(303);
@@ -117,13 +117,13 @@ describe('community and shop through the web', () => {
   });
 
   it('first player is admin and can open the admin panel; others cannot', async () => {
-    const other = await newPlayer('NotAdmin', 'horde');
+    const other = await newPlayer('NotAdmin', 'teutons');
     const res = await other.get('/admin');
     expect(res.status).toBe(303);
   });
 
   it('booking the ticker without credits shows a friendly error', async () => {
-    const agent = await newPlayer('Poor', 'clans');
+    const agent = await newPlayer('Poor', 'gauls');
     const page = await agent.get('/shop/ticker');
     const start = /name="start" value="(\d+)"/.exec(page.text)?.[1] ?? '0';
     const res = await agent.post('/shop/ticker').type('form').send({ _csrf: csrfFrom(page.text), body: 'Hello everyone', start, hours: '1' });
@@ -135,7 +135,7 @@ describe('community and shop through the web', () => {
 
 describe('playing through the web', () => {
   it('upgrades a field and shows it in the construction queue', async () => {
-    const agent = await newPlayer('Hannibal', 'horde');
+    const agent = await newPlayer('Hannibal', 'teutons');
     const slot = await agent.get('/slot/1');
     expect(slot.status).toBe(200);
     expect(slot.text).toContain('Upgrade to level 1');
@@ -147,7 +147,7 @@ describe('playing through the web', () => {
   });
 
   it('shows friendly errors for impossible actions', async () => {
-    const agent = await newPlayer('Spartacus', 'legion');
+    const agent = await newPlayer('Spartacus', 'romans');
     const page = await agent.get('/slot/25');
     const res = await agent.post('/build').type('form').send({ _csrf: csrfFrom(page.text), slot: '25', building: 'workshop' });
     expect(res.status).toBe(303);
@@ -156,7 +156,7 @@ describe('playing through the web', () => {
   });
 
   it('renders map, tile, troops, send form, reports, messages and rankings', async () => {
-    const agent = await newPlayer('Cleopatra', 'clans');
+    const agent = await newPlayer('Cleopatra', 'gauls');
     for (const path of ['/map', '/map?x=5&y=5', '/map/tile?x=0&y=0', '/troops', '/troops/send', '/reports', '/messages', '/messages/new', '/stats?k=attack', '/village', '/slot/19', '/slot/39', '/slot/40', '/slot/30', '/hero', '/chat', '/chat/feed', '/alliance', '/alliances', '/shop', '/shop/ticker', '/troops/send?kind=settle']) {
       const res = await agent.get(path);
       expect(res.status, path).toBe(200);
@@ -164,8 +164,8 @@ describe('playing through the web', () => {
   });
 
   it('sends a message to another player', async () => {
-    const a = await newPlayer('Caesar', 'legion');
-    await newPlayer('Brennus', 'clans');
+    const a = await newPlayer('Caesar', 'romans');
+    await newPlayer('Brennus', 'gauls');
     const form = await a.get('/messages/new?to=Brennus');
     const res = await a.post('/messages').type('form').send({ _csrf: csrfFrom(form.text), to: 'Brennus', subject: 'Hello', body: 'Peace?' });
     expect(res.status).toBe(303);

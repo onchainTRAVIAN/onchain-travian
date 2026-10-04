@@ -2,7 +2,7 @@ import { asc, eq } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { trainOrders } from '../../db/schema.js';
 import { config } from '../../config.js';
-import { BUILDINGS } from '../rules/buildings.js';
+import { BUILDINGS, type BuildingId } from '../rules/buildings.js';
 import { RESOURCE_KEYS, res, roundTo5, scaleRes, subRes, type Resources } from '../rules/resources.js';
 import { TRIBES, addUnits, trainTimeMs, type TrainingBuilding, type UnitDef } from '../rules/units.js';
 import { SETTLERS_PER_VILLAGE, expansionSlots } from '../rules/expansion.js';
@@ -16,6 +16,21 @@ import { ownedVillage } from './build.js';
 export type TrainOrderRow = typeof trainOrders.$inferSelect;
 
 export const MAX_TRAIN_BATCH = 100_000;
+
+/** Buildings that train troops, and which unit group each one trains. Great buildings cost 3×. */
+export const TRAINING_SITES: Partial<Record<BuildingId, { units: TrainingBuilding; costMult: number }>> = {
+  barracks: { units: 'barracks', costMult: 1 },
+  greatbarracks: { units: 'barracks', costMult: 3 },
+  stable: { units: 'stable', costMult: 1 },
+  greatstable: { units: 'stable', costMult: 3 },
+  workshop: { units: 'workshop', costMult: 1 },
+  residence: { units: 'residence', costMult: 1 },
+  palace: { units: 'residence', costMult: 1 },
+};
+
+export function isTrainingSite(id: string): id is BuildingId {
+  return id in TRAINING_SITES;
+}
 
 export interface TrainOption {
   slot: number;
@@ -42,16 +57,20 @@ export function maxAffordable(stock: Resources, cost: Resources): number {
   return Number.isFinite(max) ? Math.max(0, Math.min(max, MAX_TRAIN_BATCH)) : 0;
 }
 
-export function trainOptions(q: Q, state: VillageState, building: TrainingBuilding, now: number): TrainOption[] {
+export function trainOptions(q: Q, state: VillageState, building: BuildingId, now: number): TrainOption[] {
+  const site = TRAINING_SITES[building];
+  if (!site) return [];
   const mods = getModifiers(q, state.userId, now);
   const bLevel = levelOf(state, building);
+  // Romans' Horse Drinking Trough: cavalry trains 1% faster per level.
+  const trough = state.tribe === 'romans' && site.units === 'stable' ? 1 + 0.01 * levelOf(state, 'horsetrough') : 1;
   const stock = stockOf(state.village);
   return TRIBES[state.tribe].units
     .map((unit, slot) => ({ unit, slot }))
-    .filter(({ unit }) => unit.building === building)
+    .filter(({ unit }) => unit.building === site.units)
     .map(({ unit, slot }) => {
-      const cost = unitCost(unit, mods.troopCost);
-      const timeMs = trainTimeMs(unit, Math.max(1, bLevel), config.WORLD_SPEED * mods.trainSpeed);
+      const cost = scaleRes(unitCost(unit, mods.troopCost), site.costMult);
+      const timeMs = trainTimeMs(unit, Math.max(1, bLevel), config.WORLD_SPEED * mods.trainSpeed * trough);
       let reason: string | undefined;
       if (bLevel <= 0) reason = `Requires ${BUILDINGS[building].name}`;
       for (const req of unit.requires) {
@@ -99,7 +118,7 @@ function specialUnitRoom(q: Q, state: VillageState, slot: number, unit: UnitDef)
   return Math.max(0, remaining);
 }
 
-export function startTraining(db: DB, userId: number, villageId: number, unitSlot: number, count: number, now: number): TrainOrderRow {
+export function startTraining(db: DB, userId: number, villageId: number, building: BuildingId, unitSlot: number, count: number, now: number): TrainOrderRow {
   assertGame(Number.isInteger(count) && count > 0, 'Enter how many units to train');
   assertGame(count <= MAX_TRAIN_BATCH, 'Too many units at once');
   return db.transaction((tx) => {
@@ -108,18 +127,19 @@ export function startTraining(db: DB, userId: number, villageId: number, unitSlo
     assertGame(state, 'Village not found');
     const unit = TRIBES[state.tribe].units[unitSlot];
     assertGame(unit, 'Unknown unit');
-    const option = trainOptions(tx, state, unit.building, now).find((o) => o.slot === unitSlot);
+    assertGame(isTrainingSite(building) && levelOf(state, building) > 0, 'This building cannot train troops');
+    const option = trainOptions(tx, state, building, now).find((o) => o.slot === unitSlot);
     assertGame(option, 'Unknown unit');
     if (!option.available) throw new GameError(option.reason ?? 'Cannot train this unit');
     if (count > option.maxAffordable) throw new GameError(option.maxAffordable === 0 ? 'Not enough resources' : `You can train at most ${option.maxAffordable}`);
 
     // Units of the same building train one after another.
-    const queue = trainOrdersOf(tx, villageId).filter((o) => o.building === unit.building);
+    const queue = trainOrdersOf(tx, villageId).filter((o) => o.building === building);
     const queueEnd = queue.reduce((end, o) => Math.max(end, o.startAt + o.total * o.perUnitMs), now);
     setResources(tx, villageId, subRes(stockOf(state.village), scaleRes(option.cost, count)));
     return tx
       .insert(trainOrders)
-      .values({ villageId, building: unit.building, unitSlot, total: count, done: 0, perUnitMs: option.timeMs, startAt: queueEnd })
+      .values({ villageId, building, unitSlot, total: count, done: 0, perUnitMs: option.timeMs, startAt: queueEnd })
       .returning()
       .get();
   });

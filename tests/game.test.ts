@@ -44,8 +44,8 @@ let b: { userId: number; villageId: number };
 beforeAll(async () => {
   clock.freeze(T0);
   ensureWorld(db);
-  a = await registerPlayer(db, { username: 'Attila', password: 'password123', tribe: 'horde' }, clock.now());
-  b = await registerPlayer(db, { username: 'Brutus', password: 'password123', tribe: 'legion' }, clock.now());
+  a = await registerPlayer(db, { username: 'Attila', password: 'password123', tribe: 'teutons' }, clock.now());
+  b = await registerPlayer(db, { username: 'Brutus', password: 'password123', tribe: 'romans' }, clock.now());
 });
 
 describe('registration', () => {
@@ -53,14 +53,15 @@ describe('registration', () => {
     const state = loadVillage(db, a.villageId);
     expect(state?.slots).toHaveLength(40);
     expect(state?.slots.filter((s) => s.slot <= 18 && s.level === 0)).toHaveLength(18);
-    expect(state?.slots.find((s) => s.slot === 19)).toMatchObject({ building: 'main', level: 1 });
+    expect(state?.slots.find((s) => s.slot === 26)).toMatchObject({ building: 'main', level: 1 });
+    expect(state?.slots.find((s) => s.slot === 40)?.building).toBe('earthwall');
     expect(village(a.villageId).wood).toBe(750);
     expect(village(a.villageId).pop).toBeGreaterThan(0);
   });
 
   it('first player is admin, names are unique case-insensitively', async () => {
     expect(db.select().from(users).where(eq(users.id, a.userId)).get()?.role).toBe('admin');
-    await expect(registerPlayer(db, { username: 'attila', password: 'password123', tribe: 'clans' }, clock.now())).rejects.toBeInstanceOf(GameError);
+    await expect(registerPlayer(db, { username: 'attila', password: 'password123', tribe: 'gauls' }, clock.now())).rejects.toBeInstanceOf(GameError);
   });
 
   it('authenticates with the right password only', async () => {
@@ -121,7 +122,7 @@ describe('military', () => {
   beforeAll(() => {
     // Fast-forward the setup: give both players the buildings they need.
     for (const v of [a.villageId, b.villageId]) {
-      setSlot(v, 19, 'main', 5);
+      setSlot(v, 26, 'main', 5);
       setSlot(v, 20, 'barracks', 5);
       setSlot(v, 21, 'warehouse', 10);
       setSlot(v, 22, 'granary', 10);
@@ -131,7 +132,7 @@ describe('military', () => {
   });
 
   it('trains troops over time', () => {
-    const order = startTraining(db, a.userId, a.villageId, 0, 5, clock.now());
+    const order = startTraining(db, a.userId, a.villageId, 'barracks', 0, 5, clock.now());
     expect(order.total).toBe(5);
     advance(order.perUnitMs * 2 + 10);
     expect(homeTroops(a.villageId)[0]).toBe(2);
@@ -140,7 +141,7 @@ describe('military', () => {
   });
 
   it('special units cannot be trained yet', () => {
-    expect(() => startTraining(db, a.userId, a.villageId, 9, 1, clock.now())).toThrow();
+    expect(() => startTraining(db, a.userId, a.villageId, 'barracks', 9, 1, clock.now())).toThrow();
   });
 
   it('beginner protection blocks attacks', () => {

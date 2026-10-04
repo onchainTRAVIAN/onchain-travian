@@ -4,7 +4,7 @@ import { db } from '../../db/index.js';
 import { slots, users } from '../../db/schema.js';
 import { and, eq } from 'drizzle-orm';
 import { buildOption, buildOrdersOf, buildableOnEmptyPlot, cancelBuild, isValidSlot, startBuild, ownedVillage } from '../../game/actions/build.js';
-import { startTraining, trainOptions, trainOrdersOf } from '../../game/actions/train.js';
+import { isTrainingSite, startTraining, trainOptions, trainOrdersOf } from '../../game/actions/train.js';
 import { BUILDINGS, type BuildingId } from '../../game/rules/buildings.js';
 import { TRIBES, type TrainingBuilding } from '../../game/rules/units.js';
 import { stockOf, troopsAt } from '../../game/engine/state.js';
@@ -15,7 +15,7 @@ import { fieldsView, townView, type VillageViewData } from '../views/village.js'
 import { slotView } from '../views/slot.js';
 import { formAction, intParam, loadGamePage, sendPage, type GamePage } from './helpers.js';
 import type { SafeHtml } from '../html.js';
-import { academyOptions, researchOrdersOf, smithyOptions } from '../../game/actions/research.js';
+import { academyOptions, researchOrdersOf, upgradeOptions } from '../../game/actions/research.js';
 import { listOffers, merchantInfo } from '../../game/actions/market.js';
 import { canExpand } from '../../game/engine/expansion.js';
 import { membership } from '../../game/actions/alliance.js';
@@ -76,13 +76,13 @@ villageRouter.get('/slot/:n', (req, res) => {
   const pending = buildOrdersOf(db, state.village.id).find((o) => o.slot === n);
   const buildingId = (slotRow?.building ?? pending?.building ?? null) as BuildingId | null;
   const def = buildingId ? BUILDINGS[buildingId] : null;
-  const trainingBuildings: TrainingBuilding[] = ['barracks', 'stable', 'workshop', 'residence'];
-  const isTraining = def && (trainingBuildings as string[]).includes(def.id);
-  const hasTrainable = isTraining && TRIBES[state.tribe].units.some((u) => u.building === def.id);
+  const isTraining = def && isTrainingSite(def.id);
+  const hasTrainable = isTraining;
   const training =
     def && isTraining && hasTrainable
       ? {
-          options: trainOptions(db, state, def.id as TrainingBuilding, ctx.now),
+          building: def.id,
+          options: trainOptions(db, state, def.id, ctx.now),
           queue: trainOrdersOf(db, state.village.id).filter((o) => o.building === def.id),
         }
       : null;
@@ -115,8 +115,9 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
   switch (id) {
     case 'academy':
       return [academyPanel(academyOptions(db, state, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
-    case 'smithy':
-      return [smithyPanel(smithyOptions(db, state, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
+    case 'blacksmith':
+    case 'armoury':
+      return [smithyPanel(id, upgradeOptions(db, state, id, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
     case 'market':
       return [
         marketPanel({
@@ -173,11 +174,12 @@ villageRouter.post(
   formAction(
     z.object({
       unit: z.coerce.number().int().min(0).max(9),
+      building: z.string().max(30).refine(isTrainingSite, 'Invalid building'),
       count: z.coerce.number({ message: 'Enter how many units to train' }).int('Enter a whole number').min(1, 'Enter how many units to train'),
     }),
     (req, res, data) => {
       const ctx = authed(req);
-      const order = startTraining(db, ctx.user.id, ctx.villageId, data.unit, data.count, ctx.now);
+      const order = startTraining(db, ctx.user.id, ctx.villageId, data.building as BuildingId, data.unit, data.count, ctx.now);
       const u = TRIBES[ctx.user.tribe].units[order.unitSlot];
       setFlash(res, 'ok', `Training ${order.total} × ${u?.name ?? 'units'}.`);
       const slot = db

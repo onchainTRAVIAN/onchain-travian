@@ -4,8 +4,10 @@ import { movements, slots, tiles, trainOrders, troops, users, villages } from '.
 import { config } from '../../config.js';
 import {
   BUILDINGS,
+  buildingCulture,
   buildingDef,
   buildingPopulation,
+  bonusBuildingPct,
   type BuildingId,
 } from '../rules/buildings.js';
 import { fieldProduction, storageCapacity, crannyCapacity } from '../rules/production.js';
@@ -13,7 +15,7 @@ import { RESOURCE_KEYS, res, type Resources } from '../rules/resources.js';
 import { addUnits, emptyUnits, TRIBES, upkeepOf, type TribeId, type UnitCounts } from '../rules/units.js';
 import { oasisBonus, type OasisType } from '../rules/map.js';
 import { getModifiers, type Modifiers } from '../modifiers.js';
-import { CULTURE_PER_LEVEL, loyaltyRegenPerHour } from '../rules/expansion.js';
+import { loyaltyRegenPerHour } from '../rules/expansion.js';
 import { HERO_UPKEEP } from '../rules/hero.js';
 import { heroProductionBonus } from './hero.js';
 import { heroes, reports } from '../../db/schema.js';
@@ -69,7 +71,7 @@ export function loadVillage(q: Q, villageId: number): VillageState | undefined {
     .get();
   if (!row) return undefined;
   const s = q.select().from(slots).where(eq(slots.villageId, villageId)).orderBy(asc(slots.slot)).all();
-  return { village: row.village, userId: row.village.userId, tribe: row.tribe ?? 'legion', slots: s };
+  return { village: row.village, userId: row.village.userId, tribe: row.tribe ?? 'romans', slots: s };
 }
 
 export function levelOf(state: Pick<VillageState, 'slots'>, id: BuildingId): number {
@@ -142,7 +144,14 @@ export function grossProduction(state: VillageState, mods: Modifiers, oasis: Res
     if (!def?.produces) continue;
     out[def.produces] += fieldProduction(s.level);
   }
-  for (const k of RESOURCE_KEYS) out[k] = out[k] * config.WORLD_SPEED * (mods.production[k] + oasis[k]) + flatBonus;
+  // Sawmill, Brickyard, Iron Foundry, Grain Mill and Bakery: +5% per level.
+  const bonus: Resources = res(
+    bonusBuildingPct(levelOf(state, 'sawmill')),
+    bonusBuildingPct(levelOf(state, 'brickyard')),
+    bonusBuildingPct(levelOf(state, 'ironfoundry')),
+    bonusBuildingPct(levelOf(state, 'grainmill')) + bonusBuildingPct(levelOf(state, 'bakery')),
+  );
+  for (const k of RESOURCE_KEYS) out[k] = out[k] * config.WORLD_SPEED * (mods.production[k] + oasis[k] + bonus[k]) + flatBonus;
   return out;
 }
 
@@ -343,7 +352,7 @@ export function culturePerDay(q: Q, userId: number): number {
   let total = 0;
   for (const r of rows) {
     const def = r.building ? buildingDef(r.building) : undefined;
-    if (def) total += def.culture * r.level * CULTURE_PER_LEVEL;
+    if (def) total += buildingCulture(def, r.level);
   }
   return total * config.WORLD_SPEED;
 }
@@ -356,4 +365,10 @@ export function catchUpCulture(q: Q, userId: number, now: number): number {
   const cp = u.cp + (culturePerDay(q, userId) * (now - u.at)) / 86_400_000;
   q.update(users).set({ culturePoints: cp, cultureAt: now }).where(eq(users.id, userId)).run();
   return cp;
+}
+
+/** Highest level of a building in a village (reads the slots table directly). */
+export function buildingLevelIn(q: Q, villageId: number, id: BuildingId): number {
+  const rows = q.select({ level: slots.level }).from(slots).where(and(eq(slots.villageId, villageId), eq(slots.building, id))).all();
+  return rows.reduce((m, r) => Math.max(m, r.level), 0);
 }

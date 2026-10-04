@@ -50,7 +50,7 @@ export function loginView(csrf: string, username = ''): SafeHtml {
 }
 
 export function registerView(csrf: string, values: { username?: string; tribe?: string } = {}): SafeHtml {
-  const selected = values.tribe && (TRIBE_IDS as readonly string[]).includes(values.tribe) ? values.tribe : 'legion';
+  const selected = values.tribe && (TRIBE_IDS as readonly string[]).includes(values.tribe) ? values.tribe : 'romans';
   return html`<h1>Join ${config.WORLD_NAME}</h1>
   <form method="post" action="/register">
     ${csrfField(csrf)}

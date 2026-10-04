@@ -20,7 +20,7 @@ describe('buildings', () => {
 
   it('main building speeds up construction', () => {
     expect(mainBuildingFactor(1)).toBeCloseTo(1);
-    expect(mainBuildingFactor(20)).toBeLessThan(0.4);
+    expect(mainBuildingFactor(20)).toBeCloseTo(0.498, 2);
     const def = BUILDINGS.warehouse;
     expect(buildTimeMs(def, 5, 20, 1)).toBeLessThan(buildTimeMs(def, 5, 1, 1));
   });
@@ -75,24 +75,24 @@ describe('tribes', () => {
     const units = emptyUnits();
     units[0] = 10; // clubber speed 7
     units[6] = 1; // ram speed 4
-    expect(slowestSpeed('horde', units)).toBe(4);
+    expect(slowestSpeed('teutons', units)).toBe(4);
   });
   it('higher training building level trains faster', () => {
-    const u = TRIBES.legion.units[0];
+    const u = TRIBES.romans.units[0];
     if (!u) throw new Error('missing unit');
     expect(trainTimeMs(u, 10, 1)).toBeLessThan(trainTimeMs(u, 1, 1));
   });
 });
 
 describe('battle', () => {
-  const army = (tribe: 'legion' | 'clans' | 'horde', slot: number, n: number) => {
+  const army = (tribe: 'romans' | 'gauls' | 'teutons', slot: number, n: number) => {
     const u = emptyUnits();
     u[slot] = n;
     return { tribe, units: u };
   };
 
   it('a strong attack wipes out a weak defence and takes some losses', () => {
-    const r = resolveBattle({ mode: 'attack', attacker: army('horde', 0, 100), defenders: [army('legion', 0, 10)], defenderTribe: 'legion', wallLevel: 0 });
+    const r = resolveBattle({ mode: 'attack', attacker: army('teutons', 0, 100), defenders: [army('romans', 0, 10)], defenderTribe: 'romans', wallLevel: 0 });
     expect(r.attackerWon).toBe(true);
     expect(r.defenderLosses[0]?.[0]).toBe(10);
     expect(r.attackerLosses[0]).toBeGreaterThan(0);
@@ -100,30 +100,30 @@ describe('battle', () => {
   });
 
   it('a weak attack dies entirely in a full attack', () => {
-    const r = resolveBattle({ mode: 'attack', attacker: army('horde', 0, 5), defenders: [army('clans', 0, 100)], defenderTribe: 'clans', wallLevel: 5 });
+    const r = resolveBattle({ mode: 'attack', attacker: army('teutons', 0, 5), defenders: [army('gauls', 0, 100)], defenderTribe: 'gauls', wallLevel: 5 });
     expect(r.attackerWon).toBe(false);
     expect(r.attackerLosses[0]).toBe(5);
   });
 
   it('raids are less bloody than attacks for the winner and the loser', () => {
-    const input = { attacker: army('horde', 0, 50), defenders: [army('legion', 0, 20)], defenderTribe: 'legion' as const, wallLevel: 0 };
+    const input = { attacker: army('teutons', 0, 50), defenders: [army('romans', 0, 20)], defenderTribe: 'romans' as const, wallLevel: 0 };
     const attack = resolveBattle({ ...input, mode: 'attack' });
     const raid = resolveBattle({ ...input, mode: 'raid' });
     expect(raid.defenderLossRatio).toBeLessThan(attack.defenderLossRatio);
   });
 
   it('walls make defence stronger', () => {
-    const base = { mode: 'attack' as const, attacker: army('horde', 0, 30), defenders: [army('legion', 1, 10)], defenderTribe: 'legion' as const };
+    const base = { mode: 'attack' as const, attacker: army('teutons', 0, 30), defenders: [army('romans', 1, 10)], defenderTribe: 'romans' as const };
     expect(resolveBattle({ ...base, wallLevel: 10 }).defensePower).toBeGreaterThan(resolveBattle({ ...base, wallLevel: 0 }).defensePower);
   });
 
   it('an empty village still has base defence', () => {
-    const r = resolveBattle({ mode: 'raid', attacker: army('horde', 0, 1), defenders: [], defenderTribe: 'legion', wallLevel: 0 });
+    const r = resolveBattle({ mode: 'raid', attacker: army('teutons', 0, 1), defenders: [], defenderTribe: 'romans', wallLevel: 0 });
     expect(r.attackerWon).toBe(true);
   });
 
   it('modifiers scale attack power', () => {
-    const base = { mode: 'attack' as const, attacker: army('horde', 0, 30), defenders: [], defenderTribe: null, wallLevel: 0 };
+    const base = { mode: 'attack' as const, attacker: army('teutons', 0, 30), defenders: [], defenderTribe: null, wallLevel: 0 };
     expect(resolveBattle({ ...base, attackMultiplier: 1.2 }).attackPower).toBe(Math.round(30 * 40 * 1.2));
   });
 

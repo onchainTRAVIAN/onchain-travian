@@ -3,10 +3,10 @@ import type { Q } from '../../db/index.js';
 import { heroes, movements, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { HERO_SPEED } from '../rules/hero.js';
-import { distance, travelTimeMs } from '../rules/map.js';
+import { distance, travelTimeArenaMs } from '../rules/map.js';
 import { sumRes, type Resources } from '../rules/resources.js';
 import { emptyUnits, slowestSpeed, totalUnits, type TribeId, type UnitCounts } from '../rules/units.js';
-import { catchUp, parseLevels, setTroopsAt, troopsAt } from './state.js';
+import { buildingLevelIn, catchUp, parseLevels, setTroopsAt, troopsAt } from './state.js';
 
 export interface VillageInfo {
   id: number;
@@ -17,7 +17,9 @@ export interface VillageInfo {
   username: string;
   tribe: TribeId;
   isCapital: boolean;
-  smithy: number[];
+  /** Blacksmith (attack) and Armoury (defence) upgrade levels per unit. */
+  attackUpgrades: number[];
+  defenseUpgrades: number[];
 }
 
 export function villageInfo(q: Q, villageId: number): VillageInfo | undefined {
@@ -35,9 +37,10 @@ export function villageInfo(q: Q, villageId: number): VillageInfo | undefined {
     y: row.v.y,
     userId: row.v.userId,
     username: row.username ?? 'Nature',
-    tribe: row.tribe ?? 'legion',
+    tribe: row.tribe ?? 'romans',
     isCapital: row.v.isCapital,
-    smithy: parseLevels(row.v.smithy),
+    attackUpgrades: parseLevels(row.v.blacksmith),
+    defenseUpgrades: parseLevels(row.v.armoury),
   };
 }
 
@@ -61,7 +64,7 @@ export function scheduleReturn(
 ): void {
   if (totalUnits(units) <= 0 && !withHero) return;
   const dist = distance(fromX, fromY, home.x, home.y, config.MAP_RADIUS);
-  const travel = travelTimeMs(dist, groupSpeed(home.tribe, units, withHero), config.TROOP_SPEED);
+  const travel = travelTimeArenaMs(dist, groupSpeed(home.tribe, units, withHero), buildingLevelIn(q, home.id, 'tournament'), config.TROOP_SPEED);
   q.insert(movements)
     .values({
       kind: 'return',

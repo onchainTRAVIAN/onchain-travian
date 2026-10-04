@@ -23,7 +23,9 @@ export function merchantInfo(q: Q, state: VillageState): { total: number; busy: 
     q.select({ n: sql<number>`coalesce(sum(${marketOffers.merchants}), 0)` }).from(marketOffers).where(eq(marketOffers.villageId, state.village.id)).get()?.n ?? 0;
   const busy = moving + reserved;
   const t = TRIBES[state.tribe];
-  return { total, busy, free: Math.max(0, total - busy), capacity: t.merchantCapacity, speed: t.merchantSpeed };
+  // Trade Office: +10% capacity per level.
+  const capacity = Math.round(t.merchantCapacity * (1 + 0.1 * levelOf(state, 'tradeoffice')));
+  return { total, busy, free: Math.max(0, total - busy), capacity, speed: t.merchantSpeed };
 }
 
 function merchantsNeeded(amount: number, capacity: number): number {
@@ -152,7 +154,7 @@ export function listOffers(q: Q, viewer: VillageState, mineOnly: boolean): Offer
     .all();
   return rows
     .map((r) => {
-      const tribe = r.tribe ?? 'legion';
+      const tribe = r.tribe ?? 'romans';
       const dist = distance(viewer.village.x, viewer.village.y, r.x, r.y, config.MAP_RADIUS);
       return {
         ...r.o, villageName: r.name, owner: r.owner ?? '?', x: r.x, y: r.y, tribe,

@@ -105,7 +105,9 @@ export function effectAt(def: BuildingDef, level: number, tribe: TribeId): strin
     case 'stable':
     case 'workshop':
       return level > 0 ? `Training time ${pct(trainingBuildingFactor(level))}` : null;
-    case 'wall':
+    case 'citywall':
+    case 'earthwall':
+    case 'palisade':
       return `Defence bonus +${Math.round((Math.pow(1 + TRIBES[tribe].wallPerLevel, level) - 1) * 100)}%`;
     case 'market':
       return level > 0 ? `${level} merchant${level === 1 ? '' : 's'}` : null;

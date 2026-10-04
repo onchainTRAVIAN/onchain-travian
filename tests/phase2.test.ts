@@ -82,18 +82,19 @@ function freeTileNear(x: number, y: number, kind: 'field' | 'oasis') {
 beforeAll(async () => {
   clock.freeze(T0);
   ensureWorld(db);
-  a = await registerPlayer(db, { username: 'Arthur', password: 'password123', tribe: 'legion' }, clock.now());
-  b = await registerPlayer(db, { username: 'Bjorn', password: 'password123', tribe: 'horde' }, clock.now());
-  c = await registerPlayer(db, { username: 'Celt', password: 'password123', tribe: 'clans' }, clock.now());
+  a = await registerPlayer(db, { username: 'Arthur', password: 'password123', tribe: 'romans' }, clock.now());
+  b = await registerPlayer(db, { username: 'Bjorn', password: 'password123', tribe: 'teutons' }, clock.now());
+  c = await registerPlayer(db, { username: 'Celt', password: 'password123', tribe: 'gauls' }, clock.now());
   for (const p of [a, b, c]) {
-    setSlot(p.villageId, 19, 'main', 10);
+    setSlot(p.villageId, 26, 'main', 10);
     setSlot(p.villageId, 20, 'warehouse', 20);
     setSlot(p.villageId, 21, 'granary', 20);
     setSlot(p.villageId, 22, 'barracks', 10);
     setSlot(p.villageId, 23, 'academy', 10);
-    setSlot(p.villageId, 24, 'smithy', 10);
+    setSlot(p.villageId, 24, 'blacksmith', 10);
+    setSlot(p.villageId, 30, 'armoury', 10);
     setSlot(p.villageId, 25, 'stable', 10);
-    setSlot(p.villageId, 26, 'market', 10);
+    setSlot(p.villageId, 31, 'market', 10);
     setSlot(p.villageId, 27, 'embassy', 5);
     setSlot(p.villageId, 28, 'heromansion', 10);
     setSlot(p.villageId, 29, 'residence', 10);
@@ -106,19 +107,19 @@ beforeAll(async () => {
 
 describe('academy & smithy', () => {
   it('units need research before training; research completes over time', () => {
-    expect(() => startTraining(db, a.userId, a.villageId, 2, 1, clock.now())).toThrow(/Research/);
+    expect(() => startTraining(db, a.userId, a.villageId, 'barracks', 2, 1, clock.now())).toThrow(/Research/);
     const order = startResearch(db, a.userId, a.villageId, 'academy', 2, clock.now());
     expect(() => startResearch(db, a.userId, a.villageId, 'academy', 1, clock.now())).toThrow(/busy/);
     advance(order.finishAt - clock.now() + 1);
     expect(parseLevels(village(a.villageId).research)[2]).toBe(1);
     rich(a.villageId);
-    expect(startTraining(db, a.userId, a.villageId, 2, 1, clock.now()).total).toBe(1);
+    expect(startTraining(db, a.userId, a.villageId, 'barracks', 2, 1, clock.now()).total).toBe(1);
   });
 
   it('smithy upgrades raise a unit level, capped by smithy level', () => {
-    const order = startResearch(db, a.userId, a.villageId, 'smithy', 0, clock.now());
+    const order = startResearch(db, a.userId, a.villageId, 'blacksmith', 0, clock.now());
     advance(order.finishAt - clock.now() + 1);
-    expect(parseLevels(village(a.villageId).smithy)[0]).toBe(1);
+    expect(parseLevels(village(a.villageId).blacksmith)[0]).toBe(1);
   });
 
   it('lists research options with reasons', () => {
@@ -202,12 +203,12 @@ describe('expansion', () => {
   it('settlers found a new village once culture points allow it', () => {
     db.update(users).set({ culturePoints: 100_000, cultureAt: clock.now() }).where(eq(users.id, b.userId)).run();
     rich(b.villageId);
-    const t = startTraining(db, b.userId, b.villageId, 9, 3, clock.now());
+    const t = startTraining(db, b.userId, b.villageId, 'residence', 9, 3, clock.now());
     advance(t.perUnitMs * 3 + 10);
     expect(home(b.villageId)[9]).toBe(3);
     // No more slots for settlers beyond the one group.
     rich(b.villageId);
-    expect(() => startTraining(db, b.userId, b.villageId, 9, 1, clock.now())).toThrow();
+    expect(() => startTraining(db, b.userId, b.villageId, 'residence', 9, 1, clock.now())).toThrow();
     const v = village(b.villageId);
     const spot = freeTileNear(v.x, v.y, 'field');
     const units = emptyUnits();
@@ -333,11 +334,11 @@ describe('credits shop & news ticker', () => {
 
   it('instant finish completes construction', () => {
     rich(a.villageId);
-    const order = startBuild(db, a.userId, a.villageId, 19, undefined, clock.now());
+    const order = startBuild(db, a.userId, a.villageId, 26, undefined, clock.now());
     const before = creditBalance(db, a.userId);
     finishConstructionNow(db, a.userId, order.id, clock.now());
     processDue(db, clock.now());
-    expect(loadVillage(db, a.villageId)?.slots.find((s) => s.slot === 19)?.level).toBe(11);
+    expect(loadVillage(db, a.villageId)?.slots.find((s) => s.slot === 26)?.level).toBe(11);
     expect(creditBalance(db, a.userId)).toBeLessThan(before);
   });
 

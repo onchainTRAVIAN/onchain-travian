@@ -16,7 +16,7 @@ const RES = z.enum(RESOURCE_KEYS);
 
 economyRouter.post(
   '/research',
-  formAction(z.object({ kind: z.enum(['academy', 'smithy']), unit: z.coerce.number().int().min(0).max(9) }), (req, res, data) => {
+  formAction(z.object({ kind: z.enum(['academy', 'blacksmith', 'armoury']), unit: z.coerce.number().int().min(0).max(9) }), (req, res, data) => {
     const ctx = authed(req);
     const o = startResearch(db, ctx.user.id, ctx.villageId, data.kind, data.unit, ctx.now);
     const u = TRIBES[ctx.user.tribe].units[o.unitSlot];

@@ -1,9 +1,9 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
-import { meta, slots, tiles, troops, villages } from '../../db/schema.js';
+import { meta, slots, tiles, troops, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { generateTile, layoutFields, type FieldLayout } from '../rules/map.js';
-import { MAIN_SLOT, RALLY_SLOT, TOWN_SLOT_FIRST, TOWN_SLOT_LAST, WALL_SLOT } from '../rules/buildings.js';
+import { MAIN_SLOT, RALLY_SLOT, TOWN_SLOT_FIRST, TOWN_SLOT_LAST, WALL_FOR, WALL_SLOT } from '../rules/buildings.js';
 import { emptyUnits } from '../rules/units.js';
 import { refreshPopulation } from './state.js';
 
@@ -101,7 +101,8 @@ export function createVillage(
     rows.push({ villageId: v.id, slot: s, building: s === MAIN_SLOT ? 'main' : null, level: s === MAIN_SLOT ? 1 : 0 });
   }
   rows.push({ villageId: v.id, slot: RALLY_SLOT, building: 'rally', level: 0 });
-  rows.push({ villageId: v.id, slot: WALL_SLOT, building: 'wall', level: 0 });
+  const tribe = q.select({ tribe: users.tribe }).from(users).where(eq(users.id, opts.userId)).get()?.tribe ?? 'romans';
+  rows.push({ villageId: v.id, slot: WALL_SLOT, building: WALL_FOR[tribe], level: 0 });
   q.insert(slots).values(rows).run();
   q.insert(troops).values({ villageId: v.id, ownerVillageId: v.id, units: JSON.stringify(emptyUnits()) }).run();
   q.update(tiles).set({ villageId: v.id }).where(and(eq(tiles.x, opts.x), eq(tiles.y, opts.y))).run();

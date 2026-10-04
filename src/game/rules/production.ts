@@ -1,6 +1,6 @@
-/** Resource field output per hour at speed 1, indexed by field level (0..20). */
+/** Classic resource field output per hour at speed 1, indexed by field level (0..20). */
 export const FIELD_PRODUCTION = [
-  5, 10, 16, 24, 35, 50, 70, 95, 125, 165, 215, 275, 350, 440, 550, 680, 830, 1000, 1200, 1450, 1750,
+  2, 5, 9, 15, 22, 33, 50, 70, 100, 145, 200, 280, 375, 495, 635, 800, 1000, 1300, 1600, 2000, 2450,
 ] as const;
 
 export function fieldProduction(level: number): number {
@@ -8,13 +8,22 @@ export function fieldProduction(level: number): number {
   return FIELD_PRODUCTION[clamped] ?? 0;
 }
 
-/** Storage capacity of a warehouse/granary at a given level. Level 0 = no building. */
+/** Warehouse/granary capacity (classic formula). Level 0 = no building = 800. */
 export function storageCapacity(level: number): number {
   if (level <= 0) return 800;
-  return Math.round((800 * Math.pow(1.27, level)) / 100) * 100;
+  return Math.round((2120 * Math.pow(1.2, level) - 1320) / 100) * 100;
 }
 
-/** Resources hidden from raiders by a cranny of the given level (per resource). */
+/** Cranny capacity per resource, levels 1..10. */
+export const CRANNY_CAPACITY = [0, 100, 130, 170, 220, 280, 360, 460, 600, 770, 1000] as const;
+
 export function crannyCapacity(level: number): number {
-  return level <= 0 ? 0 : 100 + level * 150;
+  return CRANNY_CAPACITY[Math.max(0, Math.min(10, level))] ?? 0;
+}
+
+/** Gaul Trapper: number of traps per trapper level (1..20). */
+export const TRAP_CAPACITY = [0, 10, 22, 35, 49, 64, 80, 97, 115, 134, 154, 175, 196, 218, 241, 265, 290, 316, 343, 371, 400] as const;
+
+export function trapCapacity(level: number): number {
+  return TRAP_CAPACITY[Math.max(0, Math.min(20, level))] ?? 0;
 }

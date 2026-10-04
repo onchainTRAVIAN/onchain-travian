@@ -64,11 +64,16 @@ export function academyOptions(q: Q, state: VillageState, now: number): Research
     });
 }
 
-export function smithyOptions(q: Q, state: VillageState, now: number): ResearchOption[] {
-  const levels = parseLevels(state.village.smithy);
-  const smithy = levelOf(state, 'smithy');
-  const busy = researchOrdersOf(q, state.village.id).find((o) => o.kind === 'smithy');
+export type UpgradeKind = 'blacksmith' | 'armoury';
+export type ResearchKind = 'academy' | UpgradeKind;
+
+/** Blacksmith (attack) or Armoury (defence) upgrades; max level = that building's level. */
+export function upgradeOptions(q: Q, state: VillageState, kind: UpgradeKind, now: number): ResearchOption[] {
+  const levels = parseLevels(state.village[kind]);
+  const buildingLevel = levelOf(state, kind);
+  const busy = researchOrdersOf(q, state.village.id).find((o) => o.kind === kind);
   const stock = stockOf(state.village);
+  const name = kind === 'blacksmith' ? 'Blacksmith' : 'Armoury';
   return TRIBES[state.tribe].units
     .map((unit, slot) => ({ unit, slot }))
     .filter(({ unit }) => unit.type !== 'settler' && unit.type !== 'chief')
@@ -79,25 +84,25 @@ export function smithyOptions(q: Q, state: VillageState, now: number): ResearchO
       let reason: string | undefined;
       if (!isResearched(state, slot)) reason = 'Research this unit first';
       else if (level >= SMITHY_MAX) reason = 'Fully upgraded';
-      else if (level >= smithy) reason = `Upgrade the Smithy to level ${next}`;
-      else if (busy) reason = busy.unitSlot === slot ? 'Upgrading now' : 'The Smithy is busy';
+      else if (level >= buildingLevel) reason = `Upgrade the ${name} to level ${next}`;
+      else if (busy) reason = busy.unitSlot === slot ? 'Upgrading now' : `The ${name} is busy`;
       else if (!canAfford(stock, cost)) reason = 'Not enough resources';
       return { slot, unit, done: false, level, cost, timeMs: smithyTimeMs(unit, next, speed(q, state, now)), available: !reason, reason };
     });
 }
 
-export function startResearch(db: DB, userId: number, villageId: number, kind: 'academy' | 'smithy', slot: number, now: number): ResearchOrderRow {
+export function startResearch(db: DB, userId: number, villageId: number, kind: ResearchKind, slot: number, now: number): ResearchOrderRow {
   return db.transaction((tx) => {
     ownedVillage(tx, userId, villageId);
     const state = catchUp(tx, villageId, now);
     assertGame(state, 'Village not found');
-    const opts = kind === 'academy' ? academyOptions(tx, state, now) : smithyOptions(tx, state, now);
+    const opts = kind === 'academy' ? academyOptions(tx, state, now) : upgradeOptions(tx, state, kind, now);
     const o = opts.find((x) => x.slot === slot);
     assertGame(o, 'Unknown unit');
     if (!o.available) throw new GameError(o.reason ?? 'Not possible right now');
     setResources(tx, villageId, subRes(stockOf(state.village), o.cost));
     const existing = tx.select().from(researchOrders).where(and(eq(researchOrders.villageId, villageId), eq(researchOrders.kind, kind))).get();
-    assertGame(!existing, kind === 'academy' ? 'The Academy is busy' : 'The Smithy is busy');
+    assertGame(!existing, kind === 'academy' ? 'The Academy is busy' : kind === 'blacksmith' ? 'The Blacksmith is busy' : 'The Armoury is busy');
     return tx
       .insert(researchOrders)
       .values({ villageId, kind, unitSlot: slot, toLevel: kind === 'academy' ? 1 : o.level + 1, startAt: now, finishAt: now + o.timeMs })

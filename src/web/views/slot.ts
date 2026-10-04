@@ -39,7 +39,7 @@ export interface SlotViewData {
   buildable: BuildOption[];
   have: Resources;
   tribe: TribeId;
-  training: { options: TrainOption[]; queue: TrainOrderRow[] } | null;
+  training: { building: string; options: TrainOption[]; queue: TrainOrderRow[] } | null;
   /** Building-specific panels (academy, market, residence...). */
   panels: SafeHtml[];
   csrf: string;
@@ -58,7 +58,7 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
           ${o.available ? '' : html`<div class="small warn"><b>${o.reason}</b></div>`}
         </div>
         <div>${o.available
-          ? html`<form method="post" action="/train">${csrfField(csrf)}<input type="hidden" name="unit" value="${o.slot}">
+          ? html`<form method="post" action="/train">${csrfField(csrf)}<input type="hidden" name="unit" value="${o.slot}"><input type="hidden" name="building" value="${t.building}">
               <label class="sr" for="n${o.slot}">How many ${o.unit.name}</label>
               <input id="n${o.slot}" type="number" name="count" min="1" max="${Math.max(1, o.maxAffordable)}" inputmode="numeric" placeholder="0">
               <a href="#u${o.slot}" class="fill small" data-fill="n${o.slot}" data-value="${o.maxAffordable}">max ${fmtNum(o.maxAffordable)}</a>

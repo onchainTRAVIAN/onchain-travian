@@ -130,3 +130,13 @@ export function travelTimeMs(dist: number, speedTilesPerHour: number, speedMulti
   if (speedTilesPerHour <= 0) return Infinity;
   return Math.max(1000, Math.round(((dist / speedTilesPerHour) * 3600 * 1000) / speedMultiplier));
 }
+
+/** Tournament Square: beyond 30 fields troops move 10% faster per level. */
+export const ARENA_FREE_DISTANCE = 30;
+
+export function travelTimeArenaMs(dist: number, speedTilesPerHour: number, arenaLevel: number, speedMultiplier: number): number {
+  if (arenaLevel <= 0 || dist <= ARENA_FREE_DISTANCE) return travelTimeMs(dist, speedTilesPerHour, speedMultiplier);
+  if (speedTilesPerHour <= 0) return Infinity;
+  const hours = ARENA_FREE_DISTANCE / speedTilesPerHour + (dist - ARENA_FREE_DISTANCE) / (speedTilesPerHour * (1 + 0.1 * arenaLevel));
+  return Math.max(1000, Math.round((hours * 3600 * 1000) / speedMultiplier));
+}

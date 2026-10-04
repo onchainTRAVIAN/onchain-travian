@@ -4,7 +4,7 @@ import { heroes, movements, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { BUILDINGS, TOWN_BUILDING_IDS, type BuildingId } from '../rules/buildings.js';
 import { SETTLERS_PER_VILLAGE } from '../rules/expansion.js';
-import { distance, travelTimeMs, wrapCoord } from '../rules/map.js';
+import { distance, travelTimeArenaMs, wrapCoord } from '../rules/map.js';
 import { UNIT_SLOTS, subUnits, totalUnits, unitDef, type UnitCounts } from '../rules/units.js';
 import { assertGame } from '../errors.js';
 import { catchUp, levelOf, setTroopsAt, troopsAt } from '../engine/state.js';
@@ -120,7 +120,7 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
   }
 
   const dist = distance(home.x, home.y, x, y, config.MAP_RADIUS);
-  const travelMs = travelTimeMs(dist, groupSpeed(me.tribe, units, withHero), config.TROOP_SPEED);
+  const travelMs = travelTimeArenaMs(dist, groupSpeed(me.tribe, units, withHero), levelOf(state, 'tournament'), config.TROOP_SPEED);
   return { targetVillageId, targetName, targetOwner, targetKind, distance: dist, travelMs, x, y };
 }
 

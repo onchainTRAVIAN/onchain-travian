@@ -1,13 +1,15 @@
-import { and, asc, eq, lte } from 'drizzle-orm';
+import { and, asc, eq, lte, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
-import { buildOrders, heroes, movements, researchOrders, slots, tiles, troops, users, villages } from '../../db/schema.js';
+import { buildOrders, celebrations, heroes, movements, researchOrders, slots, tiles, troops, users, villages } from '../../db/schema.js';
+import { finishCelebration } from '../actions/celebration.js';
 import { config } from '../../config.js';
 import { BUILDINGS, RALLY_SLOT, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
 import { catapultDamage, computeLoot, ramDamage, resolveBattle, resolveScouting, type ArmyGroup } from '../rules/battle.js';
 import { distance, travelTimeMs } from '../rules/map.js';
 import { OASIS_RANGE, oasisSlots } from '../rules/expansion.js';
 import { RESOURCE_KEYS, addRes, res, sumRes, subRes, type Resources } from '../rules/resources.js';
-import { carryOf, emptyUnits, subUnits, totalUnits, unitDef, upkeepOf, TRIBES, type TribeId, type UnitCounts } from '../rules/units.js';
+import { addUnits, carryOf, emptyUnits, subUnits, totalUnits, unitDef, upkeepOf, TRIBES, type TribeId, type UnitCounts } from '../rules/units.js';
+import { trapCapacity } from '../rules/production.js';
 import { getModifiers } from '../modifiers.js';
 import {
   addTroopsAt,
@@ -90,6 +92,72 @@ function consumeOne(tribe: TribeId, units: UnitCounts, type: string): UnitCounts
   return out;
 }
 
+function playerPop(q: Q, userId: number | null): number {
+  if (userId === null) return 0;
+  return q.select({ n: sql<number>`coalesce(sum(${villages.pop}), 0)` }).from(villages).where(eq(villages.userId, userId)).get()?.n ?? 0;
+}
+
+/** Teutons' Brewery (in the capital): +1% attack per level for all their troops. */
+function breweryBonus(q: Q, home: VillageInfo): number {
+  if (home.tribe !== 'teutons' || home.userId === null) return 1;
+  const level =
+    q.select({ l: sql<number>`coalesce(max(${slots.level}), 0)` })
+      .from(slots)
+      .innerJoin(villages, eq(villages.id, slots.villageId))
+      .where(and(eq(villages.userId, home.userId), eq(slots.building, 'brewery')))
+      .get()?.l ?? 0;
+  return 1 + 0.01 * level;
+}
+
+function readPrisoners(v: { prisoners: string }): Record<string, UnitCounts> {
+  try {
+    const p: unknown = JSON.parse(v.prisoners);
+    if (p && typeof p === 'object') {
+      const out: Record<string, UnitCounts> = {};
+      for (const [k, val] of Object.entries(p as Record<string, unknown>)) out[k] = parseUnits(JSON.stringify(val));
+      return out;
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+/** Put attackers into free Gaul traps (proportionally across unit types). */
+function trapAttackers(q: Q, target: VillageState, home: VillageInfo, units: UnitCounts): UnitCounts {
+  const caught = emptyUnits();
+  if (target.tribe !== 'gauls' || target.userId === null) return caught;
+  let capacity = 0;
+  for (const s of target.slots) if (s.building === 'trapper') capacity += trapCapacity(s.level);
+  if (capacity <= 0) return caught;
+  const prisoners = readPrisoners(target.village);
+  const held = Object.values(prisoners).reduce((sum, c) => sum + totalUnits(c), 0);
+  let free = capacity - held;
+  const total = totalUnits(units);
+  if (free <= 0 || total <= 0) return caught;
+  const share = Math.min(1, free / total);
+  units.forEach((n, i) => {
+    const t = Math.min(n, Math.floor(n * share), free);
+    caught[i] = t;
+    free -= t;
+  });
+  const key = String(home.id);
+  prisoners[key] = addUnits(prisoners[key] ?? emptyUnits(), caught);
+  q.update(villages).set({ prisoners: JSON.stringify(prisoners) }).where(eq(villages.id, target.village.id)).run();
+  return caught;
+}
+
+function releasePrisoners(q: Q, villageId: number, ownerVillageId: number): UnitCounts {
+  const v = q.select().from(villages).where(eq(villages.id, villageId)).get();
+  if (!v) return emptyUnits();
+  const prisoners = readPrisoners(v);
+  const mine = prisoners[String(ownerVillageId)];
+  if (!mine) return emptyUnits();
+  delete prisoners[String(ownerVillageId)];
+  q.update(villages).set({ prisoners: JSON.stringify(prisoners) }).where(eq(villages.id, villageId)).run();
+  return mine;
+}
+
 /* ------------------------------------------------------------------ */
 /* Villages                                                            */
 /* ------------------------------------------------------------------ */
@@ -118,7 +186,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const stationed = q.select().from(troops).where(eq(troops.villageId, targetId)).all();
   const defenders = stationed.map((row) => {
     const owner = villageInfo(q, row.ownerVillageId);
-    const group: ArmyGroup = { tribe: owner?.tribe ?? 'legion', units: parseUnits(row.units), smithy: owner?.smithy };
+    const group: ArmyGroup = { tribe: owner?.tribe ?? 'romans', units: parseUnits(row.units), upgrades: owner?.defenseUpgrades };
     return { row, owner, group };
   });
   const ownerHero = heroAtHome(q, target.userId, targetId, t);
@@ -172,18 +240,36 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
 
   // --- Battle ---
   const mode = mv.kind === 'raid' ? 'raid' : 'attack';
-  const heroGroups: ArmyGroup[] = defHeroes.map((h) => ({ tribe: 'legion', units: emptyUnits(), heroStrength: heroStrength(h) }));
+  const notes: string[] = [];
+
+  // Gaul traps catch attackers before the fight.
+  const trapped = trapAttackers(q, target, home, attackerUnits);
+  const fighting = subUnits(attackerUnits, trapped);
+  if (totalUnits(trapped) > 0) notes.push(`${totalUnits(trapped)} attacking soldiers were caught in traps.`);
+
+  const heroGroups: ArmyGroup[] = defHeroes.map((h) => ({ tribe: 'romans', units: emptyUnits(), heroStrength: heroStrength(h) }));
   const result = resolveBattle({
     mode,
-    attacker: { tribe: home.tribe, units: attackerUnits, smithy: home.smithy, heroStrength: aHero ? heroStrength(aHero) : 0 },
+    attacker: { tribe: home.tribe, units: fighting, upgrades: home.attackUpgrades, heroStrength: aHero ? heroStrength(aHero) : 0 },
     defenders: [...defenders.map((d) => d.group), ...heroGroups],
     defenderTribe: target.userId !== null ? target.tribe : null,
     wallLevel,
-    attackMultiplier: attackerMods.attack * heroOffMultiplier(aHero),
+    attackMultiplier: attackerMods.attack * heroOffMultiplier(aHero) * breweryBonus(q, home),
     defenseMultiplier: defenderMods.defense * heroDefMultiplier(ownerHero),
+    residenceLevel: Math.max(levelOf(target, 'residence'), levelOf(target, 'palace')),
+    attackerPop: playerPop(q, home.userId),
+    defenderPop: playerPop(q, target.userId),
   });
 
-  let survivors = subUnits(attackerUnits, result.attackerLosses);
+  let survivors = subUnits(fighting, result.attackerLosses);
+  // A victorious attack frees this village's soldiers held in the enemy's traps.
+  if (result.attackerWon && mode === 'attack') {
+    const freed = releasePrisoners(q, targetId, home.id);
+    if (totalUnits(freed) > 0) {
+      survivors = addUnits(survivors, freed);
+      notes.push(`${totalUnits(freed)} of your trapped soldiers were freed.`);
+    }
+  }
   defenders.forEach((d, idx) => {
     setTroopsAt(q, d.row.villageId, d.row.ownerVillageId, subUnits(d.group.units, result.defenderLosses[idx] ?? emptyUnits()));
   });
@@ -204,7 +290,6 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     heroReports.push({ name: after.name, side: 'defender', health: Math.round(after.health), died: after.status === 'dead', xp: attackerLossValue });
   }
 
-  const notes: string[] = [];
   let wallChange: BattleReportData['wall'];
   let buildingChange: BattleReportData['building'];
   let loyaltyChange: BattleReportData['loyalty'];
@@ -221,7 +306,8 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     if (catas > 0) {
       const hit = pickCatapultTarget(target, mv.catapultTarget);
       if (hit?.building) {
-        const down = catapultDamage(catas, hit.level);
+        const durability = targetInfo.isCapital ? 1 + 0.1 * levelOf(target, 'stonemason') : 1;
+        const down = catapultDamage(catas, hit.level, durability);
         const to = hit.level - down;
         buildingChange = { name: BUILDINGS[hit.building as BuildingId]?.name ?? hit.building, from: hit.level, to };
         if (down > 0) {
@@ -284,7 +370,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const data: BattleReportData = {
     type: 'battle',
     mode,
-    attacker: side(home, attackerUnits, result.attackerLosses),
+    attacker: side(home, attackerUnits, addUnits(result.attackerLosses, trapped)),
     defenders: defenders.map((d, idx) => side(d.owner ?? targetInfo, d.group.units, result.defenderLosses[idx] ?? emptyUnits())),
     attackerWon: result.attackerWon,
     defendersHidden: false,
@@ -342,7 +428,7 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
   const attackerMods = getModifiers(q, home.userId, t);
   const result = resolveBattle({
     mode,
-    attacker: { tribe: home.tribe, units: attackerUnits, smithy: home.smithy, heroStrength: aHero ? heroStrength(aHero) : 0 },
+    attacker: { tribe: home.tribe, units: attackerUnits, upgrades: home.attackUpgrades, heroStrength: aHero ? heroStrength(aHero) : 0 },
     defenders: [{ tribe: 'nature', units: animals }],
     defenderTribe: null,
     wallLevel: 0,
@@ -550,9 +636,10 @@ function handleResearchDone(q: Q, order: typeof researchOrders.$inferSelect): vo
     r[order.unitSlot] = 1;
     q.update(villages).set({ research: JSON.stringify(r) }).where(eq(villages.id, v.id)).run();
   } else {
-    const s = parseLevels(v.smithy);
+    const kind = order.kind;
+    const s = parseLevels(v[kind]);
     s[order.unitSlot] = Math.max(s[order.unitSlot] ?? 0, order.toLevel);
-    q.update(villages).set({ smithy: JSON.stringify(s) }).where(eq(villages.id, v.id)).run();
+    q.update(villages).set({ [kind]: JSON.stringify(s) }).where(eq(villages.id, v.id)).run();
   }
 }
 
@@ -567,10 +654,21 @@ export function processDue(db: DB, now: number, limit = 1000): number {
     const nextBuild = db.select().from(buildOrders).where(lte(buildOrders.finishAt, now)).orderBy(asc(buildOrders.finishAt), asc(buildOrders.id)).limit(1).get();
     const nextMove = db.select().from(movements).where(lte(movements.arriveAt, now)).orderBy(asc(movements.arriveAt), asc(movements.id)).limit(1).get();
     const nextResearch = db.select().from(researchOrders).where(lte(researchOrders.finishAt, now)).orderBy(asc(researchOrders.finishAt), asc(researchOrders.id)).limit(1).get();
+    const nextParty = db.select().from(celebrations).where(lte(celebrations.finishAt, now)).orderBy(asc(celebrations.finishAt)).limit(1).get();
     const candidates: { at: number; run: () => void }[] = [];
     if (nextBuild) candidates.push({ at: nextBuild.finishAt, run: () => db.transaction((tx) => handleBuildDone(tx, nextBuild)) });
     if (nextMove) candidates.push({ at: nextMove.arriveAt, run: () => db.transaction((tx) => handleMovement(tx, nextMove)) });
     if (nextResearch) candidates.push({ at: nextResearch.finishAt, run: () => db.transaction((tx) => handleResearchDone(tx, nextResearch)) });
+    if (nextParty) {
+      candidates.push({
+        at: nextParty.finishAt,
+        run: () =>
+          db.transaction((tx) => {
+            const owner = tx.select({ u: villages.userId }).from(villages).where(eq(villages.id, nextParty.villageId)).get();
+            finishCelebration(tx, nextParty, owner?.u ?? null);
+          }),
+      });
+    }
     if (candidates.length === 0) break;
     candidates.sort((a, b) => a.at - b.at);
     candidates[0]?.run();

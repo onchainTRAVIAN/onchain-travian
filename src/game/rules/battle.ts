@@ -6,8 +6,8 @@ export type AttackMode = 'attack' | 'raid';
 export interface ArmyGroup {
   tribe: TribeId;
   units: UnitCounts;
-  /** Smithy upgrade level per unit slot. */
-  smithy?: number[];
+  /** Blacksmith (when attacking) or Armoury (when defending) level per unit slot. */
+  upgrades?: number[];
   /** Fighting strength of a hero travelling with this group (0/undefined = no hero). */
   heroStrength?: number;
 }
@@ -22,6 +22,11 @@ export interface BattleInput {
   /** Multipliers from perks/upgrades (1 = none). */
   attackMultiplier?: number;
   defenseMultiplier?: number;
+  /** Residence or Palace level of the defending village (adds 2·L² defence). */
+  residenceLevel?: number;
+  /** Populations for the morale bonus (a big attacker hitting a small village is weakened). */
+  attackerPop?: number;
+  defenderPop?: number;
 }
 
 export interface BattleResult {
@@ -38,6 +43,18 @@ export interface BattleResult {
 export const VILLAGE_BASE_DEFENSE = 10;
 const EXPONENT = 1.5;
 
+/** T3.6 loss exponent: big battles are bloodier for the winner (1.5 for small fights, down to ~1.26). */
+export function lossExponent(totalUnits: number): number {
+  if (totalUnits <= 0) return EXPONENT;
+  return Math.max(1.2578, Math.min(1.5, 2 * (1.8592 - Math.pow(totalUnits, 0.015))));
+}
+
+/** Morale bonus for the defender when the attacker is much bigger (max +50%). */
+export function moraleBonus(attackerPop: number | undefined, defenderPop: number | undefined): number {
+  if (!attackerPop || !defenderPop || attackerPop <= defenderPop) return 1;
+  return Math.min(1.5, Math.pow(attackerPop / Math.max(1, defenderPop), 0.2));
+}
+
 function isInfantryLike(tribe: TribeId, slot: number): boolean {
   return unitDef(tribe, slot).type !== 'cav';
 }
@@ -49,7 +66,7 @@ export function attackPower(group: ArmyGroup): { inf: number; cav: number } {
     if (n <= 0) return;
     const u = unitDef(group.tribe, i);
     if (u.type === 'scout') return;
-    const value = n * u.attack * smithyFactor(group.smithy?.[i] ?? 0);
+    const value = n * u.attack * smithyFactor(group.upgrades?.[i] ?? 0);
     if (isInfantryLike(group.tribe, i)) inf += value;
     else cav += value;
   });
@@ -64,7 +81,7 @@ export function defensePower(groups: ArmyGroup[], infShare: number): number {
     g.units.forEach((n, i) => {
       if (n <= 0) return;
       const u = unitDef(g.tribe, i);
-      total += n * (u.defInf * infShare + u.defCav * cavShare) * smithyFactor(g.smithy?.[i] ?? 0);
+      total += n * (u.defInf * infShare + u.defCav * cavShare) * smithyFactor(g.upgrades?.[i] ?? 0);
     });
   }
   return total;
@@ -81,28 +98,33 @@ export function resolveBattle(input: BattleInput): BattleResult {
   const wallMult = input.defenderTribe
     ? Math.pow(1 + TRIBES[input.defenderTribe].wallPerLevel, input.wallLevel)
     : 1;
+  const residence = input.residenceLevel ?? 0;
   const def =
-    (defensePower(input.defenders, infShare) + VILLAGE_BASE_DEFENSE + input.wallLevel * 10) *
+    (defensePower(input.defenders, infShare) + VILLAGE_BASE_DEFENSE + 2 * residence * residence) *
     wallMult *
-    (input.defenseMultiplier ?? 1);
+    (input.defenseMultiplier ?? 1) *
+    moraleBonus(input.attackerPop, input.defenderPop);
 
+  const unitsInBattle =
+    input.attacker.units.reduce((a, b) => a + b, 0) + input.defenders.reduce((s, g) => s + g.units.reduce((a, b) => a + b, 0), 0);
+  const K = lossExponent(unitsInBattle);
   const attackerWon = atk > def;
   let attackerLossRatio: number;
   let defenderLossRatio: number;
 
   if (input.mode === 'attack') {
     if (attackerWon) {
-      attackerLossRatio = Math.pow(def / atk, EXPONENT);
+      attackerLossRatio = Math.pow(def / atk, K);
       defenderLossRatio = 1;
     } else {
       attackerLossRatio = 1;
-      defenderLossRatio = atk > 0 ? Math.pow(atk / def, EXPONENT) : 0;
+      defenderLossRatio = atk > 0 ? Math.pow(atk / def, K) : 0;
     }
   } else {
     // Raid: both sides retreat early, so the winner loses less and the loser does not die to the last man.
     const winner = Math.max(atk, def);
     const loser = Math.min(atk, def);
-    const x = winner > 0 ? Math.pow(loser / winner, EXPONENT) : 0;
+    const x = winner > 0 ? Math.pow(loser / winner, K) : 0;
     const winnerLoss = x / (1 + x);
     const loserLoss = 1 / (1 + x);
     attackerLossRatio = attackerWon ? winnerLoss : loserLoss;
@@ -135,13 +157,13 @@ export function ramDamage(survivingRams: number, wallLevel: number): number {
   return wallLevel - level;
 }
 
-/** Building levels knocked down by surviving catapults. */
-export function catapultDamage(survivingCatapults: number, buildingLevel: number): number {
+/** Building levels knocked down by surviving catapults (Stonemason makes buildings sturdier). */
+export function catapultDamage(survivingCatapults: number, buildingLevel: number, durability = 1): number {
   if (survivingCatapults <= 0 || buildingLevel <= 0) return 0;
   let level = buildingLevel;
   let catas = survivingCatapults;
   while (level > 0) {
-    const needed = 1 + Math.ceil(level * 1.5);
+    const needed = Math.ceil((1 + Math.ceil(level * 1.5)) * durability);
     if (catas < needed) break;
     catas -= needed;
     level -= 1;
