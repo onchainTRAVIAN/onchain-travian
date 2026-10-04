@@ -7,6 +7,7 @@
 - Gold transfers between players (Plus page, profile link, message to receiver).
 - Gold market (`/goldmarket`): sell resources or troops (no settlers/chiefs) for Gold; goods held in escrow; troops buyable only by the same tribe; delivery via `delivery` movement.
 - Clean side menus (card panels, 16px line icons, active page highlight); layout zooms up on wide screens; phone overflow fixed.
+- Map: clicks always hit the field under the cursor (tile art ignores the pointer), direction pad (diagonal in Classic view) + arrow keys, hover updates the details box.
 - Live world speed x100 (`WORLD_SPEED`/`TROOP_SPEED` Railway variables).
 
 ## 0.6.0 — 2026-10-04
