@@ -17,6 +17,7 @@ import type { MovementView } from '../../game/queries.js';
 import { instantPrice } from '../../game/actions/credits.js';
 import { fmtClock, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
+import { TOWN_SPOTS } from './spots.js';
 import { csrfField, icon, resIcon, timer } from './layout.js';
 import { buildingImg, buildingLabel, movementList, unitIcon } from './parts.js';
 
@@ -133,6 +134,7 @@ export function townView(d: VillageViewData): SafeHtml {
   const wallFile = wall?.building === 'earthwall' ? 'earth' : wall?.building === 'palisade' ? 'palisade' : 'city';
   const spots = d.state.slots.filter((s) => (s.slot >= TOWN_SLOT_FIRST && s.slot <= TOWN_SLOT_LAST) || s.slot === RALLY_SLOT);
   const levels: SafeHtml[] = [];
+  const labels = new Map<number, string>();
   const buildings = spots.map((s) => {
     const pending = d.orders.find((o) => o.slot === s.slot);
     const id = s.building ?? pending?.building ?? null;
@@ -143,8 +145,10 @@ export function townView(d: VillageViewData): SafeHtml {
     if (built || pending) levels.push(html`<span class="lv l${s.slot} ${badgeClass(d, s.slot, s.level, def?.maxLevel ?? 20)}">${s.level}</span>`);
     // An unbuilt rally point shows as an empty site.
     const src = s.slot === RALLY_SLOT && !built && !pending ? 'empty' : file;
-    return html`<a class="bld b${s.slot}" href="/slot/${s.slot}" title="${label}" aria-label="${label}"><img src="/static/img/buildings/${src}.svg" alt=""></a>`;
+    labels.set(s.slot, label);
+    return html`<span class="bld b${s.slot}"><img src="/static/img/buildings/${src}.svg" alt=""></span>`;
   });
+  labels.set(WALL_SLOT, `${TRIBES[tribe].wallName} level ${wall?.level ?? 0}`);
   if (wall && wall.level > 0) levels.push(html`<span class="lv l40 ${badgeClass(d, WALL_SLOT, wall.level, 20)}">${wall.level}</span>`);
   return html`
   ${incomingAlert(d.movements, d.now)}
@@ -154,7 +158,12 @@ export function townView(d: VillageViewData): SafeHtml {
     ${wall && wall.level > 0 ? html`<img class="wall" src="/static/img/walls/${wallFile}.svg" alt="">` : ''}
     ${buildings}
     ${levels}
-    <a class="wallspot" href="/slot/40" title="${TRIBES[tribe].wallName} level ${wall?.level ?? 0}" aria-label="${TRIBES[tribe].wallName} level ${wall?.level ?? 0}"></a>
+    <svg class="hitmap" viewBox="0 0 540 448" aria-label="Buildings">
+      ${TOWN_SPOTS.map((p) => {
+        const label = labels.get(p.slot) ?? 'Building site';
+        return html`<a href="/slot/${p.slot}" class="spot" aria-label="${label}"><title>${label}</title><ellipse cx="${p.cx}" cy="${p.cy}" rx="${p.rx}" ry="${p.ry}"></ellipse></a>`;
+      })}
+    </svg>
   </div>
   ${buildQueue(d.orders, d.now, d.csrf)}
   ${d.training.length > 0 ? trainingQueue(d.training, tribe, d.now, d.csrf) : ''}`;

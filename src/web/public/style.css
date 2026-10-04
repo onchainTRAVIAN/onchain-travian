@@ -186,16 +186,19 @@ legend { font-weight: bold; padding: 0; margin-bottom: 4px; }
 #vmap2 .bg, #vmap2 .wall { position: absolute; left: 0; top: 0; width: 540px; height: 448px; }
 #vmap2 .bg { z-index: 1; }
 #vmap2 .wall { z-index: 2; pointer-events: none; }
-#vmap2 a.bld { position: absolute; display: block; width: 75px; height: 100px; }
-#vmap2 a.bld img { width: 75px; height: 100px; display: block; }
-#vmap2 a.bld.b39 { width: 69px; height: 120px; }
-#vmap2 a.bld.b39 img { width: 69px; height: 120px; }
-#vmap2 a.bld:hover img { filter: brightness(1.08); }
+#vmap2 .bld { position: absolute; display: block; width: 75px; height: 100px; pointer-events: none; }
+#vmap2 .bld img { width: 75px; height: 100px; display: block; }
+#vmap2 .bld.b39 { width: 69px; height: 120px; }
+#vmap2 .bld.b39 img { width: 69px; height: 120px; }
+/* Click layer: one non-overlapping ellipse per spot (pictures overlap, so they ignore the pointer). */
+#vmap2 .hitmap { position: absolute; left: 0; top: 0; width: 540px; height: 448px; z-index: 45; }
+#vmap2 .hitmap ellipse { fill: transparent; stroke: none; cursor: pointer; }
+#vmap2 .hitmap a:hover ellipse, #vmap2 .hitmap a:focus ellipse { fill: rgba(255, 255, 255, 0.28); stroke: #71d000; stroke-width: 2; stroke-dasharray: 5 3; }
+#vmap2 h1, #vmap2 .lv { pointer-events: none; }
 #vmap2 .lv { position: absolute; z-index: 50; width: 17px; height: 17px; line-height: 17px; text-align: center; font: bold 9px Arial, Helvetica, sans-serif;
   color: #000; background: #fff; border: 1px solid #777; border-radius: 50%; box-sizing: border-box; pointer-events: none; }
 #vmap2 .lv.up { border-color: #71d000; }
 #vmap2 .lv.busy { background: #fff3c4; border-color: #ff8000; }
-#vmap2 a.wallspot { position: absolute; left: 225px; top: 340px; width: 60px; height: 40px; z-index: 40; }
 .lvswitch { font-size: 11px; }
 
 /* ---------- Map (inline SVG) ---------- */
