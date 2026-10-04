@@ -8,6 +8,12 @@ export function fmtSigned(n: number): string {
 }
 
 /** 3725000 -> "1:02:05"; days shown as "2d 03:04:05". */
+/** Time per unit: seconds with a decimal under a minute (fast worlds), else h:mm:ss. */
+export function fmtUnitTime(ms: number): string {
+  if (ms < 60_000) return `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)} s`;
+  return fmtDuration(ms);
+}
+
 export function fmtDuration(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const d = Math.floor(total / 86400);

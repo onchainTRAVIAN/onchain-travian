@@ -430,6 +430,20 @@ export const artifacts = sqliteTable(
   (t) => [index('artifacts_village_idx').on(t.villageId)],
 );
 
+/** Destinations a player saved for sending merchants (and troops) again later. */
+export const savedPlaces = sqliteTable(
+  'saved_places',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    x: integer('x').notNull(),
+    y: integer('y').notNull(),
+    label: text('label').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('saved_places_user_xy').on(t.userId, t.x, t.y)],
+);
+
 /** Gold market: resources or troops a player sells to others for Gold. Goods are held in escrow. */
 export const marketListings = sqliteTable(
   'market_listings',

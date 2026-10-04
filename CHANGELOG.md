@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.2 — 2026-10-05
+- Wall: an unbuilt wall shows as an outline ring around the village; clicking anywhere along the ring opens it to build. Conquered villages get the conqueror's wall type (could not be rebuilt before).
+- Cranny scales with world speed (classic table × speed), capped at a full level-20 warehouse (80,000 per resource).
+- Training times are exact (milliseconds, no rounding to whole seconds or 1 s minimum); per-unit times under a minute show with a decimal (e.g. 2.7 s).
+- Marketplace: "(max)" per resource (limited by stock and free merchants); save destinations and pick them (and your own villages) with one click; same quick pick on the send-troops form.
+- Send troops: "Select all troops" / "clear".
+
 ## 0.9.1 — 2026-10-04 (anti-cheat fixes from the audit)
 - Reserved names (Natars, Nature, Admin, System, …) can't be registered; the Natar NPC is found by its tribe, never by name (a player could otherwise have received every Natar village and artifact).
 - Gold market is no vault: listed troops eat crop at home, cancelled goods walk back (≥ 10 min), listed resources per village are capped at its storage.

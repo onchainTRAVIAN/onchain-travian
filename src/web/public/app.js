@@ -142,6 +142,12 @@
     var pick = function (x, y) {
       for (var i = 0; i < blds.length; i++) if (hitImg(blds[i].img, x, y)) return blds[i].slot;
       if (wallImg && hitImg(wallImg, x, y)) return '40';
+      // The wall is a thin ring: a band along it (in the 540x448 picture) also counts as the wall.
+      var r = vm.getBoundingClientRect();
+      var px = ((x - r.left) / r.width) * 540;
+      var py = ((y - r.top) / r.height) * 448;
+      var d = Math.sqrt(Math.pow((px - 270) / 262, 2) + Math.pow((py - 228) / 214, 2));
+      if (d > 0.9 && d < 1.04) return '40';
       return null;
     };
     var hovered = null;
@@ -160,7 +166,7 @@
         if (e.detail === 0 || !masks) return; // keyboard activation, or masks not loaded: plain links
         var a = e.target.closest ? e.target.closest('a') : null;
         var slot = pick(e.clientX, e.clientY);
-        // No wall built yet: the gate area at the bottom still opens the wall site.
+        // Natar villages have no wall picture: the gate area still opens the wall plot.
         if (!slot && !wallImg && a && a.getAttribute('href') === '/slot/40') slot = '40';
         if (a) e.preventDefault();
         if (slot) {
@@ -277,6 +283,31 @@
     });
     update();
   }
+
+  // Market: quick-pick saved places / own villages fill the coordinates.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a.place') : null;
+    if (!a) return;
+    var form = a.closest('form');
+    if (!form) return;
+    e.preventDefault();
+    form.querySelector('input[name=x]').value = a.getAttribute('data-x');
+    form.querySelector('input[name=y]').value = a.getAttribute('data-y');
+  });
+
+  // Send troops: "all troops" fills every unit box with what's at home; "clear" empties them.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('[data-allunits]') : null;
+    if (!a) return;
+    e.preventDefault();
+    var all = a.getAttribute('data-allunits') === 'all';
+    var ins = a.closest('form').querySelectorAll('input.su-in');
+    for (var i = 0; i < ins.length; i++) {
+      if (ins[i].disabled) continue;
+      ins[i].value = all ? ins[i].getAttribute('max') : '';
+    }
+    ins.length && ins[0].dispatchEvent(new Event('input', { bubbles: true }));
+  });
 
   // "(max)" links fill unit inputs.
   document.addEventListener('click', function (e) {

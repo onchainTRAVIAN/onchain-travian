@@ -304,6 +304,8 @@ describe('expansion', () => {
     expect(after.loyalty).toBeLessThan(5);
     const rep = db.select().from(reports).where(eq(reports.userId, b.userId)).all().at(-1);
     expect(rep?.data).toContain('"conquered":true');
+    // The wall plot now belongs to the conqueror's tribe (Romans: City Wall), ready to be rebuilt.
+    expect(loadVillage(db, bNew.id)?.slots.find((s) => s.slot === 40)).toMatchObject({ building: 'citywall', level: 0 });
     finishAll();
     // T3.6: loyalty regrows only with a Residence/Palace (1% per level per hour).
     home(bNew.id);

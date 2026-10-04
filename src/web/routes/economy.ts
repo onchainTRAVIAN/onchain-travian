@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { startResearch } from '../../game/actions/research.js';
 import { acceptOffer, cancelOffer, createOffer, sendResources } from '../../game/actions/market.js';
+import { deletePlace, savePlace } from '../../game/actions/places.js';
 import { RESOURCE_KEYS, res } from '../../game/rules/resources.js';
 import { TRIBES } from '../../game/rules/units.js';
 import { authed, setFlash } from '../session.js';
@@ -28,10 +29,15 @@ economyRouter.post(
 economyRouter.post(
   '/market/send',
   formAction(
-    z.object({ x: z.coerce.number().int(), y: z.coerce.number().int(), wood: amount, clay: amount, iron: amount, crop: amount }),
+    z.object({
+      x: z.coerce.number().int(), y: z.coerce.number().int(), wood: amount, clay: amount, iron: amount, crop: amount,
+      save: z.preprocess((v) => v === '1' || v === 'on', z.boolean()).optional(),
+      label: z.string().max(30).optional(),
+    }),
     (req, res, d) => {
       const ctx = authed(req);
       const ms = sendResources(db, ctx.user.id, ctx.villageId, d.x, d.y, res_(d), ctx.now);
+      if (d.save) savePlace(db, ctx.user.id, d.x, d.y, d.label ?? '', ctx.now);
       setFlash(res, 'ok', `Merchants are on their way. They arrive in ${fmtDuration(ms)}.`);
       res.redirect(303, backUrl(req, '/village'));
     },
@@ -41,6 +47,15 @@ economyRouter.post(
 function res_(d: { wood: number; clay: number; iron: number; crop: number }) {
   return res(d.wood, d.clay, d.iron, d.crop);
 }
+
+economyRouter.post(
+  '/places/delete',
+  formAction(z.object({ id: z.coerce.number().int().positive() }), (req, res, d) => {
+    deletePlace(db, authed(req).user.id, d.id);
+    setFlash(res, 'ok', 'Place removed.');
+    res.redirect(303, backUrl(req, '/village'));
+  }),
+);
 
 economyRouter.post(
   '/market/offer',

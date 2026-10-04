@@ -148,14 +148,16 @@ export function townView(d: VillageViewData): SafeHtml {
     labels.set(s.slot, label);
     return html`<span class="bld b${s.slot}"><img src="/static/img/buildings/${src}.svg" alt=""></span>`;
   });
-  labels.set(WALL_SLOT, `${TRIBES[tribe].wallName} level ${wall?.level ?? 0}`);
+  labels.set(WALL_SLOT, wall && wall.level > 0 ? `${TRIBES[tribe].wallName} level ${wall.level}` : `Build a ${TRIBES[tribe].wallName}`);
   if (wall && wall.level > 0) levels.push(html`<span class="lv l40 ${badgeClass(d, WALL_SLOT, wall.level, 20)}">${wall.level}</span>`);
   return html`
   ${incomingAlert(d.movements, d.now)}
   <div id="vmap2">
     <h1>${d.state.village.name}</h1>
     <img class="bg" src="/static/img/scene/dorf2.svg" alt="">
-    ${wall && wall.level > 0 ? html`<img class="wall" src="/static/img/walls/${wallFile}.svg" alt="">` : ''}
+    ${wall?.building
+      ? html`<img class="wall${wall.level > 0 ? '' : ' ghost'}" src="/static/img/walls/${wallFile}.svg" alt="">`
+      : ''}
     ${buildings}
     ${levels}
     <svg class="hitmap" viewBox="0 0 540 448" aria-label="Buildings">

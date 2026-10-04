@@ -331,9 +331,13 @@ export function slowestSpeed(tribeId: TribeId, c: UnitCounts): number {
 }
 
 /** Train time in ms for one unit. */
+/**
+ * Time to train one unit, in milliseconds. Kept exact (not rounded to whole seconds): on fast
+ * worlds a unit can take under a second, and rounding would distort big batches.
+ */
 export function trainTimeMs(u: UnitDef, buildingLevel: number, speedMultiplier: number): number {
   const factor = Math.pow(0.9, Math.max(0, buildingLevel - 1));
-  return Math.max(1000, Math.round((u.trainTime * factor) / speedMultiplier) * 1000);
+  return Math.max(50, Math.round((u.trainTime * factor * 1000) / speedMultiplier));
 }
 
 /** Smithy upgrades: +1.5% attack and defence per level, compounding. */

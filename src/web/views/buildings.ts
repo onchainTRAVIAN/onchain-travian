@@ -57,6 +57,9 @@ export function smithyPanel(kind: 'blacksmith' | 'armoury', tribe: TribeId, opts
 
 export function marketPanel(d: {
   npc?: SafeHtml;
+  stock: Resources;
+  places: { id: number; x: number; y: number; label: string }[];
+  ownVillages: { name: string; x: number; y: number }[];
   merchants: { total: number; busy: number; free: number; capacity: number; speed: number };
   mine: OfferView[];
   others: OfferView[];
@@ -69,14 +72,29 @@ export function marketPanel(d: {
   return html`<p class="tabs"><a href="#send">Send resources</a><a href="#offer">Offer</a><a href="#buy">Buy</a><a href="#npc">NPC trade</a><a href="/goldmarket">Gold market</a></p>
     <h2 id="send">Send resources</h2>
     <p>Merchants ${d.merchants.free}/${d.merchants.total} · each merchant can carry <b>${fmtNum(d.merchants.capacity)}</b> resources.</p>
-    <form method="post" action="/market/send">
+    <form method="post" action="/market/send" id="sendform">
       ${csrfField(d.csrf)}
       <table class="tb"><tbody>
-        ${RESOURCE_KEYS.map((k) => html`<tr><td>${resIcon(k)} ${RESOURCE_LABEL[k]}:</td><td><input id="s${k}" type="number" name="${k}" min="0" placeholder="0" inputmode="numeric"></td></tr>`)}
-        <tr><td>Village coordinates:</td><td>X <input type="number" name="x" value="${d.x ?? ''}" required inputmode="numeric"> Y <input type="number" name="y" value="${d.y ?? ''}" required inputmode="numeric"></td></tr>
+        ${RESOURCE_KEYS.map((k) => {
+          const max = Math.max(0, Math.min(Math.floor(d.stock[k]), d.merchants.free * d.merchants.capacity));
+          return html`<tr><td>${resIcon(k)} ${RESOURCE_LABEL[k]}:</td><td><input id="s${k}" type="number" name="${k}" min="0" placeholder="0" inputmode="numeric">
+            <a href="#s${k}" class="fill small" data-fill="s${k}" data-value="${max}">(max ${fmtNum(max)})</a></td></tr>`;
+        })}
+        <tr><td>Village coordinates:</td><td>X <input type="number" name="x" value="${d.x ?? ''}" required inputmode="numeric" class="w30"> Y <input type="number" name="y" value="${d.y ?? ''}" required inputmode="numeric" class="w30"></td></tr>
+        ${d.ownVillages.length || d.places.length
+          ? html`<tr><td>Quick pick:</td><td class="places">${d.ownVillages.map(
+              (v) => html`<a href="#sendform" class="place" data-x="${v.x}" data-y="${v.y}" title="Your village">${v.name}</a> `,
+            )}${d.places.map(
+              (p) => html`<span class="nowrap"><a href="#sendform" class="place" data-x="${p.x}" data-y="${p.y}">${p.label} (${p.x}|${p.y})</a>
+                <button type="submit" form="delplace${p.id}" class="lnk small" title="Forget this place" aria-label="Forget ${p.label}">✕</button></span> `,
+            )}</td></tr>`
+          : ''}
+        <tr><td></td><td><label><input type="checkbox" name="save" value="1"> Save this destination</label>
+          <input type="text" name="label" maxlength="30" placeholder="name (optional)" class="w120"></td></tr>
       </tbody></table>
       <button type="submit">OK</button>
     </form>
+    ${d.places.map((p) => html`<form id="delplace${p.id}" method="post" action="/places/delete" hidden>${csrfField(d.csrf)}<input type="hidden" name="id" value="${p.id}"></form>`)}
     <h2 id="offer">Offer resources</h2>
     <form method="post" action="/market/offer">
       ${csrfField(d.csrf)}

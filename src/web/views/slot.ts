@@ -3,7 +3,7 @@ import type { TrainOption, TrainOrderRow } from '../../game/actions/train.js';
 import { popAtLevel, type BuildingDef } from '../../game/rules/buildings.js';
 import type { Resources } from '../../game/rules/resources.js';
 import type { TribeId } from '../../game/rules/units.js';
-import { fmtClock, fmtDuration, fmtNum } from '../format.js';
+import { fmtClock, fmtDuration, fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon } from './layout.js';
 import { buildingImg, effectAt, unitIcon } from './parts.js';
@@ -72,7 +72,7 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
     ${t.options.map(
       (o) => html`<tr id="u${o.slot}">
         <td class="desc">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b>
-          <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span>${icon('res/clock', 'Duration', 18, 12)}${fmtDuration(o.timeMs)}</span>`)}
+          <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>`)}
           ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>
         <td class="val">${o.available
           ? html`<label class="sr" for="t${o.slot}">How many ${o.unit.name}</label><input class="w30 tr-in" id="t${o.slot}" type="number" name="t${o.slot}" min="0" max="${o.maxAffordable}" inputmode="numeric" value="0"

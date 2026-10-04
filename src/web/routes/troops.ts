@@ -6,6 +6,7 @@ import { levelOf, troopsAt } from '../../game/engine/state.js';
 import { reinforcementsIn, troopsAway, villageMovements } from '../../game/queries.js';
 import { UNIT_SLOTS, carryOf } from '../../game/rules/units.js';
 import { getModifiers } from '../../game/modifiers.js';
+import { placesOf } from '../../game/actions/places.js';
 import { GameError } from '../../game/errors.js';
 import { authed, setFlash } from '../session.js';
 import { confirmView, sendView, troopsView } from '../views/troops.js';
@@ -71,7 +72,7 @@ troopsRouter.get('/troops/send', (req, res) => {
     y: req.query.y !== undefined ? intParam(req.query.y, 0) : undefined,
     kind: kindParsed.success ? kindParsed.data : undefined,
   };
-  sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home: troopsAt(db, page.state.village.id, page.state.village.id), values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry, rallyLevel: levelOf(page.state, 'rally') }), {
+  sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home: troopsAt(db, page.state.village.id, page.state.village.id), values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry, rallyLevel: levelOf(page.state, 'rally'), places: placesOf(db, ctx.user.id), ownVillages: page.chrome.villages.filter((v) => v.id !== page.state.village.id) }), {
     nav: 'troops',
     chrome: page.chrome,
   });
@@ -84,7 +85,7 @@ troopsRouter.post('/troops/send/preview', (req, res, next) => {
   const home = troopsAt(db, page.state.village.id, page.state.village.id);
   const show = (message: string, values: Partial<SendInput>) => {
     req.ctx.flash = { type: 'error', text: message };
-    sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home, values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry, rallyLevel: levelOf(page.state, 'rally') }), { nav: 'troops', chrome: page.chrome, status: 422 });
+    sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home, values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry, rallyLevel: levelOf(page.state, 'rally'), places: placesOf(db, ctx.user.id), ownVillages: page.chrome.villages.filter((v) => v.id !== page.state.village.id) }), { nav: 'troops', chrome: page.chrome, status: 422 });
   };
   if (!parsed.success) {
     show(parsed.error.issues[0]?.message ?? 'Please check the form.', {});

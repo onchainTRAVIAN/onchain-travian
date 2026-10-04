@@ -12,7 +12,7 @@ import {
   bonusBuildingPct,
   type BuildingId,
 } from '../rules/buildings.js';
-import { fieldProduction, storageCapacity, crannyCapacity } from '../rules/production.js';
+import { fieldProduction, storageCapacity, crannyCapacity, crannyHidden } from '../rules/production.js';
 import { RESOURCE_KEYS, res, type Resources } from '../rules/resources.js';
 import { addUnits, emptyUnits, TRIBES, upkeepOf, type TribeId, type UnitCounts } from '../rules/units.js';
 import { oasisBonus, type OasisType } from '../rules/map.js';
@@ -118,8 +118,10 @@ export function depositCapped(q: Q, state: VillageState, goods: Resources): void
 export function hiddenByCranny(state: VillageState, attackerTribe: TribeId, confusion = 1): number {
   let total = 0;
   for (const s of state.slots) if (s.building === 'cranny') total += crannyCapacity(s.level);
-  // `confusion`: Rivals' confusion artifact multiplies the crannies.
-  return Math.floor(total * confusion * TRIBES[state.tribe].crannyMultiplier * TRIBES[attackerTribe].enemyCrannyFactor);
+  // Scaled with world speed (capped at a full warehouse); Rivals' confusion multiplies it;
+  // Teuton raiders still find a fifth of it.
+  const hidden = crannyHidden(total, confusion * TRIBES[state.tribe].crannyMultiplier, config.WORLD_SPEED);
+  return Math.floor(hidden * TRIBES[attackerTribe].enemyCrannyFactor);
 }
 
 export function populationOf(state: Pick<VillageState, 'slots'>): number {

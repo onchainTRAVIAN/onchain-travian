@@ -10,11 +10,12 @@ import {
   tiles,
   trainOrders,
   troops,
+  users,
   villages,
 } from '../../db/schema.js';
 import { culturePointsRequired, expansionSlots } from '../rules/expansion.js';
 import { catchUpCulture, levelOf, loadVillage, refreshPopulation } from './state.js';
-import { BUILDINGS, FIELD_MAX_NON_CAPITAL, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
+import { BUILDINGS, FIELD_MAX_NON_CAPITAL, WALL_FOR, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
 import { scheduleReturn, sendTroopsHome, villageInfo } from './movement.js';
 import { emptyUnits } from '../rules/units.js';
 
@@ -112,10 +113,15 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
   const home = q.select({ e: villages.expansions }).from(villages).where(eq(villages.id, fromVillageId)).get();
   q.update(villages).set({ expansions: (home?.e ?? 0) + 1 }).where(eq(villages.id, fromVillageId)).run();
 
-  // T3.6: the wall and the old tribe's special buildings are destroyed on conquest.
+  // T3.6: the wall and the old tribe's special buildings are destroyed on conquest; the wall plot
+  // takes the new owner's wall type (level 0) so it can be built again.
+  const newTribe = q.select({ t: users.tribe }).from(users).where(eq(users.id, newOwnerId)).get()?.t;
   for (const sl of q.select().from(slots).where(eq(slots.villageId, targetId)).all()) {
     const def = sl.building ? BUILDINGS[sl.building as BuildingId] : undefined;
-    if (sl.slot === WALL_SLOT || (def?.tribe && def.fixedSlot !== WALL_SLOT)) {
+    if (sl.slot === WALL_SLOT) {
+      const wall = newTribe && newTribe !== 'natars' ? WALL_FOR[newTribe] : null;
+      q.update(slots).set({ building: wall, level: 0 }).where(and(eq(slots.villageId, targetId), eq(slots.slot, sl.slot))).run();
+    } else if (def?.tribe) {
       q.update(slots).set({ building: null, level: 0 }).where(and(eq(slots.villageId, targetId), eq(slots.slot, sl.slot))).run();
     }
   }

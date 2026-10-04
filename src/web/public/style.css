@@ -486,3 +486,8 @@ a.uico:hover img { filter: drop-shadow(0 0 1.5px #71d000); }
 .unitstats { flex: 1; min-width: 240px; }
 .unitstats table th, .unitinfo + h2 + table th { text-align: left; font-weight: normal; color: #555; width: 45%; }
 .unittabs a { padding: 2px 4px; }
+/* An unbuilt wall: a faint outline around the village that can be clicked to build it. */
+#vmap2 .wall.ghost { opacity: 0.5; filter: grayscale(0.3) drop-shadow(0 0 1px rgba(80, 60, 20, 0.6)); }
+#vmap2.wallhov .wall.ghost { opacity: 0.85; }
+.w120 { width: 120px; }
+.places a.place { margin-right: 6px; }

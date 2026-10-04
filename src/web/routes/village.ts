@@ -26,6 +26,7 @@ import { npcPanel } from '../views/shop.js';
 import { academyPanel, celebrationPanel, demolishPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel, trapperPanel } from '../views/buildings.js';
 import { buildTraps, freePrisoners, trapPanelData } from '../../game/actions/traps.js';
 import { artifactsIn } from '../../game/actions/endgame.js';
+import { placesOf } from '../../game/actions/places.js';
 import { treasuryPanel } from '../views/endgame.js';
 import { celebrationOptions, runningCelebration, startCelebration } from '../../game/actions/celebration.js';
 
@@ -131,6 +132,9 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
       return [
         marketPanel({
           npc: npcPanel(have, capacityFor(state), page.chrome.credits, ctx.csrf),
+          stock: have,
+          places: placesOf(db, ctx.user.id),
+          ownVillages: page.chrome.villages.filter((v) => v.id !== state.village.id),
           merchants: merchantInfo(db, state),
           mine: listOffers(db, state, true),
           others: listOffers(db, state, false),

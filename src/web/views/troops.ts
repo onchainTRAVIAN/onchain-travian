@@ -67,7 +67,7 @@ function catapultSelects(rally: number, chosen: string[]): SafeHtml {
     ${rally >= 20 ? html` ${sel('catapultTarget2', chosen[1], 'Second target:')} <span class="small muted">(needs at least 20 catapults; they split in half)</span>` : ''}</p>`;
 }
 
-export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean; carryMult: number; rallyLevel: number }): SafeHtml {
+export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean; carryMult: number; rallyLevel: number; places: { x: number; y: number; label: string }[]; ownVillages: { name: string; x: number; y: number }[] }): SafeHtml {
   const units = TRIBES[d.tribe].units;
   const kind = d.values.kind ?? 'attack';
   // Classic layout: three columns of units (infantry | cavalry | siege & specials).
@@ -87,11 +87,17 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
         ${[0, 1, 2, 3].map((r) => html`<tr>${cols.map((c) => (c[r] !== undefined ? cell(c[r] as number) : html`<td></td>`))}</tr>`)}
         ${d.heroHome ? html`<tr><td colspan="3"><label>${unitIcon(d.tribe, 10, 16, false)} <input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> Hero</label></td></tr>` : ''}
       </tbody></table>
-      <p class="carryline">${icon('res/wood', 'Resources', 18, 12)} Can carry: <b id="carry-total">0</b> resources</p>
+      <p class="carryline"><a href="#troops" data-allunits="all">» Select all troops</a> · <a href="#troops" data-allunits="none">clear</a>
+        · ${icon('res/wood', 'Resources', 18, 12)} Can carry: <b id="carry-total">0</b> resources</p>
       <table class="plain"><tbody><tr>
         <td>${MISSIONS.map((m) => html`<label class="block"><input type="radio" name="kind" value="${m.kind}"${m.kind === kind ? html` checked` : ''}> ${m.label}</label>`)}</td>
         <td><b>x</b> <input type="text" name="x" value="${d.values.x ?? ''}" class="w30" required inputmode="numeric">
-          <b>y</b> <input type="text" name="y" value="${d.values.y ?? ''}" class="w30" required inputmode="numeric"></td>
+          <b>y</b> <input type="text" name="y" value="${d.values.y ?? ''}" class="w30" required inputmode="numeric">
+          ${d.ownVillages.length || d.places.length
+            ? html`<div class="places small">${[...d.ownVillages.map((v) => ({ label: v.name, x: v.x, y: v.y })), ...d.places].map(
+                (p) => html`<a href="#troops" class="place" data-x="${p.x}" data-y="${p.y}">${p.label}</a> `,
+              )}</div>`
+            : ''}</td>
       </tr></tbody></table>
       ${d.home.some((n, i) => n > 0 && units[i]?.type === 'catapult')
         ? catapultSelects(d.rallyLevel, (d.values.catapultTarget ?? '').split(','))

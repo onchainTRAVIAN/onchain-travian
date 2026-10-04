@@ -3,7 +3,7 @@ import { needsResearch } from '../../game/actions/research.js';
 import { BUILDINGS } from '../../game/rules/buildings.js';
 import { RESOURCE_KEYS, type Resources } from '../../game/rules/resources.js';
 import { TRIBES, researchCost, researchTimeMs, smithyCost, trainTimeMs, type TribeId, type UnitDef } from '../../game/rules/units.js';
-import { fmtDuration, fmtNum } from '../format.js';
+import { fmtDuration, fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon } from './layout.js';
 import { unitIcon } from './parts.js';
@@ -65,7 +65,7 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
       : html`<h2>Training</h2>
         <table><tbody>
           <tr><th>Cost</th><td>${costRow(u.cost)}</td></tr>
-          <tr><th>Training time</th><td>${icon('res/clock', 'Duration', 18, 12)} ${fmtDuration(train)} <span class="small muted">(level 1 building${config.WORLD_SPEED !== 1 ? `, x${config.WORLD_SPEED} world` : ''}; faster with higher levels)</span></td></tr>
+          <tr><th>Training time</th><td>${icon('res/clock', 'Duration', 18, 12)} ${fmtUnitTime(train)} <span class="small muted">(level 1 building${config.WORLD_SPEED !== 1 ? `, x${config.WORLD_SPEED} world` : ''}; faster with higher levels)</span></td></tr>
           <tr><th>Trained in</th><td>${BUILDING_NAME[u.building]}</td></tr>
           <tr><th>Requirements</th><td>${u.requires.length === 0
             ? html`<span class="none">none${d.slot === 0 ? ' — available from the start' : ''}</span>`
