@@ -12,3 +12,5 @@ WAP-style Travian-like game. TS strict, Express 5 server-rendered HTML (no clien
 - Crypto: `src/crypto/` (SIWE wallet, holder tiers, deposit indexer, workers). Contract in `contracts/` (Foundry, `~/.foundry/bin`). ABIs copied to `src/crypto/*.ts` — re-copy after contract changes.
 - Correlated subqueries: reference the outer table as raw `"users"."id"` — drizzle drops table qualifiers on single-table selects.
 - Local chain E2E: `anvil --block-time 2`, `npm run chain:deploy`, paste env lines.
+- Deploy: Railway (`railway.json`: build `npm run build`, start `npm start`, health `/healthz`). Needs volume mounted at `/data` + `DATABASE_PATH=/data/game.db`, `NODE_ENV=production`, `SESSION_SECRET`. Single instance only (SQLite). Vercel unsuitable (no disk, no always-on workers).
+- Target chain: Robinhood Chain (Arbitrum Orbit L2, chain 4663, testnet 46630); game token to be launched via Pons (1B fixed supply).
