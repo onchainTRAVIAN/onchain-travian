@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 — 2026-10-04
+- Map is one scalable SVG: sizes 7×7 / 11×11 / 15×15 / 21×21, Classic (diamond) or Flat (square tiles) view, remembered in a cookie.
+- NPC trade keeps the exact total (unassigned rest spread over the chosen mix), live Rest counter + Distribute; also on the Marketplace.
+- Player profiles: avatar upload (sharp → 128×128 WebP on the volume, `/avatar/:id`), tribe default portraits, About text, details card; avatars in rankings and alliance lists.
+- Gold transfers between players (Plus page, profile link, message to receiver).
+- Gold market (`/goldmarket`): sell resources or troops (no settlers/chiefs) for Gold; goods held in escrow; troops buyable only by the same tribe; delivery via `delivery` movement.
+- Clean side menus (card panels, 16px line icons, active page highlight); layout zooms up on wide screens; phone overflow fixed.
+- Live world speed x100 (`WORLD_SPEED`/`TROOP_SPEED` Railway variables).
+
 ## 0.6.0 — 2026-10-04
 - Layout rebuilt to classic Travian 3 measurements: 980px page, round grey nav (split reports/messages), 18×12 resource bar, 130px side menu, villages list, grey-grid tables, Verdana 13px, #71D000 links.
 - Village overview 300×264 per field layout with level markers and production/troops tables beside it; village centre 540×448 with 75×100 buildings on the classic spots and tribe wall overlays; diamond map of 74×74 tiles with rulers, arrows and coordinate box.
