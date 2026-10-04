@@ -10,7 +10,7 @@
 - Clean side menus (card panels, 16px line icons, active page highlight); layout zooms up on wide screens; phone overflow fixed.
 - Map: clicks always hit the field under the cursor (tile art ignores the pointer), direction pad (diagonal in Classic view) + arrow keys, hover updates the details box.
 - Fix: Gold "finish now" (and other actions) return to the page you came from — Referrer-Policy is now `same-origin` (was `no-referrer`, so every redirect fell back to the village centre); finished fields fall back to the overview.
-- Village centre: every point goes to the nearest building spot (Voronoi zones around each building picture, `src/web/views/spots.ts`) instead of the overlapping 75×100 pictures; hover outline per building; wall gate clickable.
+- Village centre: pixel-exact picking — precomputed outline masks of every building/plot picture (`scripts/gen-masks.py` → `public/masks.json`) decide which building is under the cursor, front to back; the hovered building glows; grass/roads do nothing. The SVG Voronoi layer (`src/web/views/spots.ts`) remains for keyboard and no-JS use.
 - Map: round arrow buttons on all four sides of the map (constant on-screen size at every map size); labels scale too.
 - Oases hold resources: unoccupied oases gather their bonus resources (40/h per 25% × speed, cap 1000 × speed up to 80k, start half full); winning attacks/raids loot them; scouts and the oasis page show the stock. Held oases don't gather.
 - Player activity is private: no "last seen"/online status on profiles or alliance member lists (admin panel only).

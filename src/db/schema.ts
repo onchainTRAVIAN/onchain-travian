@@ -358,6 +358,43 @@ export const creditsLedger = sqliteTable(
   (t) => [uniqueIndex('credits_idem_idx').on(t.idemKey), index('credits_user_idx').on(t.userId)],
 );
 
+/** All-time totals of each player at the start of a week; weekly stats are "now minus this". */
+export const weekSnapshots = sqliteTable(
+  'week_snapshots',
+  {
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    weekStart: integer('week_start').notNull(),
+    off: integer('off').notNull(),
+    def: integer('def').notNull(),
+    loot: integer('loot').notNull(),
+    pop: integer('pop').notNull(),
+    villages: integer('villages').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.weekStart] })],
+);
+
+/** Weeks whose snapshot was taken (and, for finished weeks, whose medals were awarded). */
+export const weeks = sqliteTable('weeks', {
+  weekStart: integer('week_start').primaryKey(),
+  startedAt: integer('started_at').notNull(),
+  finalizedAt: integer('finalized_at'),
+});
+
+/** Weekly top-3 medals. */
+export const medals = sqliteTable(
+  'medals',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    weekStart: integer('week_start').notNull(),
+    category: text('category', { enum: ['attack', 'defense', 'population', 'expansion', 'raid'] }).notNull(),
+    rank: integer('rank').notNull(),
+    value: integer('value').notNull(),
+    prize: integer('prize').notNull(),
+  },
+  (t) => [uniqueIndex('medals_week_cat_rank').on(t.weekStart, t.category, t.rank), index('medals_user_idx').on(t.userId)],
+);
+
 /** Gold market: resources or troops a player sells to others for Gold. Goods are held in escrow. */
 export const marketListings = sqliteTable(
   'market_listings',

@@ -74,7 +74,7 @@ const RANK_TABS: { key: RankKind; label: string; col: string }[] = [
   { key: 'population', label: 'Players', col: 'Population' },
   { key: 'attack', label: 'Attackers', col: 'Points' },
   { key: 'defense', label: 'Defenders', col: 'Points' },
-  { key: 'raid', label: 'Raiders', col: 'Loot' },
+  { key: 'raid', label: 'Robbers', col: 'Resources robbed' },
 ];
 
 const extraTabs = (on: string) =>
@@ -114,6 +114,7 @@ export function rankingView(d: {
   const value = (r: (typeof d.rows)[number]) => (d.kind === 'attack' ? r.off : d.kind === 'defense' ? r.def : d.kind === 'raid' ? r.loot : r.pop);
   return html`<h1>Statistics</h1>
     ${statsTabs(d.kind)}
+    ${d.kind === 'raid' ? html`<p class="small muted">Total resources each player has carried home from raids and attacks on villages and oases.</p>` : ''}
     <div class="tblwrap"><table>
       <tr><th class="num">#</th><th>Player</th><th class="num">Villages</th><th class="num">${tab?.col ?? ''}</th></tr>
       ${d.rows.map(

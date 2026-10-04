@@ -29,6 +29,13 @@
       "when": 1791130835598,
       "tag": "0003_oasisres",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791131240749,
+      "tag": "0004_weekly",
+      "breakpoints": true
     }
   ]
 }

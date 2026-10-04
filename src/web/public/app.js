@@ -103,6 +103,75 @@
     });
   }
 
+  // Village centre: click and hover exactly what you see. Each building/plot picture is checked
+  // pixel by pixel (front to back), so a roof never opens the building behind it and grass does nothing.
+  var vm = document.getElementById('vmap2');
+  if (vm && vm.querySelector('.hitmap')) {
+    vm.classList.add('js');
+    var blds = [];
+    var els = vm.querySelectorAll('.bld');
+    for (var bi = 0; bi < els.length; bi++) {
+      var mm = /\bb(\d+)\b/.exec(els[bi].className);
+      var im = els[bi].querySelector('img');
+      if (mm && im) blds.push({ el: els[bi], img: im, slot: mm[1], z: parseInt(getComputedStyle(els[bi]).zIndex, 10) || 0 });
+    }
+    blds.sort(function (a, b) { return b.z - a.z; }); // front first
+    var wallImg = vm.querySelector('img.wall');
+    // Outline masks of every picture (scripts/gen-masks.py): which cells of each picture are drawn.
+    var masks = null;
+    fetch('/static/masks.json')
+      .then(function (r) { return r.json(); })
+      .then(function (j) { masks = j.masks; })
+      .catch(function () { masks = null; });
+    var maskFor = function (img) {
+      var m = /\/static\/img\/(.+\.svg)/.exec(img.getAttribute('src') || '');
+      return m && masks ? masks[m[1] + '@' + img.offsetWidth + 'x' + img.offsetHeight] : null;
+    };
+    var drawnAt = function (img, fx, fy) {
+      var mk = maskFor(img);
+      if (!mk) return false;
+      var c = Math.min(mk.cols - 1, Math.max(0, Math.floor(fx * mk.cols)));
+      var r = Math.min(mk.rows - 1, Math.max(0, Math.floor(fy * mk.rows)));
+      return ((parseInt(mk.data[r].charAt(c >> 2), 16) >> (3 - (c & 3))) & 1) === 1;
+    };
+    var hitImg = function (img, x, y) {
+      var r = img.getBoundingClientRect();
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom) return false;
+      return drawnAt(img, (x - r.left) / r.width, (y - r.top) / r.height);
+    };
+    var pick = function (x, y) {
+      for (var i = 0; i < blds.length; i++) if (hitImg(blds[i].img, x, y)) return blds[i].slot;
+      if (wallImg && hitImg(wallImg, x, y)) return '40';
+      return null;
+    };
+    var hovered = null;
+    var setHover = function (slot) {
+      if (slot === hovered) return;
+      for (var i = 0; i < blds.length; i++) blds[i].el.classList.toggle('hov', blds[i].slot === slot);
+      vm.classList.toggle('pt', slot !== null);
+      vm.classList.toggle('wallhov', slot === '40');
+      hovered = slot;
+    };
+    vm.addEventListener('mousemove', function (e) { setHover(pick(e.clientX, e.clientY)); });
+    vm.addEventListener('mouseleave', function () { setHover(null); });
+    vm.addEventListener(
+      'click',
+      function (e) {
+        if (e.detail === 0 || !masks) return; // keyboard activation, or masks not loaded: plain links
+        var a = e.target.closest ? e.target.closest('a') : null;
+        var slot = pick(e.clientX, e.clientY);
+        // No wall built yet: the gate area at the bottom still opens the wall site.
+        if (!slot && !wallImg && a && a.getAttribute('href') === '/slot/40') slot = '40';
+        if (a) e.preventDefault();
+        if (slot) {
+          e.preventDefault();
+          window.location.href = '/slot/' + slot;
+        }
+      },
+      true,
+    );
+  }
+
   // Training: live total cost of everything entered in the training table.
   var tt = document.getElementById('train-total');
   if (tt) {
