@@ -19,5 +19,6 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Map is an inline SVG built in `src/web/views/map.ts` (positions as SVG attributes, so no CSS position classes); flat tiles in `img/map/flat/`.
 - Avatars: `src/game/actions/avatar.ts` stores WebP next to the DB (`<dir of DATABASE_PATH>/avatars`); multipart forms pass `_csrf` in the query string.
 - Gold economy: all Gold lives in `credits_ledger` (sum per user); transfers/market write paired rows with unique idem keys. Gold market: `src/game/actions/goldmarket.ts` (escrow on listing, `delivery` movement handled like `return`).
+- World speed scales production, build/train/research/travel times, culture points, loyalty and hero regen — NOT crop consumption (`cropUpkeep`).
 - Live ops: change world speed with Railway vars `WORLD_SPEED`/`TROOP_SPEED`; one-off DB fixes via SSH (script in /app, `node script.mjs`, uses `DATABASE_PATH`).
 - Rules data: `src/game/rules/{units,buildings,production}.ts` follow T3.6 formulas; `tests/classic.test.ts` pins reference values. Art: `src/web/public/img/` (SVG); dorf1/dorf2/map positions come from `scripts/gen-positions.py` (pasted at the end of `style.css`).

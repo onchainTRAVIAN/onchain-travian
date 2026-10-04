@@ -475,6 +475,22 @@ describe('credits shop & news ticker', () => {
 });
 
 describe('starvation', () => {
+  it('crop consumption does not scale with world speed (production does)', () => {
+    const st = loadVillage(db, a.villageId)!;
+    const cfg = config as { WORLD_SPEED: number };
+    const was = cfg.WORLD_SPEED;
+    try {
+      cfg.WORLD_SPEED = 1;
+      const e1 = economyOf(db, st, clock.now());
+      cfg.WORLD_SPEED = 100;
+      const e100 = economyOf(db, st, clock.now());
+      expect(e100.upkeep).toBe(e1.upkeep);
+      expect(e100.gross.wood).toBeCloseTo(e1.gross.wood * 100, 0);
+    } finally {
+      cfg.WORLD_SPEED = was;
+    }
+  });
+
   it('troops desert when the granary is empty and upkeep exceeds production', () => {
     const units = emptyUnits();
     units[0] = 100_000;

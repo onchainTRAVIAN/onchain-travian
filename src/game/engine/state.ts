@@ -172,8 +172,12 @@ function heroUpkeep(q: Q, villageId: number): number {
   return h && h.status !== 'dead' && h.status !== 'reviving' ? HERO_UPKEEP : 0;
 }
 
+/**
+ * Crop eaten per hour by the population, own troops and the hero. Like Travian speed servers,
+ * consumption does NOT scale with world speed (only production, times and culture do).
+ */
 export function cropUpkeep(q: Q, state: VillageState): number {
-  return (state.village.pop + upkeepOf(state.tribe, ownedTroopTotals(q, state.village.id)) + heroUpkeep(q, state.village.id)) * config.WORLD_SPEED;
+  return state.village.pop + upkeepOf(state.tribe, ownedTroopTotals(q, state.village.id)) + heroUpkeep(q, state.village.id);
 }
 
 export interface Economy {
@@ -309,7 +313,7 @@ export function refreshPopulation(q: Q, villageId: number): number {
  * most crop-hungry first, until upkeep fits production again.
  */
 function starve(q: Q, state: VillageState, deficitPerHour: number, t: number): void {
-  let toCut = deficitPerHour / config.WORLD_SPEED;
+  let toCut = deficitPerHour;
   const home = troopsAt(q, state.village.id, state.village.id);
   const order = home
     .map((n, i) => ({ i, n, upkeep: TRIBES[state.tribe].units[i]?.upkeep ?? 1 }))
