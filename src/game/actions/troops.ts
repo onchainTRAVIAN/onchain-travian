@@ -157,7 +157,7 @@ export function sendTroops(db: DB, userId: number, villageId: number, input: Sen
       // Attacking another player ends your own protection (beginner or bought); the 8 h wait
       // before buying protection again counts from now.
       tx.update(users)
-        .set({ protectedUntil: sql`min(${users.protectedUntil}, ${now})`, boughtProtectionEnd: sql`min(${users.boughtProtectionEnd}, ${now})` })
+        .set({ protectedUntil: sql`min(${users.protectedUntil}, ${now})`, boughtProtectionEnd: now })
         .where(eq(users.id, userId))
         .run();
     }

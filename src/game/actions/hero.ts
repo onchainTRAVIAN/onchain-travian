@@ -136,12 +136,13 @@ export function reviveHero(db: DB, userId: number, now: number): HeroRow {
 }
 
 /** Give up an oasis held by one of your villages (it becomes wild again). */
-export function releaseOasis(db: DB, userId: number, villageId: number, x: number, y: number): void {
+export function releaseOasis(db: DB, userId: number, villageId: number, x: number, y: number, now: number): void {
   db.transaction((tx) => {
     ownedVillage(tx, userId, villageId);
     const r = tx
       .update(tiles)
-      .set({ villageId: null, animals: null, animalsAt: null, oasisLoyalty: 100, oasisLoyaltyAt: null })
+      // Animals keep their current number and regrow slowly from now (no instant respawn to farm).
+      .set({ villageId: null, animalsAt: now, oasisLoyalty: 100, oasisLoyaltyAt: null })
       .where(and(eq(tiles.x, x), eq(tiles.y, y), eq(tiles.kind, 'oasis'), eq(tiles.villageId, villageId)))
       .run();
     assertGame(r.changes > 0, 'This oasis is not held by this village');

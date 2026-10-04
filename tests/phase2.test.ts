@@ -46,7 +46,7 @@ import { res } from '../src/game/rules/resources.js';
 import { config } from '../src/config.js';
 import { oasisStock } from '../src/game/engine/oasis.js';
 import { WEEK_MS, lastWinners, medalsOf, processWeek, weekStart, weeklyStandings } from '../src/game/actions/weekly.js';
-import { buyListing, cancelListing, editListing, listResources, listTroops } from '../src/game/actions/goldmarket.js';
+import { CANCEL_RETURN_MS, buyListing, cancelListing, editListing, listResources, listTroops } from '../src/game/actions/goldmarket.js';
 
 const HOUR = 3_600_000;
 const T0 = Date.UTC(2026, 2, 1);
@@ -582,6 +582,9 @@ describe('gold market', () => {
     expect(() => buyListing(db, r2.userId, r2.villageId, expensive, clock.now())).toThrow(/This costs/);
     expect(creditBalance(db, r2.userId)).toBe(r2Gold);
     cancelListing(db, a.userId, expensive, clock.now());
+    // Cancelled goods walk back from the market; they're not home instantly.
+    expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(0);
+    advance(CANCEL_RETURN_MS + 1000);
     expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(20);
     expect(() => cancelListing(db, a.userId, expensive, clock.now())).toThrow(/closed/);
     expect(() => editListing(db, a.userId, expensive, { price: 5 }, clock.now())).toThrow(/closed/);

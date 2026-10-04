@@ -85,7 +85,7 @@ heroRouter.post(
   '/oasis/release',
   formAction(z.object({ x: z.coerce.number().int(), y: z.coerce.number().int() }), (req, res, d) => {
     const ctx = authed(req);
-    releaseOasis(db, ctx.user.id, ctx.villageId, d.x, d.y);
+    releaseOasis(db, ctx.user.id, ctx.villageId, d.x, d.y, ctx.now);
     setFlash(res, 'ok', 'The oasis is wild again.');
     res.redirect(303, backUrl(req, '/village'));
   }),

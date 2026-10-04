@@ -76,6 +76,8 @@ export function backUrl(req: Request, fallback: string): string {
   try {
     const u = new URL(ref);
     if (u.host !== req.get('host')) return fallback;
+    // "//evil.example" or "/\\evil" would be followed to another site.
+    if (u.pathname.startsWith('//') || u.pathname.startsWith('/\\')) return fallback;
     return u.pathname + u.search;
   } catch {
     return fallback;

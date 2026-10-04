@@ -6,7 +6,7 @@ import { distance, travelTimeMs, wrapCoord } from '../rules/map.js';
 import { RESOURCE_KEYS, canAfford, res, subRes, addRes, sumRes, type ResourceKey, type Resources } from '../rules/resources.js';
 import { TRIBES, emptyUnits, type TribeId } from '../rules/units.js';
 import { assertGame } from '../errors.js';
-import { catchUp, levelOf, setResources, stockOf, type VillageState } from '../engine/state.js';
+import { catchUp, levelOf, setResources, stockOf, type VillageState, depositCapped } from '../engine/state.js';
 import { tileAt } from '../engine/oasis.js';
 import { ownedVillage } from './build.js';
 
@@ -101,7 +101,8 @@ export function cancelOffer(db: DB, userId: number, offerId: number, now: number
     ownedVillage(tx, userId, o.villageId);
     const state = catchUp(tx, o.villageId, now);
     assertGame(state, 'Village not found');
-    setResources(tx, o.villageId, addRes(stockOf(state.village), ONE(o.offerRes as ResourceKey, o.offerAmount)));
+    // The refund can't overfill the warehouse (offers must not work as extra storage).
+    depositCapped(tx, state, ONE(o.offerRes as ResourceKey, o.offerAmount));
     tx.delete(marketOffers).where(eq(marketOffers.id, offerId)).run();
   });
 }

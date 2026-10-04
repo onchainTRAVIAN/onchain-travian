@@ -2,7 +2,7 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { artifactValue } from './artifacts.js';
 import { clock } from '../../clock.js';
 import type { Q } from '../../db/index.js';
-import { movements, slots, tiles, trainOrders, troops, users, villages } from '../../db/schema.js';
+import { marketListings, movements, slots, tiles, trainOrders, troops, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
 import {
   BUILDINGS,
@@ -105,6 +105,15 @@ export function capacityFor(state: Pick<VillageState, 'slots'>): Resources {
   return res(warehouse, warehouse, warehouse, granary);
 }
 
+/** Add resources to a village, never above its storage (anything beyond capacity is lost). */
+export function depositCapped(q: Q, state: VillageState, goods: Resources): void {
+  const cap = capacityFor(state);
+  const stock = stockOf(state.village);
+  const next = res();
+  for (const k of RESOURCE_KEYS) next[k] = Math.max(stock[k], Math.min(cap[k], stock[k] + goods[k]));
+  setResources(q, state.village.id, next);
+}
+
 /** Amount of each resource a cranny keeps safe from raiders. */
 export function hiddenByCranny(state: VillageState, attackerTribe: TribeId, confusion = 1): number {
   let total = 0;
@@ -202,6 +211,16 @@ export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId): number 
     moving = addUnits(moving, parseUnits(m.units));
   }
   total += own(moving);
+  // Troops on sale in the Gold market still eat at home.
+  let listed = emptyUnits();
+  for (const l of q
+    .select({ units: marketListings.units })
+    .from(marketListings)
+    .where(and(eq(marketListings.villageId, villageId), eq(marketListings.status, 'open'), eq(marketListings.kind, 'troops')))
+    .all()) {
+    listed = addUnits(listed, parseUnits(l.units));
+  }
+  total += own(listed);
   const key = String(villageId);
   for (const v of q.select({ prisoners: villages.prisoners }).from(villages).where(sql`${villages.prisoners} like ${'%"' + key + '"%'}`).all()) {
     try {

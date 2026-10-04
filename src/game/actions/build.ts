@@ -20,7 +20,7 @@ import { RESOURCE_KEYS, canAfford, subRes, addRes, type Resources } from '../rul
 import { TRIBES } from '../rules/units.js';
 import { getModifiers } from '../modifiers.js';
 import { GameError, assertGame } from '../errors.js';
-import { catchUp, economyOf, levelOf, setResources, stockOf, type VillageState } from '../engine/state.js';
+import { catchUp, economyOf, levelOf, setResources, stockOf, type VillageState, depositCapped, capacityFor } from '../engine/state.js';
 
 export type BuildOrderRow = typeof buildOrders.$inferSelect;
 
@@ -131,13 +131,13 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   }
 
   const stock = stockOf(state.village);
+  // A level that costs more than the storage can hold can't be built, even with resources on hand.
+  const capacity = capacityFor(state);
+  for (const k of RESOURCE_KEYS) {
+    if (cost[k] > capacity[k]) return no(k === 'crop' ? 'Upgrade your Granary first' : 'Upgrade your Warehouse first');
+  }
   if (!canAfford(stock, cost)) {
     const eco = economyOf(q, state, now);
-    for (const k of RESOURCE_KEYS) {
-      if (cost[k] > eco.capacity[k]) {
-        return no(k === 'crop' ? 'Upgrade your Granary first' : 'Upgrade your Warehouse first');
-      }
-    }
     return no('Not enough resources', waitForResources(stock, eco.net, eco.capacity, cost));
   }
   return { ...base, canBuild: true };
@@ -206,7 +206,7 @@ export function cancelBuild(db: DB, userId: number, orderId: number, now: number
     const def = BUILDINGS[order.building as BuildingId];
     assertGame(def, 'Unknown building');
     // Demolitions cost nothing, so cancelling refunds nothing.
-    if (!order.demolish) setResources(tx, order.villageId, addRes(stockOf(state.village), buildCost(def, order.toLevel)));
+    if (!order.demolish) depositCapped(tx, state, buildCost(def, order.toLevel));
     tx.delete(buildOrders).where(eq(buildOrders.id, orderId)).run();
   });
 }

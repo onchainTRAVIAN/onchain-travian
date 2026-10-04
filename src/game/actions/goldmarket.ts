@@ -12,12 +12,36 @@ import { ownedVillage } from './build.js';
 import { creditBalance } from './credits.js';
 
 export const LISTING_MAX_OPEN = 20;
+/** Goods of a cancelled listing need this long (real time) to get back home. */
+export const CANCEL_RETURN_MS = Math.max(10 * 60_000, Math.round((2 * 3_600_000) / config.WORLD_SPEED));
 export const LISTING_MAX_PRICE = 1_000_000;
 export const LISTING_MIN_RESOURCES = 100;
 /** Settlers (slot 9) and chiefs (slot 8) can't be sold. */
 export const SELLABLE_SLOTS = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 export type ListingRow = typeof marketListings.$inferSelect;
+
+const fmtInt = (n: number) => Math.floor(n).toLocaleString('en-US');
+
+/** Resources on sale from a village (open listings). */
+export function listedResources(q: Q, villageId: number): Resources {
+  const out = res();
+  for (const l of q.select({ goods: marketListings.goods }).from(marketListings).where(and(eq(marketListings.villageId, villageId), eq(marketListings.status, 'open'), eq(marketListings.kind, 'resources'))).all()) {
+    const g = parseResources(l.goods);
+    for (const k of RESOURCE_KEYS) out[k] += g[k];
+  }
+  return out;
+}
+
+/** Troops on sale from a village: they still eat its crop. */
+export function listedTroops(q: Q, villageId: number): UnitCounts {
+  let out = emptyUnits();
+  for (const l of q.select({ units: marketListings.units }).from(marketListings).where(and(eq(marketListings.villageId, villageId), eq(marketListings.status, 'open'), eq(marketListings.kind, 'troops'))).all()) {
+    const u = parseUnits(l.units);
+    out = out.map((n, i) => n + (u[i] ?? 0));
+  }
+  return out;
+}
 
 function assertPrice(price: number): void {
   assertGame(Number.isInteger(price) && price >= 1, 'Set a price of at least 1 Gold');
@@ -46,6 +70,10 @@ export function listResources(db: DB, userId: number, villageId: number, goods: 
     assertGame(sumRes(clean) >= LISTING_MIN_RESOURCES, `Offer at least ${LISTING_MIN_RESOURCES} resources`);
     const stock = stockOf(state.village);
     for (const k of RESOURCE_KEYS) assertGame(stock[k] >= clean[k], `Not enough ${k} in this village`);
+    // The market isn't a vault: everything listed from a village must fit in its storage.
+    const listed = listedResources(tx, villageId);
+    const cap = capacityFor(state);
+    assertGame(sumRes(listed) + sumRes(clean) <= sumRes(cap), `You can list at most ${fmtInt(sumRes(cap))} resources from this village (its storage)`);
     const next = res();
     for (const k of RESOURCE_KEYS) next[k] = stock[k] - clean[k];
     setResources(tx, villageId, next);
@@ -100,19 +128,18 @@ export function cancelListing(db: DB, userId: number, listingId: number, now: nu
     const l = tx.select().from(marketListings).where(eq(marketListings.id, listingId)).get();
     assertGame(l && l.sellerId === userId, 'Offer not found');
     assertGame(l.status === 'open', 'This offer is already closed');
+    // Cancelled goods walk back from the market (they can't be pulled back the instant an attack lands).
     const back = returnVillage(tx, l);
     if (back !== null) {
-      const state = catchUp(tx, back, now);
-      if (state) {
-        if (l.kind === 'troops') addTroopsAt(tx, back, back, parseUnits(l.units));
-        else {
-          const stock = stockOf(state.village);
-          const cap = capacityFor(state);
-          const goods = parseResources(l.goods);
-          const next = res();
-          for (const k of RESOURCE_KEYS) next[k] = Math.max(stock[k], Math.min(cap[k], stock[k] + goods[k]));
-          setResources(tx, back, next);
-        }
+      const v = tx.select({ x: villages.x, y: villages.y }).from(villages).where(eq(villages.id, back)).get();
+      if (v) {
+        tx.insert(movements)
+          .values({
+            kind: 'delivery', fromVillageId: back, toVillageId: back, originX: v.x, originY: v.y, toX: v.x, toY: v.y,
+            units: l.kind === 'troops' ? l.units : JSON.stringify(emptyUnits()), loot: l.kind === 'resources' ? l.goods : null,
+            departAt: now, arriveAt: now + CANCEL_RETURN_MS,
+          })
+          .run();
       }
     }
     tx.update(marketListings).set({ status: 'cancelled', closedAt: now }).where(eq(marketListings.id, l.id)).run();
@@ -154,6 +181,8 @@ export function editListing(
         assertGame(state, 'Village not found');
         const stock = stockOf(state.village);
         const cap = capacityFor(state);
+        const others = sumRes(listedResources(tx, l.villageId)) - sumRes(old);
+        assertGame(others + sumRes(next) <= sumRes(cap), `You can list at most ${fmtInt(sumRes(cap))} resources from this village (its storage)`);
         const after = res();
         for (const k of RESOURCE_KEYS) {
           const delta = next[k] - old[k];

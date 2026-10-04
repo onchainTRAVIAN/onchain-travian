@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1 — 2026-10-04 (anti-cheat fixes from the audit)
+- Reserved names (Natars, Nature, Admin, System, …) can't be registered; the Natar NPC is found by its tribe, never by name (a player could otherwise have received every Natar village and artifact).
+- Gold market is no vault: listed troops eat crop at home, cancelled goods walk back (≥ 10 min), listed resources per village are capped at its storage.
+- Releasing/losing an oasis keeps its animals (no instant respawn to farm hero XP and weekly attack points).
+- Refunds (cancelled offers/builds) can't overfill storage; a level costing more than the storage holds can't be built.
+- Attacking starts the 8-hour wait before protection can be bought (no attack-then-hide while still protected).
+- Redirects never leave the site; heroes stationed in a razed village walk home instead of getting stuck.
+
 ## 0.9.0 — 2026-10-04 (classic T3.6 rules, phase 4: endgame)
 - Natars (NPC tribe with Kirilloid's T3 stats, original art) guard 22 artifacts in Treasuries: Architects' secret, Boots of the mercenary, Eyes of the eagle, Diet control, Trainers' talent, Storage master plan, Rivals' confusion (small = village, large/unique = account) and the Artifact of the fool (random effect each day).
 - Capturing: destroy the Treasury with catapults, win a normal attack with your hero, and have an empty Treasury (level 10 small, 20 large/unique) in the attacking village; effects start 24 h / speed later. Artifact villages can't be razed.

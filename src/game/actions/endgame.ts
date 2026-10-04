@@ -20,9 +20,12 @@ export function treasuryNeeded(size: ArtifactSize): number {
 
 const NATAR_NAME = 'Natars';
 
-/** The Natar NPC account (created on first use; it can't log in). */
+/**
+ * The Natar NPC account (created on first use; it can't log in). Found by its tribe — never by
+ * name, so a player can't impersonate it (the name is also reserved at registration).
+ */
 export function natarUser(q: Q, now: number): number {
-  const u = q.select({ id: users.id }).from(users).where(eq(users.usernameLower, NATAR_NAME.toLowerCase())).get();
+  const u = q.select({ id: users.id }).from(users).where(eq(users.tribe, 'natars')).get();
   if (u) return u.id;
   return q
     .insert(users)

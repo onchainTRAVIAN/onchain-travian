@@ -15,7 +15,8 @@ import {
 import { culturePointsRequired, expansionSlots } from '../rules/expansion.js';
 import { catchUpCulture, levelOf, loadVillage, refreshPopulation } from './state.js';
 import { BUILDINGS, FIELD_MAX_NON_CAPITAL, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
-import { sendTroopsHome } from './movement.js';
+import { scheduleReturn, sendTroopsHome, villageInfo } from './movement.js';
+import { emptyUnits } from '../rules/units.js';
 
 export interface ExpansionCheck {
   ok: boolean;
@@ -71,7 +72,7 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
   q.insert(troops).values({ villageId: targetId, ownerVillageId: targetId, units: JSON.stringify(new Array(10).fill(0)) }).run();
 
   // Oases belong to the old owner's empire; they become wild again.
-  q.update(tiles).set({ villageId: null, animals: null, animalsAt: null }).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, targetId))).run();
+  q.update(tiles).set({ villageId: null, animalsAt: now }).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, targetId))).run();
 
   // A hero based here falls and moves its home to the old owner's capital.
   if (oldOwner !== null) {
@@ -131,6 +132,13 @@ export function destroyVillage(q: Q, villageId: number, now: number): void {
   for (const row of q.select().from(troops).where(and(eq(troops.villageId, villageId), ne(troops.ownerVillageId, villageId))).all()) {
     sendTroopsHome(q, villageId, row.ownerVillageId, now);
   }
+  // Heroes of other players stationed here walk home too (they could be here without any troops).
+  for (const h of q.select().from(heroes).where(and(eq(heroes.locationId, villageId), eq(heroes.status, 'away'))).all()) {
+    const home = villageInfo(q, h.homeVillageId);
+    if (!home) continue;
+    q.update(heroes).set({ status: 'moving', locationId: null }).where(eq(heroes.id, h.id)).run();
+    scheduleReturn(q, home, v.x, v.y, emptyUnits(), null, now, true);
+  }
   if (v.userId !== null) {
     const capital = q
       .select({ id: villages.id })
@@ -149,7 +157,7 @@ export function destroyVillage(q: Q, villageId: number, now: number): void {
     }
   }
   q.update(tiles).set({ villageId: null }).where(and(eq(tiles.kind, 'field'), eq(tiles.villageId, villageId))).run();
-  q.update(tiles).set({ villageId: null, animals: null, animalsAt: null }).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, villageId))).run();
+  q.update(tiles).set({ villageId: null, animalsAt: now }).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, villageId))).run();
   q.delete(villages).where(eq(villages.id, villageId)).run();
 }
 

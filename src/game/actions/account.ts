@@ -14,12 +14,21 @@ const ARGON = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
 
 export type UserRow = typeof users.$inferSelect;
 
+/** Names players can't take: NPC tribes and system roles (case-insensitive, ignoring spaces/dots/dashes). */
+const RESERVED_NAMES = ['natars', 'natar', 'nature', 'system', 'admin', 'administrator', 'moderator', 'herald', 'ancientrealms', 'multihunter'];
+
+export function isReservedName(name: string): boolean {
+  const n = name.toLowerCase().replace(/[\s._-]/g, '');
+  return RESERVED_NAMES.some((r) => n === r);
+}
+
 export async function registerPlayer(
   db: DB,
   input: { username: string; password: string; tribe: PlayableTribeId },
   now: number,
 ): Promise<{ userId: number; villageId: number }> {
   const usernameLower = input.username.toLowerCase();
+  if (isReservedName(input.username)) throw new GameError('That name is reserved');
   const taken = db.select({ id: users.id }).from(users).where(eq(users.usernameLower, usernameLower)).get();
   if (taken) throw new GameError('That name is already taken');
   const passwordHash = await hash(input.password, ARGON);
