@@ -15,6 +15,7 @@
 - Oases hold resources: unoccupied oases gather their bonus resources (40/h per 25% × speed, cap 1000 × speed up to 80k, start half full); winning attacks/raids loot them; scouts and the oasis page show the stock. Held oases don't gather.
 - Player activity is private: no "last seen"/online status on profiles or alliance member lists (admin panel only).
 - Training table shows a live total (resources, upkeep, time) for everything entered; shortages in red.
+- Rules checked against Kirilloid's T3 model and corrected: chief speeds (Senator 4, Chief 4, Chieftain 5), T3 training times for 18 units, Rally Point build time (2000 s at L1), Swordsman needs Academy 3, Horse Drinking Trough culture 3, Academy research cost (6/4/8/6×cost+100/100/200/160; chiefs 0.5/0.5/0.8/0.6×cost+500/200/400/160) and per-unit research times, Blacksmith/Armoury cost round5(L^0.8×(7×cost+base)/upkeep) and time; Academy/smithy levels speed research 3.6%/level.
 - Weekly statistics (Statistics → This week): attackers, defenders, climbers (population), expansion (new villages), robbers — gains since Monday 00:00 UTC. Every Monday the top 3 per category get a gold/silver/bronze medal (shown on their profile) and 300/200/100 Gold, with a message; rollover is idempotent (`src/game/actions/weekly.ts`, run from the server tick).
 - "Raiders" ranking renamed "Robbers" (resources robbed).
 - Beginner protection lasts 24 h (was 72). Protection can be bought for 80 Gold (24 h): not while protected, and only 8 h after the last bought protection ended; attacking ends it early.

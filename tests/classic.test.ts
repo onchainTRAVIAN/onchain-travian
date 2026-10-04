@@ -12,7 +12,8 @@ import {
 } from '../src/game/rules/buildings.js';
 import { crannyCapacity, fieldProduction, storageCapacity } from '../src/game/rules/production.js';
 import { culturePointsRequired } from '../src/game/rules/expansion.js';
-import { TRIBES } from '../src/game/rules/units.js';
+import { TRIBES, researchCost, researchTimeMs, smithyCost } from '../src/game/rules/units.js';
+import { res } from '../src/game/rules/resources.js';
 import { lossExponent, moraleBonus } from '../src/game/rules/battle.js';
 import { travelTimeArenaMs, travelTimeMs } from '../src/game/rules/map.js';
 import { ensureWorld } from '../src/game/engine/world.js';
@@ -63,7 +64,14 @@ describe('T3.6 reference numbers', () => {
 
   it('classic unit stats', () => {
     const leg = TRIBES.romans.units[0];
-    expect(leg).toMatchObject({ name: 'Legionnaire', attack: 40, defInf: 35, defCav: 50, speed: 6, carry: 50, trainTime: 1600 });
+    expect(leg).toMatchObject({ name: 'Legionnaire', attack: 40, defInf: 35, defCav: 50, speed: 6, carry: 50, trainTime: 2000 });
+    // T3 values checked against Kirilloid's T3 model (2026-10-04): chief speeds, research & upgrade formulas.
+    expect([TRIBES.romans.units[8]?.speed, TRIBES.teutons.units[8]?.speed, TRIBES.gauls.units[8]?.speed]).toEqual([4, 4, 5]);
+    expect(researchCost(TRIBES.romans.units[1]!)).toEqual(res(700, 620, 1480, 580));
+    expect(researchCost(TRIBES.romans.units[8]!)).toEqual(res(15875, 13800, 36400, 22660));
+    expect(smithyCost(TRIBES.gauls.units[1]!, 1)).toEqual(res(1080, 1150, 1495, 580));
+    expect(researchTimeMs(TRIBES.romans.units[1]!, 1)).toBe(8400 * 1000);
+    expect(TRIBES.gauls.units[1]?.requires).toContainEqual({ building: 'academy', level: 3 });
     expect(TRIBES.teutons.units[5]).toMatchObject({ name: 'Teutonic Knight', attack: 150, speed: 9 });
     expect(TRIBES.gauls.units[3]).toMatchObject({ name: 'Theutates Thunder', attack: 90, speed: 19, carry: 75 });
     expect(TRIBES.romans.wallName).toBe('City Wall');

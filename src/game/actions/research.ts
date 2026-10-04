@@ -60,7 +60,7 @@ export function academyOptions(q: Q, state: VillageState, now: number): Research
       }
       if (!reason && levelOf(state, 'academy') < 1) reason = 'Requires Academy';
       if (!reason && !canAfford(stock, cost)) reason = 'Not enough resources';
-      return { slot, unit, done, level: done ? 1 : 0, cost, timeMs: researchTimeMs(unit, speed(q, state, now)), available: !reason, reason };
+      return { slot, unit, done, level: done ? 1 : 0, cost, timeMs: researchTimeMs(unit, speed(q, state, now), levelOf(state, 'academy')), available: !reason, reason };
     });
 }
 
@@ -87,7 +87,7 @@ export function upgradeOptions(q: Q, state: VillageState, kind: UpgradeKind, now
       else if (level >= buildingLevel) reason = `Upgrade the ${name} to level ${next}`;
       else if (busy) reason = busy.unitSlot === slot ? 'Upgrading now' : `The ${name} is busy`;
       else if (!canAfford(stock, cost)) reason = 'Not enough resources';
-      return { slot, unit, done: false, level, cost, timeMs: smithyTimeMs(unit, next, speed(q, state, now)), available: !reason, reason };
+      return { slot, unit, done: false, level, cost, timeMs: smithyTimeMs(unit, next, speed(q, state, now), buildingLevel), available: !reason, reason };
     });
 }
 

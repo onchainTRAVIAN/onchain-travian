@@ -90,21 +90,21 @@ const romans: TribeDef = {
   chiefPower: [20, 30],
   units: [
     U({ id: 'legionnaire', name: 'Legionnaire', icon: '🛡️', type: 'inf', description: 'The simple and all-round infantry of the Roman empire.',
-      attack: 40, defInf: 35, defCav: 50, speed: 6, carry: 50, upkeep: 1, cost: [120, 100, 150, 30], trainTime: 1600, building: 'barracks' }),
+      attack: 40, defInf: 35, defCav: 50, speed: 6, carry: 50, upkeep: 1, cost: [120, 100, 150, 30], trainTime: 2000, building: 'barracks' }),
     U({ id: 'praetorian', name: 'Praetorian', icon: '🏰', type: 'inf', description: 'The emperor’s guard; excellent defenders against infantry.',
-      attack: 30, defInf: 65, defCav: 35, speed: 5, carry: 20, upkeep: 1, cost: [100, 130, 160, 70], trainTime: 1760, building: 'barracks',
+      attack: 30, defInf: 65, defCav: 35, speed: 5, carry: 20, upkeep: 1, cost: [100, 130, 160, 70], trainTime: 2200, building: 'barracks',
       requires: [['academy', 1], ['armoury', 1]] }),
     U({ id: 'imperian', name: 'Imperian', icon: '🗡️', type: 'inf', description: 'The ultimate attacker of the Roman infantry.',
-      attack: 70, defInf: 40, defCav: 25, speed: 7, carry: 50, upkeep: 1, cost: [150, 160, 210, 80], trainTime: 1920, building: 'barracks',
+      attack: 70, defInf: 40, defCav: 25, speed: 7, carry: 50, upkeep: 1, cost: [150, 160, 210, 80], trainTime: 2400, building: 'barracks',
       requires: [['academy', 5], ['blacksmith', 1]] }),
     U({ id: 'equites_legati', name: 'Equites Legati', icon: '🔭', type: 'scout', description: 'Roman reconnaissance riders that spy on enemy villages.',
-      attack: 0, defInf: 20, defCav: 10, speed: 16, carry: 0, upkeep: 2, cost: [140, 160, 20, 40], trainTime: 1360, building: 'stable',
+      attack: 0, defInf: 20, defCav: 10, speed: 16, carry: 0, upkeep: 2, cost: [140, 160, 20, 40], trainTime: 1700, building: 'stable',
       requires: [['academy', 5], ['stable', 1]] }),
     U({ id: 'equites_imperatoris', name: 'Equites Imperatoris', icon: '🐎', type: 'cav', description: 'The standard Roman cavalry: fast and strong in attack.',
-      attack: 120, defInf: 65, defCav: 50, speed: 14, carry: 100, upkeep: 3, cost: [550, 440, 320, 100], trainTime: 2640, building: 'stable',
+      attack: 120, defInf: 65, defCav: 50, speed: 14, carry: 100, upkeep: 3, cost: [550, 440, 320, 100], trainTime: 3300, building: 'stable',
       requires: [['academy', 5], ['stable', 5]] }),
     U({ id: 'equites_caesaris', name: 'Equites Caesaris', icon: '🏇', type: 'cav', description: 'Heavily armoured cavalry, strong in attack and defence.',
-      attack: 180, defInf: 80, defCav: 105, speed: 10, carry: 70, upkeep: 4, cost: [550, 640, 800, 180], trainTime: 3520, building: 'stable',
+      attack: 180, defInf: 80, defCav: 105, speed: 10, carry: 70, upkeep: 4, cost: [550, 640, 800, 180], trainTime: 4400, building: 'stable',
       requires: [['academy', 5], ['stable', 10]] }),
     U({ id: 'battering_ram', name: 'Battering Ram', icon: '🪵', type: 'ram', description: 'Heavy support weapon that breaks down walls.',
       attack: 60, defInf: 30, defCav: 75, speed: 4, carry: 0, upkeep: 3, cost: [900, 360, 500, 70], trainTime: 4600, building: 'workshop',
@@ -113,7 +113,7 @@ const romans: TribeDef = {
       attack: 75, defInf: 60, defCav: 10, speed: 3, carry: 0, upkeep: 6, cost: [950, 1350, 600, 90], trainTime: 9000, building: 'workshop',
       requires: [['academy', 15], ['workshop', 10]] }),
     U({ id: 'senator', name: 'Senator', icon: '🎖️', type: 'chief', description: 'Persuades other villages to join the empire.',
-      attack: 50, defInf: 40, defCav: 30, speed: 5, carry: 0, upkeep: 5, cost: [30750, 27200, 45000, 37500], trainTime: 90700, building: 'residence',
+      attack: 50, defInf: 40, defCav: 30, speed: 4, carry: 0, upkeep: 5, cost: [30750, 27200, 45000, 37500], trainTime: 90700, building: 'residence',
       requires: [['academy', 20], ['rally', 10]] }),
     U({ id: 'roman_settler', name: 'Settler', icon: '🧺', type: 'settler', description: 'Brave colonists who found new villages.',
       attack: 0, defInf: 80, defCav: 80, speed: 5, carry: 3000, upkeep: 1, cost: [5800, 5300, 7200, 5500], trainTime: 26900, building: 'residence' }),
@@ -137,21 +137,21 @@ const teutons: TribeDef = {
   chiefPower: [20, 25],
   units: [
     U({ id: 'clubswinger', name: 'Clubswinger', icon: '🏏', type: 'inf', description: 'The cheapest unit in the game; trains very fast.',
-      attack: 40, defInf: 20, defCav: 5, speed: 7, carry: 60, upkeep: 1, cost: [95, 75, 40, 40], trainTime: 720, building: 'barracks' }),
+      attack: 40, defInf: 20, defCav: 5, speed: 7, carry: 60, upkeep: 1, cost: [95, 75, 40, 40], trainTime: 900, building: 'barracks' }),
     U({ id: 'spearman', name: 'Spearman', icon: '🔱', type: 'inf', description: 'Defensive infantry, excellent against cavalry.',
-      attack: 10, defInf: 35, defCav: 60, speed: 7, carry: 40, upkeep: 1, cost: [145, 70, 85, 40], trainTime: 1120, building: 'barracks',
+      attack: 10, defInf: 35, defCav: 60, speed: 7, carry: 40, upkeep: 1, cost: [145, 70, 85, 40], trainTime: 1400, building: 'barracks',
       requires: [['academy', 1], ['barracks', 3]] }),
     U({ id: 'axeman', name: 'Axeman', icon: '🪓', type: 'inf', description: 'The strongest Teutonic infantry.',
-      attack: 60, defInf: 30, defCav: 30, speed: 6, carry: 50, upkeep: 1, cost: [130, 120, 170, 70], trainTime: 1200, building: 'barracks',
+      attack: 60, defInf: 30, defCav: 30, speed: 6, carry: 50, upkeep: 1, cost: [130, 120, 170, 70], trainTime: 1500, building: 'barracks',
       requires: [['academy', 3], ['blacksmith', 1]] }),
     U({ id: 'scout', name: 'Scout', icon: '🔭', type: 'scout', description: 'Spies on enemy villages on foot.',
-      attack: 0, defInf: 10, defCav: 5, speed: 9, carry: 0, upkeep: 1, cost: [160, 100, 50, 50], trainTime: 1120, building: 'barracks',
+      attack: 0, defInf: 10, defCav: 5, speed: 9, carry: 0, upkeep: 1, cost: [160, 100, 50, 50], trainTime: 1400, building: 'barracks',
       requires: [['academy', 1], ['main', 5]] }),
     U({ id: 'paladin', name: 'Paladin', icon: '🛡️', type: 'cav', description: 'Heavily armoured defensive cavalry.',
-      attack: 55, defInf: 100, defCav: 40, speed: 10, carry: 110, upkeep: 2, cost: [370, 270, 290, 75], trainTime: 2400, building: 'stable',
+      attack: 55, defInf: 100, defCav: 40, speed: 10, carry: 110, upkeep: 2, cost: [370, 270, 290, 75], trainTime: 3000, building: 'stable',
       requires: [['academy', 5], ['stable', 3]] }),
     U({ id: 'teutonic_knight', name: 'Teutonic Knight', icon: '🐻', type: 'cav', description: 'Devastating attacking cavalry.',
-      attack: 150, defInf: 50, defCav: 75, speed: 9, carry: 80, upkeep: 3, cost: [450, 515, 480, 80], trainTime: 2960, building: 'stable',
+      attack: 150, defInf: 50, defCav: 75, speed: 9, carry: 80, upkeep: 3, cost: [450, 515, 480, 80], trainTime: 3700, building: 'stable',
       requires: [['academy', 15], ['stable', 10]] }),
     U({ id: 'ram', name: 'Ram', icon: '🪵', type: 'ram', description: 'Breaks down walls.',
       attack: 65, defInf: 30, defCav: 80, speed: 4, carry: 0, upkeep: 3, cost: [1000, 300, 350, 70], trainTime: 4200, building: 'workshop',
@@ -160,7 +160,7 @@ const teutons: TribeDef = {
       attack: 50, defInf: 60, defCav: 10, speed: 3, carry: 0, upkeep: 6, cost: [900, 1200, 600, 60], trainTime: 9000, building: 'workshop',
       requires: [['academy', 15], ['workshop', 10]] }),
     U({ id: 'chief', name: 'Chief', icon: '🎖️', type: 'chief', description: 'Convinces villages to join your tribe.',
-      attack: 40, defInf: 60, defCav: 40, speed: 5, carry: 0, upkeep: 4, cost: [35500, 26600, 25000, 27200], trainTime: 70500, building: 'residence',
+      attack: 40, defInf: 60, defCav: 40, speed: 4, carry: 0, upkeep: 4, cost: [35500, 26600, 25000, 27200], trainTime: 70500, building: 'residence',
       requires: [['academy', 20], ['rally', 5]] }),
     U({ id: 'teuton_settler', name: 'Settler', icon: '🧺', type: 'settler', description: 'Founds new villages.',
       attack: 10, defInf: 80, defCav: 80, speed: 5, carry: 3000, upkeep: 1, cost: [7200, 5500, 5800, 6500], trainTime: 31000, building: 'residence' }),
@@ -184,21 +184,21 @@ const gauls: TribeDef = {
   chiefPower: [20, 25],
   units: [
     U({ id: 'phalanx', name: 'Phalanx', icon: '🔱', type: 'inf', description: 'Cheap and strong defensive infantry.',
-      attack: 15, defInf: 40, defCav: 50, speed: 7, carry: 35, upkeep: 1, cost: [100, 130, 55, 30], trainTime: 1040, building: 'barracks' }),
+      attack: 15, defInf: 40, defCav: 50, speed: 7, carry: 35, upkeep: 1, cost: [100, 130, 55, 30], trainTime: 1300, building: 'barracks' }),
     U({ id: 'swordsman', name: 'Swordsman', icon: '⚔️', type: 'inf', description: 'Attacking infantry that can also defend.',
-      attack: 65, defInf: 35, defCav: 20, speed: 6, carry: 45, upkeep: 1, cost: [140, 150, 185, 60], trainTime: 1440, building: 'barracks',
-      requires: [['academy', 1], ['blacksmith', 1]] }),
+      attack: 65, defInf: 35, defCav: 20, speed: 6, carry: 45, upkeep: 1, cost: [140, 150, 185, 60], trainTime: 1800, building: 'barracks',
+      requires: [['academy', 3], ['blacksmith', 1]] }),
     U({ id: 'pathfinder', name: 'Pathfinder', icon: '🔭', type: 'scout', description: 'The fastest scout in the game.',
-      attack: 0, defInf: 20, defCav: 10, speed: 17, carry: 0, upkeep: 2, cost: [170, 150, 20, 40], trainTime: 1360, building: 'stable',
+      attack: 0, defInf: 20, defCav: 10, speed: 17, carry: 0, upkeep: 2, cost: [170, 150, 20, 40], trainTime: 1700, building: 'stable',
       requires: [['academy', 5], ['stable', 1]] }),
     U({ id: 'theutates_thunder', name: 'Theutates Thunder', icon: '⚡', type: 'cav', description: 'Lightning-fast cavalry, perfect for raiding.',
-      attack: 90, defInf: 25, defCav: 40, speed: 19, carry: 75, upkeep: 2, cost: [350, 450, 230, 60], trainTime: 2480, building: 'stable',
+      attack: 90, defInf: 25, defCav: 40, speed: 19, carry: 75, upkeep: 2, cost: [350, 450, 230, 60], trainTime: 3100, building: 'stable',
       requires: [['academy', 5], ['stable', 3]] }),
     U({ id: 'druidrider', name: 'Druidrider', icon: '🌿', type: 'cav', description: 'Defensive cavalry, superb against infantry.',
-      attack: 45, defInf: 115, defCav: 55, speed: 16, carry: 35, upkeep: 2, cost: [360, 330, 280, 120], trainTime: 2560, building: 'stable',
+      attack: 45, defInf: 115, defCav: 55, speed: 16, carry: 35, upkeep: 2, cost: [360, 330, 280, 120], trainTime: 3200, building: 'stable',
       requires: [['academy', 5], ['stable', 5]] }),
     U({ id: 'haeduan', name: 'Haeduan', icon: '🐗', type: 'cav', description: 'Heavy cavalry, strong in attack and against riders.',
-      attack: 140, defInf: 50, defCav: 165, speed: 13, carry: 65, upkeep: 3, cost: [500, 620, 675, 170], trainTime: 3120, building: 'stable',
+      attack: 140, defInf: 50, defCav: 165, speed: 13, carry: 65, upkeep: 3, cost: [500, 620, 675, 170], trainTime: 3900, building: 'stable',
       requires: [['academy', 15], ['stable', 10]] }),
     U({ id: 'gaul_ram', name: 'Ram', icon: '🪵', type: 'ram', description: 'Breaks down walls.',
       attack: 50, defInf: 30, defCav: 105, speed: 4, carry: 0, upkeep: 3, cost: [950, 555, 330, 75], trainTime: 5000, building: 'workshop',
@@ -207,7 +207,7 @@ const gauls: TribeDef = {
       attack: 70, defInf: 45, defCav: 10, speed: 3, carry: 0, upkeep: 6, cost: [960, 1450, 630, 90], trainTime: 9000, building: 'workshop',
       requires: [['academy', 15], ['workshop', 10]] }),
     U({ id: 'chieftain', name: 'Chieftain', icon: '🎖️', type: 'chief', description: 'Convinces villages to join your tribe.',
-      attack: 40, defInf: 50, defCav: 50, speed: 4, carry: 0, upkeep: 4, cost: [30750, 45400, 31000, 37500], trainTime: 90700, building: 'residence',
+      attack: 40, defInf: 50, defCav: 50, speed: 5, carry: 0, upkeep: 4, cost: [30750, 45400, 31000, 37500], trainTime: 90700, building: 'residence',
       requires: [['academy', 20], ['rally', 10]] }),
     U({ id: 'gaul_settler', name: 'Settler', icon: '🧺', type: 'settler', description: 'Founds new villages.',
       attack: 0, defInf: 80, defCav: 80, speed: 5, carry: 3000, upkeep: 1, cost: [5500, 7000, 5300, 4900], trainTime: 22700, building: 'residence' }),
@@ -309,23 +309,68 @@ export function smithyFactor(level: number): number {
 }
 
 /** Academy research cost: about 3x the unit cost. */
+/** T3 research / upgrade base times in seconds (Kirilloid's T3 model, `rt`). */
+const RESEARCH_SECONDS: Record<string, number> = {
+  legionnaire: 7800,
+  praetorian: 8400,
+  imperian: 9000,
+  equites_legati: 6900,
+  equites_imperatoris: 11700,
+  equites_caesaris: 15000,
+  battering_ram: 15600,
+  fire_catapult: 28800,
+  senator: 24475,
+  clubswinger: 4500,
+  spearman: 6000,
+  axeman: 6300,
+  scout: 6000,
+  paladin: 10800,
+  teutonic_knight: 12900,
+  ram: 14400,
+  catapult: 28800,
+  chief: 19425,
+  phalanx: 5700,
+  swordsman: 7200,
+  pathfinder: 6900,
+  theutates_thunder: 11100,
+  druidrider: 11400,
+  haeduan: 13500,
+  gaul_ram: 16800,
+  trebuchet: 28800,
+  chieftain: 24475,
+};
+
+const round5 = (n: number) => Math.round(n / 5) * 5;
+const RES_BASE = [100, 100, 200, 160];
+const costList = (u: UnitDef) => [u.cost.wood, u.cost.clay, u.cost.iron, u.cost.crop];
+
+/** Academy research cost (T3): 6/4/8/6 × unit cost + 100/100/200/160; chiefs 0.5/0.5/0.8/0.6 × cost + 500/200/400/160. */
 export function researchCost(u: UnitDef): Resources {
-  return res(u.cost.wood * 3, u.cost.clay * 3, u.cost.iron * 3, u.cost.crop * 3);
+  const chief = u.type === 'chief';
+  const k = chief ? [0.5, 0.5, 0.8, 0.6] : [6, 4, 8, 6];
+  const b = chief ? [500, 200, 400, 160] : RES_BASE;
+  const r = costList(u).map((v, i) => round5((k[i] ?? 0) * v + (b[i] ?? 0)));
+  return res(r[0] ?? 0, r[1] ?? 0, r[2] ?? 0, r[3] ?? 0);
 }
 
-export function researchTimeMs(u: UnitDef, speedMultiplier: number): number {
-  return Math.max(1000, Math.round((u.trainTime * 4) / speedMultiplier) * 1000);
+/** Academy research time: the unit's T3 research time, 3.6% faster per Academy level above 1. */
+export function researchTimeMs(u: UnitDef, speedMultiplier: number, academyLevel = 1): number {
+  const base = RESEARCH_SECONDS[u.id] ?? u.trainTime * 4;
+  return Math.max(1000, Math.round((base * Math.pow(0.964, Math.max(1, academyLevel) - 1)) / speedMultiplier) * 1000);
 }
 
-/** Smithy upgrade cost to reach `level`. */
+/** Blacksmith/Armoury upgrade cost to reach `level` (T3): round5(level^0.8 × (7 × cost + base) / upkeep). */
 export function smithyCost(u: UnitDef, level: number): Resources {
-  const k = 1.5 * Math.pow(1.22, level - 1);
-  const r = (n: number) => Math.round((n * k) / 5) * 5;
-  return res(r(u.cost.wood), r(u.cost.clay), r(u.cost.iron), r(u.cost.crop));
+  const k = Math.pow(level, 0.8);
+  const up = Math.max(1, u.upkeep);
+  const r = costList(u).map((v, i) => round5((k * (v * 7 + (RES_BASE[i] ?? 0))) / up));
+  return res(r[0] ?? 0, r[1] ?? 0, r[2] ?? 0, r[3] ?? 0);
 }
 
-export function smithyTimeMs(u: UnitDef, level: number, speedMultiplier: number): number {
-  return Math.max(1000, Math.round((u.trainTime * 2 * Math.pow(1.18, level - 1)) / speedMultiplier) * 1000);
+/** Upgrade time to reach `level`: research time × level^0.8, 3.6% faster per smithy level above 1. */
+export function smithyTimeMs(u: UnitDef, level: number, speedMultiplier: number, smithyLevel = 1): number {
+  const base = RESEARCH_SECONDS[u.id] ?? u.trainTime * 2;
+  return Math.max(1000, Math.round((base * Math.pow(level, 0.8) * Math.pow(0.964, Math.max(1, smithyLevel) - 1)) / speedMultiplier) * 1000);
 }
 
 export const SMITHY_MAX = 20;
