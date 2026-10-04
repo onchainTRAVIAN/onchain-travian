@@ -67,7 +67,7 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
           <tr><th>Trained in</th><td>${BUILDING_NAME[u.building]}</td></tr>
           <tr><th>Requirements</th><td>${u.requires.length === 0
             ? html`<span class="none">none${d.slot === 0 ? ' — available from the start' : ''}</span>`
-            : u.requires.map((r) => html`<span class="nowrap">${BUILDINGS[r.building].name} level ${r.level}</span> `)}</td></tr>
+            : u.requires.map((r, i) => html`${i > 0 ? ', ' : ''}<span class="nowrap">${BUILDINGS[r.building].name} level ${r.level}</span>`)}</td></tr>
           ${research
             ? html`<tr><th>Research (Academy)</th><td>${costRow(researchCost(u))} · ${fmtDuration(researchTimeMs(u, config.WORLD_SPEED))}</td></tr>`
             : ''}

@@ -15,6 +15,7 @@
 - Oases hold resources: unoccupied oases gather their bonus resources (40/h per 25% × speed, cap 1000 × speed up to 80k, start half full); winning attacks/raids loot them; scouts and the oasis page show the stock. Held oases don't gather.
 - Player activity is private: no "last seen"/online status on profiles or alliance member lists (admin panel only).
 - Training table shows a live total (resources, upkeep, time) for everything entered; shortages in red.
+- New troop art: all 30 tribe units, 10 animals and the hero redrawn as detailed classic-style 16px icons plus 120×140 portraits (`img/units/big/`), original art.
 - Troop guide: every troop picture links to its information page (`/unit/<tribe>/<n>`: big picture, attack/defence/speed/carry/upkeep, cost, training time at this world's speed, requirements, research and first upgrade cost); `/units` lists all tribes and animals.
 - Fix: crop consumption (population, troops, hero) no longer multiplied by world speed — like Travian speed servers only production, times and culture scale. Starvation uses the same unscaled figure.
 - Rules checked against Kirilloid's T3 model and corrected: chief speeds (Senator 4, Chief 4, Chieftain 5), T3 training times for 18 units, Rally Point build time (2000 s at L1), Swordsman needs Academy 3, Horse Drinking Trough culture 3, Academy research cost (6/4/8/6×cost+100/100/200/160; chiefs 0.5/0.5/0.8/0.6×cost+500/200/400/160) and per-unit research times, Blacksmith/Armoury cost round5(L^0.8×(7×cost+base)/upkeep) and time; Academy/smithy levels speed research 3.6%/level.
