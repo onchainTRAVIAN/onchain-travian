@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
 import { db } from '../../db/index.js';
+import { buildOrders } from '../../db/schema.js';
 import {
   activeBoosts,
   bookTicker,
@@ -74,9 +76,11 @@ shopRouter.post(
   '/shop/finish/build',
   formAction(orderId, (req, r, d) => {
     const ctx = authed(req);
+    const slot = db.select({ slot: buildOrders.slot }).from(buildOrders).where(eq(buildOrders.id, d.orderId)).get()?.slot;
     const price = finishConstructionNow(db, ctx.user.id, d.orderId, ctx.now);
     setFlash(r, 'ok', `Construction finished for ${price} Gold.`);
-    r.redirect(303, backUrl(req, '/village'));
+    // Resource fields (slots 1–18) live on the village overview, buildings in the village centre.
+    r.redirect(303, backUrl(req, slot !== undefined && slot <= 18 ? '/fields' : '/village'));
   }),
 );
 

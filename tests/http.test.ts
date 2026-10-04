@@ -1,6 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import { eq } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
+import { users } from '../src/db/schema.js';
+import { grantCredits } from '../src/game/actions/credits.js';
 import { ensureWorld } from '../src/game/engine/world.js';
 import { createApp } from '../src/app.js';
 
@@ -144,6 +147,22 @@ describe('playing through the web', () => {
     const fields = await agent.get('/fields');
     expect(fields.text).toContain('Building:');
     expect(fields.text).toMatch(/(Woodcutter|Clay Pit|Iron Mine|Cropland) \(level 1\)/);
+  });
+
+  it('finishing a field with Gold returns to the page the player came from', async () => {
+    const agent = await newPlayer('Midas', 'gauls');
+    const u = db.select({ id: users.id }).from(users).where(eq(users.usernameLower, 'midas')).get();
+    grantCredits(db, u?.id ?? 0, 500, 'test', 'midas-grant', Date.now());
+    const slot = await agent.get('/slot/1');
+    await agent.post('/build').type('form').send({ _csrf: csrfFrom(slot.text), slot: '1' });
+    const fields = await agent.get('/fields');
+    expect(fields.headers['referrer-policy']).toBe('same-origin');
+    const orderId = /name="orderId" value="(\d+)"/.exec(fields.text)?.[1];
+    expect(orderId).toBeDefined();
+    // No Referer (e.g. privacy settings): a resource field goes back to the fields page, not the village centre.
+    const res = await agent.post('/shop/finish/build').type('form').send({ _csrf: csrfFrom(fields.text), orderId });
+    expect(res.status).toBe(303);
+    expect(res.headers.location).toBe('/fields');
   });
 
   it('shows friendly errors for impossible actions', async () => {

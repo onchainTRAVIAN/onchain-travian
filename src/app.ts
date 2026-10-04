@@ -43,6 +43,8 @@ export function createApp() {
         },
       },
       strictTransportSecurity: config.NODE_ENV === 'production',
+      // Send the Referer only within the game, so actions can return the player to the page they came from.
+      referrerPolicy: { policy: 'same-origin' },
     }),
   );
   app.use('/static', express.static(PUBLIC_DIR, { maxAge: config.NODE_ENV === 'production' ? '1d' : 0 }));
