@@ -253,6 +253,8 @@ describe('map views and profiles', () => {
     await agent.post('/account/bio').type('form').send({ _csrf: token, bio: '<b>hi</b> I farm' });
     const pub = await agent.get(`/player/${m?.[1]}`);
     expect(pub.text).toContain('&lt;b&gt;hi&lt;/b&gt; I farm');
+    // Activity is private: no "last seen" / online status on profiles.
+    expect(pub.text).not.toMatch(/last seen|● online/);
     // Remove → tribe default.
     await agent.post('/account/avatar/remove').type('form').send({ _csrf: token });
     const after = await agent.get('/account');

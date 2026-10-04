@@ -13,6 +13,7 @@
 - Village centre: every point goes to the nearest building spot (Voronoi zones around each building picture, `src/web/views/spots.ts`) instead of the overlapping 75×100 pictures; hover outline per building; wall gate clickable.
 - Map: round arrow buttons on all four sides of the map (constant on-screen size at every map size); labels scale too.
 - Oases hold resources: unoccupied oases gather their bonus resources (40/h per 25% × speed, cap 1000 × speed up to 80k, start half full); winning attacks/raids loot them; scouts and the oasis page show the stock. Held oases don't gather.
+- Player activity is private: no "last seen"/online status on profiles or alliance member lists (admin panel only).
 - Training table shows a live total (resources, upkeep, time) for everything entered; shortages in red.
 - Founding an alliance costs 280 Gold (`ALLIANCE_FOUND_PRICE`), on top of Embassy level 3.
 - Live world speed x100 (`WORLD_SPEED`/`TROOP_SPEED` Railway variables).

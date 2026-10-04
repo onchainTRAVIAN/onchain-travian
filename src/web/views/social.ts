@@ -154,14 +154,12 @@ export function playerView(d: {
 }): SafeHtml {
   const t = TRIBES[d.user.tribe];
   const pop = d.villages.reduce((s, v) => s + v.pop, 0);
-  const online = d.now - d.user.lastSeenAt < 15 * 60_000;
   return html`<h1>Player profile</h1>
     <div class="profile">
       <div class="pcard">
         ${avatarImg(d.user, 128, 'avatar big')}
         <div class="pname">${d.user.username}</div>
         <div class="ptribe"><img src="/static/img/units/${d.user.tribe}-1.svg" width="16" height="16" alt=""> ${t.name}</div>
-        <div class="pstatus ${online ? 'c1' : 'none'}">${online ? '● online' : `last seen ${fmtAgo(d.user.lastSeenAt, d.now)}`}</div>
       </div>
       <table class="pdetails"><thead><tr><th colspan="2">Details</th></tr></thead><tbody>
         <tr><th>Rank</th><td>${d.rank}.</td></tr>

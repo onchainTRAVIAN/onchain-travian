@@ -92,7 +92,7 @@ export function allianceView(d: {
     <h2>Members</h2>
     <ul class="list">${d.members.map(
       (m) => html`<li><img class="avatar sm" src="${avatarUrl({ id: m.userId, tribe: m.tribe, avatarAt: m.avatarAt })}" width="24" height="24" alt=""><span class="grow"><a href="/player/${m.userId}">${m.username}</a> <span class="small muted">${TRIBES[m.tribe].name}</span>
-        <span class="sub">${ROLE_LABEL[m.role]} · ${fmtNum(m.pop)} pop · ${m.villages} village${m.villages === 1 ? '' : 's'}${isMine ? ` · seen ${fmtAgo(m.lastSeenAt, d.now)}` : ''}</span></span>
+        <span class="sub">${ROLE_LABEL[m.role]} · ${fmtNum(m.pop)} pop · ${m.villages} village${m.villages === 1 ? '' : 's'}</span></span>
         ${canManage && m.role !== 'leader'
           ? html`<form method="post" action="/alliance/kick" class="inline">${csrfField(d.csrf)}<input type="hidden" name="userId" value="${m.userId}"><button type="submit" class="small secondary" aria-label="Remove ${m.username}">✕</button></form>`
           : ''}
