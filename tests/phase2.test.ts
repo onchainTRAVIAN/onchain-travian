@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
 import { heroes, movements, reports, slots, tiles, users, villages } from '../src/db/schema.js';
 import { clock } from '../src/clock.js';
@@ -43,6 +43,7 @@ import { emptyUnits } from '../src/game/rules/units.js';
 import { res } from '../src/game/rules/resources.js';
 import { config } from '../src/config.js';
 import { oasisStock } from '../src/game/engine/oasis.js';
+import { WEEK_MS, lastWinners, medalsOf, processWeek, weekStart, weeklyStandings } from '../src/game/actions/weekly.js';
 import { buyListing, cancelListing, editListing, listResources, listTroops } from '../src/game/actions/goldmarket.js';
 
 const HOUR = 3_600_000;
@@ -559,5 +560,37 @@ describe('gold market', () => {
     expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(35);
     cancelListing(db, a.userId, tid, clock.now());
     cancelListing(db, a.userId, id, clock.now());
+  });
+});
+
+describe('weekly statistics', () => {
+  it('ranks weekly gains, awards top 3 medals + Gold at the rollover exactly once', async () => {
+    expect(new Date(weekStart(Date.UTC(2026, 9, 7, 15))).toISOString()).toBe('2026-10-05T00:00:00.000Z'); // Wednesday → Monday
+    processWeek(db, clock.now()); // snapshot for the current week
+    const ws = weekStart(clock.now());
+    const bump = (id: number, off: number) =>
+      db.update(users).set({ offPoints: sql`${users.offPoints} + ${off}` }).where(eq(users.id, id)).run();
+    bump(a.userId, 500);
+    bump(b.userId, 300);
+    bump(c.userId, 100);
+    const late = await registerPlayer(db, { username: 'Latecomer', password: 'password123', tribe: 'romans' }, clock.now());
+    bump(late.userId, 50);
+    const top = weeklyStandings(db, 'attack', ws, 10);
+    expect(top.slice(0, 3).map((r) => r.userId)).toEqual([a.userId, b.userId, c.userId]);
+    expect(top.find((r) => r.userId === late.userId)?.value).toBe(50);
+    const gold = [a, b, c].map((p) => creditBalance(db, p.userId));
+    clock.advance(ws + WEEK_MS + 60_000 - clock.now());
+    const r = processWeek(db, clock.now());
+    expect(r.awarded).toBeGreaterThanOrEqual(3);
+    expect(creditBalance(db, a.userId)).toBeGreaterThanOrEqual((gold[0] ?? 0) + 300);
+    expect(medalsOf(db, a.userId).some((m) => m.category === 'attack' && m.rank === 1 && m.prize === 300)).toBe(true);
+    expect(medalsOf(db, b.userId).some((m) => m.category === 'attack' && m.rank === 2 && m.prize === 200)).toBe(true);
+    expect(medalsOf(db, c.userId).some((m) => m.category === 'attack' && m.rank === 3 && m.prize === 100)).toBe(true);
+    // Running again (every tick) pays nothing more, and the new week starts from zero.
+    const after = creditBalance(db, a.userId);
+    expect(processWeek(db, clock.now()).awarded).toBe(0);
+    expect(creditBalance(db, a.userId)).toBe(after);
+    expect(weeklyStandings(db, 'attack', weekStart(clock.now()), 10)).toHaveLength(0);
+    expect(lastWinners(db)?.rows.length).toBeGreaterThanOrEqual(3);
   });
 });

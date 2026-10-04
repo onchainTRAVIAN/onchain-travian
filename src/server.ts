@@ -3,6 +3,7 @@ import { db } from './db/index.js';
 import { clock } from './clock.js';
 import { ensureWorld } from './game/engine/world.js';
 import { processDue } from './game/engine/events.js';
+import { processWeek } from './game/actions/weekly.js';
 import { createApp } from './app.js';
 import { startCryptoWorkers } from './crypto/worker.js';
 
@@ -14,6 +15,13 @@ const worker = setInterval(() => {
     processDue(db, clock.now());
   } catch (err) {
     console.error('World tick failed:', err);
+  }
+  try {
+    // Monday 00:00 UTC: award last week's medals and Gold, snapshot totals for the new week.
+    const r = processWeek(db, clock.now());
+    if (r.awarded > 0) console.log(`Weekly medals awarded: ${r.awarded}`);
+  } catch (err) {
+    console.error('Weekly rollover failed:', err);
   }
 }, 1000);
 

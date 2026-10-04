@@ -13,12 +13,13 @@ function allianceTagFull(userId: number): { id: number; tag: string; name: strin
 import { renameVillage } from '../../game/actions/account.js';
 import { AVATAR_MAX_UPLOAD, avatarPath, hasAvatar, removeAvatar, saveAvatar, setBio } from '../../game/actions/avatar.js';
 import { GameError } from '../../game/errors.js';
+import { WEEKLY_CATEGORIES, lastWinners, medalsOf, weekStart, weeklyStandings } from '../../game/actions/weekly.js';
 import { deleteMessage, inbox, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
 import { parseReport } from '../../game/engine/reports.js';
 import { heroRankings, playerProfile, playerRank, rankings, reportList, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
 import { authed, setFlash } from '../session.js';
 import { reportListView, reportView } from '../views/reports.js';
-import { accountView, heroRankingView, helpView, inboxView, messageView, playerView, rankingView, villageRankingView, writeView } from '../views/social.js';
+import { accountView, heroRankingView, helpView, inboxView, messageView, playerView, rankingView, villageRankingView, weeklyView, writeView } from '../views/social.js';
 import { formAction, intParam, loadGamePage, pageParam, sendPage } from './helpers.js';
 import { requireAuth } from '../session.js';
 
@@ -215,6 +216,7 @@ socialRouter.get('/player/:id', (req, res) => {
       rank: playerRank(db, profile.user.id),
       alliance: allianceTagFull(profile.user.id),
       heroLevel: db.select({ l: heroes.level }).from(heroes).where(eq(heroes.userId, profile.user.id)).get()?.l ?? null,
+      medals: medalsOf(db, profile.user.id),
       isMe: req.ctx.user?.id === profile.user.id,
       now: req.ctx.now,
     }),
@@ -320,6 +322,18 @@ socialRouter.get('/avatar/:id', (req, res) => {
   }
   const u = db.select({ tribe: users.tribe }).from(users).where(eq(users.id, id)).get();
   res.redirect(302, `/static/img/avatars/${u?.tribe ?? 'romans'}.svg`);
+});
+
+socialRouter.get('/stats/week', (req, res) => {
+  const category = WEEKLY_CATEGORIES.find((c) => c === req.query.c) ?? 'attack';
+  const ws = weekStart(req.ctx.now);
+  sendPage(
+    req,
+    res,
+    'This week',
+    weeklyView({ category, rows: weeklyStandings(db, category, ws, 50), weekStart: ws, now: req.ctx.now, myId: req.ctx.user?.id ?? null, winners: lastWinners(db) }),
+    { nav: 'stats', chrome: req.ctx.user ? loadGamePage(req).chrome : null },
+  );
 });
 
 socialRouter.get('/help', (req, res) => {

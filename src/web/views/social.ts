@@ -5,6 +5,7 @@ import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, timer } from './layout.js';
 import { avatarUrl } from '../../game/actions/avatar.js';
+import { WEEK_MS, WEEKLY_CATEGORIES, WEEKLY_LABEL, WEEKLY_PRIZES, type MedalView, type WeeklyCategory, type WeeklyRow } from '../../game/actions/weekly.js';
 import { paginate } from './parts.js';
 
 /* ---------- Messages ---------- */
@@ -78,10 +79,54 @@ const RANK_TABS: { key: RankKind; label: string; col: string }[] = [
 ];
 
 const extraTabs = (on: string) =>
-  html`<a href="/stats/villages" class="${on === 'villages' ? 'on' : ''}">Villages</a><a href="/stats/heroes" class="${on === 'heroes' ? 'on' : ''}">Heroes</a><a href="/alliances">Alliances</a>`;
+  html`<a href="/stats/week" class="${on === 'week' ? 'on' : ''}">This week</a><a href="/stats/villages" class="${on === 'villages' ? 'on' : ''}">Villages</a><a href="/stats/heroes" class="${on === 'heroes' ? 'on' : ''}">Heroes</a><a href="/alliances">Alliances</a>`;
 
 function statsTabs(on: string): SafeHtml {
   return html`<nav class="tabs" aria-label="Ranking type">${RANK_TABS.map((t) => html`<a href="/stats?k=${t.key}" class="${t.key === on ? 'on' : ''}">${t.label}</a>`)}${extraTabs(on)}</nav>`;
+}
+
+const MEDAL = ['gold', 'silver', 'bronze'] as const;
+
+function medalImg(rank: number, size = 20): SafeHtml {
+  const m = MEDAL[rank - 1] ?? 'bronze';
+  return html`<img src="/static/img/medals/${m}.svg" width="${size}" height="${size}" alt="${m} medal" title="${m} medal">`;
+}
+
+export function weeklyView(d: {
+  category: WeeklyCategory;
+  rows: WeeklyRow[];
+  weekStart: number;
+  now: number;
+  myId: number | null;
+  winners: { weekStart: number; rows: { category: WeeklyCategory; rank: number; value: number; prize: number; userId: number; username: string }[] } | null;
+}): SafeHtml {
+  const end = d.weekStart + WEEK_MS;
+  const lab = WEEKLY_LABEL[d.category];
+  return html`<h1>Statistics</h1>${statsTabs('week')}
+    <p class="tabs">${WEEKLY_CATEGORIES.map((c) => html`<a href="/stats/week?c=${c}" class="${c === d.category ? 'on' : ''}">${WEEKLY_LABEL[c].tab}</a>`)}</p>
+    <p class="small">Week of ${new Date(d.weekStart).toISOString().slice(0, 10)} · ends in ${timer(end, d.now, false)} (Monday 00:00 UTC).
+      The top 3 of every category win a medal and ${medalImg(1, 14)} ${WEEKLY_PRIZES[0]} / ${medalImg(2, 14)} ${WEEKLY_PRIZES[1]} / ${medalImg(3, 14)} ${WEEKLY_PRIZES[2]} Gold.</p>
+    <div class="tblwrap"><table><thead><tr><th class="num">#</th><th>Player</th><th class="num">${lab.col}</th><th>Prize</th></tr></thead><tbody>
+    ${d.rows.length === 0
+      ? html`<tr><td colspan="4" class="none center">Nobody has scored this week yet. Be the first!</td></tr>`
+      : d.rows.map(
+          (r, i) => html`<tr class="${r.userId === d.myId ? 'me' : ''}"><td class="num">${i + 1}</td>
+            <td><img class="avatar sm" src="${avatarUrl({ id: r.userId, tribe: r.tribe, avatarAt: r.avatarAt })}" width="20" height="20" alt=""> <a href="/player/${r.userId}">${r.username}</a></td>
+            <td class="num">${fmtNum(r.value)}</td>
+            <td>${i < 3 ? html`${medalImg(i + 1)} ${WEEKLY_PRIZES[i]} Gold` : ''}</td></tr>`,
+        )}
+    </tbody></table></div>
+    ${d.winners
+      ? html`<h2>Winners of the week of ${new Date(d.winners.weekStart).toISOString().slice(0, 10)}</h2>
+        <div class="tblwrap"><table><thead><tr><th>Category</th><th>Winners</th></tr></thead><tbody>
+        ${WEEKLY_CATEGORIES.map((c) => {
+          const w = d.winners?.rows.filter((r) => r.category === c) ?? [];
+          return html`<tr><td>${WEEKLY_LABEL[c].tab}</td><td>${w.length === 0
+            ? html`<span class="none">-</span>`
+            : w.map((r) => html`<span class="nowrap">${medalImg(r.rank)} <a href="/player/${r.userId}">${r.username}</a> <span class="small muted">(${fmtNum(r.value)})</span></span> `)}</td></tr>`;
+        })}
+        </tbody></table></div>`
+      : ''}`;
 }
 
 export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; hasMore: boolean }): SafeHtml {
@@ -150,6 +195,7 @@ export function playerView(d: {
   rank: number;
   alliance: { id: number; tag: string; name: string } | null;
   heroLevel: number | null;
+  medals: MedalView[];
   isMe: boolean;
   now: number;
 }): SafeHtml {
@@ -176,6 +222,13 @@ export function playerView(d: {
         ${d.user.protectedUntil > d.now ? html`<tr><th>Protection</th><td>${timer(d.user.protectedUntil, d.now, false)}</td></tr>` : ''}
       </tbody></table>
     </div>
+    ${d.medals.length
+      ? html`<h2>Medals</h2><div class="tblwrap"><table><thead><tr><th></th><th>Title</th><th>Week</th><th class="num">Score</th></tr></thead><tbody>
+        ${d.medals.map(
+          (m) => html`<tr><td>${medalImg(m.rank, 24)}</td><td>${WEEKLY_LABEL[m.category].title} <span class="small muted">(place ${m.rank})</span></td>
+            <td>${new Date(m.weekStart).toISOString().slice(0, 10)}</td><td class="num">${fmtNum(m.value)}</td></tr>`,
+        )}</tbody></table></div>`
+      : ''}
     ${d.user.bio ? html`<div class="pbio"><b>About:</b><div class="msgbody">${d.user.bio}</div></div>` : ''}
     <table><thead><tr><th>Villages</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
     ${d.villages.map(

@@ -176,7 +176,7 @@ describe('playing through the web', () => {
 
   it('renders map, tile, troops, send form, reports, messages and rankings', async () => {
     const agent = await newPlayer('Cleopatra', 'gauls');
-    for (const path of ['/map', '/map?x=5&y=5', '/map/tile?x=0&y=0', '/troops', '/troops/send', '/reports', '/messages', '/messages/new', '/stats?k=attack', '/stats/villages', '/stats/heroes', '/village', '/slot/19', '/slot/39', '/slot/40', '/slot/30', '/hero', '/chat', '/chat/feed', '/alliance', '/alliances', '/shop', '/shop/ticker', '/troops/send?kind=settle', '/goldmarket', '/goldmarket?tab=troops', '/goldmarket?tab=sell', '/goldmarket?tab=mine']) {
+    for (const path of ['/map', '/map?x=5&y=5', '/map/tile?x=0&y=0', '/troops', '/troops/send', '/reports', '/messages', '/messages/new', '/stats?k=attack', '/stats/villages', '/stats/heroes', '/village', '/slot/19', '/slot/39', '/slot/40', '/slot/30', '/hero', '/chat', '/chat/feed', '/alliance', '/alliances', '/shop', '/shop/ticker', '/troops/send?kind=settle', '/goldmarket', '/goldmarket?tab=troops', '/goldmarket?tab=sell', '/goldmarket?tab=mine', '/stats/week', '/stats/week?c=raid', '/stats/week?c=expansion']) {
       const res = await agent.get(path);
       expect(res.status, path).toBe(200);
     }
