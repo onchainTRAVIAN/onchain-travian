@@ -318,7 +318,7 @@ describe('credits shop & news ticker', () => {
     expect(grantCredits(db, a.userId, 200, 'test', 'test-grant-1', clock.now())).toBe(true);
     expect(grantCredits(db, a.userId, 200, 'test', 'test-grant-1', clock.now())).toBe(false);
     expect(creditBalance(db, a.userId)).toBe(200);
-    expect(() => buyBoost(db, b.userId, 'build_queue', clock.now())).toThrow(/credits/);
+    expect(() => buyBoost(db, b.userId, 'build_queue', clock.now())).toThrow(/Gold/);
   });
 
   it('boosts apply through modifiers and extend when bought again', () => {

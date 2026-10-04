@@ -1,9 +1,9 @@
 import { config } from '../../config.js';
-import { RESOURCE_ICON, RESOURCE_KEYS, RESOURCE_LABEL, type Resources } from '../../game/rules/resources.js';
+import { RESOURCE_KEYS, RESOURCE_LABEL, type Resources } from '../../game/rules/resources.js';
 import type { Economy, VillageRow } from '../../game/engine/state.js';
 import type { UserRow } from '../../game/actions/account.js';
 import type { Flash } from '../session.js';
-import { fmtClock, fmtDuration, fmtNum, fmtSigned } from '../format.js';
+import { fmtClock, fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 
 export interface Chrome {
@@ -47,6 +47,15 @@ export interface PageOpts {
   announcement?: string | null;
 }
 
+/** <img> for one of the game's SVG icons. */
+export function icon(path: string, alt: string, size = 18): SafeHtml {
+  return html`<img src="/static/img/${path}.svg" width="${size}" height="${size}" alt="${alt}" title="${alt}">`;
+}
+
+export function resIcon(k: keyof Resources, size = 18): SafeHtml {
+  return icon(`res/${k}`, RESOURCE_LABEL[k], size);
+}
+
 function tickerBar(items: TickerItem[], announcement: string | null | undefined): SafeHtml {
   const all: SafeHtml[] = [];
   if (announcement) all.push(html`<span class="tk-item tk-sys">📣 ${announcement}</span>`);
@@ -58,45 +67,76 @@ function tickerBar(items: TickerItem[], announcement: string | null | undefined)
   </div>`;
 }
 
-function resourceBar(v: VillageRow, eco: Economy, now: number): SafeHtml {
-  const stock: Resources = { wood: v.wood, clay: v.clay, iron: v.iron, crop: v.crop };
-  return html`<div class="resbar" role="region" aria-label="Resources">
-    ${RESOURCE_KEYS.map((k) => {
-      const full = eco.net[k] >= 0 && stock[k] >= eco.capacity[k];
-      const neg = eco.net[k] < 0;
-      return html`<div class="res${full ? ' full' : ''}${neg ? ' neg' : ''}" title="${RESOURCE_LABEL[k]}: ${fmtNum(stock[k])} / ${fmtNum(eco.capacity[k])}">
-        <span aria-hidden="true">${RESOURCE_ICON[k]}</span><span class="sr">${RESOURCE_LABEL[k]}</span>
-        <b data-amount="${stock[k]}" data-rate="${eco.net[k]}" data-cap="${eco.capacity[k]}" data-at="${now}">${fmtNum(stock[k])}</b>
-        <span class="rate">${fmtSigned(eco.net[k])}/h</span>
-      </div>`;
-    })}
-  </div>
-  <div class="capline">Warehouse ${fmtNum(eco.capacity.wood)} · Granary ${fmtNum(eco.capacity.crop)}</div>`;
+function topNav(active: NavKey | undefined, c: Chrome | null | undefined): SafeHtml {
+  if (!c) return html``;
+  const items: { key: NavKey; href: string; img: string; label: string; badge?: number }[] = [
+    { key: 'fields', href: '/fields', img: 'dorf1', label: 'Village overview' },
+    { key: 'village', href: '/village', img: 'dorf2', label: 'Village centre' },
+    { key: 'map', href: '/map', img: 'map', label: 'Map' },
+    { key: 'stats', href: '/stats', img: 'stats', label: 'Statistics' },
+    { key: 'reports', href: '/reports', img: 'reports', label: 'Reports', badge: c.unread.reports },
+    { key: 'messages', href: '/messages', img: 'messages', label: 'Messages', badge: c.unread.messages },
+    { key: 'shop', href: '/shop', img: 'plus', label: 'Plus & Gold' },
+  ];
+  return html`<nav id="mtop" aria-label="Main">${items.map(
+    (i) => html`<a href="${i.href}" class="${i.key === active ? 'on' : ''}" title="${i.label}"${i.key === active ? html` aria-current="page"` : ''}>
+      <img src="/static/img/nav/${i.img}.svg" alt="${i.label}">${i.badge ? html`<span class="badge">${i.badge}</span>` : ''}</a>`,
+  )}</nav>`;
 }
 
-function nav(active: NavKey | undefined, c: Chrome): SafeHtml {
-  const unread = c.unread;
-  const items: { key: NavKey; href: string; ico: string; label: string; badge?: number | string }[] = [
-    { key: 'fields', href: '/fields', ico: '🌾', label: 'Fields' },
-    { key: 'village', href: '/village', ico: '🏘️', label: 'Village' },
-    { key: 'map', href: '/map', ico: '🗺️', label: 'Map' },
-    { key: 'troops', href: '/troops', ico: '⚔️', label: 'Troops' },
-    { key: 'hero', href: '/hero', ico: '🦸', label: 'Hero', badge: c.heroAlert ? '!' : undefined },
-    { key: 'reports', href: '/reports', ico: '📜', label: 'Reports', badge: unread.reports },
-    { key: 'messages', href: '/messages', ico: '✉️', label: 'Messages', badge: unread.messages },
-    { key: 'chat', href: '/chat', ico: '💬', label: 'Chat' },
-    { key: 'alliance', href: '/alliance', ico: '🤝', label: 'Alliance' },
-    { key: 'stats', href: '/stats', ico: '🏆', label: 'Rankings' },
-    { key: 'shop', href: '/shop', ico: '💎', label: 'Shop' },
-    { key: 'account', href: '/account', ico: '👤', label: 'Profile' },
-  ];
-  return html`<nav class="nav" aria-label="Main">
-    ${items.map(
-      (i) => html`<a href="${i.href}" class="${i.key === active ? 'on' : ''}"${i.key === active ? html` aria-current="page"` : ''}>
-        <span class="ico" aria-hidden="true">${i.ico}</span>${i.label}${i.badge ? html`<span class="badge" aria-label="${i.badge} new">${i.badge}</span>` : ''}
-      </a>`,
-    )}
-  </nav>`;
+function resourceBar(v: VillageRow, eco: Economy, now: number, credits: number): SafeHtml {
+  const stock: Resources = { wood: v.wood, clay: v.clay, iron: v.iron, crop: v.crop };
+  return html`<div id="res" role="region" aria-label="Resources">
+    ${RESOURCE_KEYS.map((k) => {
+      const full = eco.net[k] >= 0 && stock[k] >= eco.capacity[k];
+      return html`<span class="r${full ? ' full' : ''}" title="${RESOURCE_LABEL[k]}: ${fmtNum(eco.net[k])} per hour">${resIcon(k)}<b data-amount="${stock[k]}" data-rate="${eco.net[k]}" data-cap="${eco.capacity[k]}" data-at="${now}">${fmtNum(stock[k])}</b><span class="cap">/${fmtNum(eco.capacity[k])}</span></span>`;
+    })}
+    <span class="r${eco.net.crop < 0 ? ' neg' : ''}" title="Crop consumption / crop production per hour">${icon('res/cropuse', 'Crop consumption')}${fmtNum(eco.upkeep)}/${fmtNum(eco.gross.crop)}</span>
+    <a class="r gold" href="/shop" title="Gold">${icon('res/gold', 'Gold')}<b>${fmtNum(credits)}</b></a>
+  </div>`;
+}
+
+function leftMenu(c: Chrome | null | undefined, csrf: string): SafeHtml {
+  if (!c) {
+    return html`<aside id="lmenu" aria-label="Menu">
+      <a href="/">Home</a><a href="/login">Login</a><a href="/register">Register</a><hr><a href="/stats">Statistics</a><a href="/help">Instructions</a>
+    </aside>`;
+  }
+  return html`<aside id="lmenu" aria-label="Menu">
+    <a href="/fields">Village overview</a>
+    <a href="/village">Village centre</a>
+    <a href="/troops">Rally Point</a>
+    <a href="/hero">Hero${c.heroAlert ? html` <span class="bad">(!)</span>` : ''}</a>
+    <hr>
+    <a href="/account">Profile</a>
+    <a href="/alliance">Alliance</a>
+    <a href="/chat">Chat</a>
+    <a href="/shop">Plus &amp; Gold</a>
+    <a href="/wallet">Wallet</a>
+    ${c.user.role === 'admin' ? html`<a href="/admin">Admin</a>` : ''}
+    <hr>
+    <a href="/help">Instructions</a>
+    <form method="post" action="/logout"><input type="hidden" name="_csrf" value="${csrf}"><button type="submit" class="small secondary">Logout</button></form>
+  </aside>`;
+}
+
+function rightSide(c: Chrome | null | undefined, csrf: string): SafeHtml {
+  if (!c) return html`<aside id="rside"></aside>`;
+  return html`<aside id="rside" aria-label="Villages">
+    <h5>Villages:</h5>
+    <ul>${c.villages.map(
+      (v) => html`<li class="${v.id === c.village.id ? 'on' : ''}">
+        <form method="post" action="/village/switch" class="inline"><input type="hidden" name="_csrf" value="${csrf}"><input type="hidden" name="villageId" value="${v.id}">
+          <button type="submit" class="vbtn">${v.id === c.village.id ? '• ' : ''}${v.name}</button></form>
+        <span class="coords">(${v.x}|${v.y})</span></li>`,
+    )}</ul>
+    <h5>Links:</h5>
+    <ul>
+      <li><a href="/troops/send">Send troops</a></li>
+      <li><a href="/alliance">Alliance</a></li>
+      <li><a href="/shop/ticker">News ticker</a></li>
+    </ul>
+  </aside>`;
 }
 
 export function layout(o: PageOpts): SafeHtml {
@@ -106,45 +146,38 @@ export function layout(o: PageOpts): SafeHtml {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#3c5a26">
+<meta name="theme-color" content="#6fa52e">
 <title>${o.title} · ${config.WORLD_NAME}</title>
 <link rel="stylesheet" href="/static/style.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏰%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="/static/img/nav/dorf2.svg">
 </head>
 <body data-now="${o.now}">
-<div class="wrap">
-  <header class="top">
-    <a class="logo" href="${c ? '/village' : '/'}">🏰 ${config.WORLD_NAME}<small>${config.WORLD_SPEED !== 1 ? `x${config.WORLD_SPEED}` : ''}</small></a>
-    ${c
-      ? html`<div class="who"><a href="/account">${c.user.username}</a> · <a href="/shop" title="Credits">💎 ${fmtNum(c.credits)}</a><br><a href="/village">${c.village.name}</a> (${c.village.x}|${c.village.y})</div>`
-      : html`<div class="who"><a href="/login">Log in</a> · <a href="/register">Play free</a></div>`}
+<div id="page">
+  <header id="hd">
+    <a id="logo" href="${c ? '/fields' : '/'}">${config.WORLD_NAME}<small>${config.WORLD_SPEED !== 1 ? `SPEED x${config.WORLD_SPEED}` : 'CLASSIC WORLD'}</small></a>
+    ${topNav(o.nav, c)}
   </header>
+  ${c ? resourceBar(c.village, c.eco, o.now, c.credits) : html`<div id="res"></div>`}
   ${tickerBar(o.ticker ?? [], o.announcement)}
-  ${c ? resourceBar(c.village, c.eco, o.now) : ''}
-  ${c ? nav(o.nav, c) : ''}
-  ${o.flash ? html`<div class="flash ${o.flash.type}" role="${o.flash.type === 'error' ? 'alert' : 'status'}">${o.flash.text}</div>` : ''}
-  <main id="main">
-    ${o.body}
-  </main>
-  <footer>
-    ${c && c.villages.length > 1
-      ? html`<form method="post" action="/village/switch" class="switch"><input type="hidden" name="_csrf" value="${o.csrf}">
-          <label for="vsw" class="small">Your villages</label>
-          <div class="row"><select id="vsw" name="villageId">${c.villages.map((v) => html`<option value="${v.id}"${v.id === c.village.id ? html` selected` : ''}>${v.name} (${v.x}|${v.y})</option>`)}</select>
-          <button type="submit" class="small">Go</button></div></form><br>`
-      : ''}
-    Server time ${fmtClock(o.now)} UTC · <a href="/help">Help</a> · <a href="/stats">Rankings</a>${c ? html` · <form method="post" action="/logout" class="inline"><input type="hidden" name="_csrf" value="${o.csrf}"><button type="submit" class="small secondary">Log out</button></form>` : ''}
-  </footer>
+  <div id="cols">
+    ${leftMenu(c, o.csrf)}
+    <main id="content">
+      ${o.flash ? html`<div class="flash ${o.flash.type}" role="${o.flash.type === 'error' ? 'alert' : 'status'}">${o.flash.text}</div>` : ''}
+      ${o.body}
+    </main>
+    ${rightSide(c, o.csrf)}
+  </div>
+  <footer id="ft">Server time: ${fmtClock(o.now)} UTC · <a href="/help">Instructions</a> · <a href="/stats">Statistics</a> · ${config.WORLD_NAME}</footer>
 </div>
 <script src="/static/app.js" defer></script>
 </body>
 </html>`;
 }
 
-export function costLine(cost: Resources, have?: Resources): SafeHtml {
+export function costLine(cost: Resources, have?: Resources, extra?: SafeHtml): SafeHtml {
   return html`<div class="cost">${RESOURCE_KEYS.map(
-    (k) => html`<span class="${have && have[k] < cost[k] ? 'miss' : ''}" title="${RESOURCE_LABEL[k]}">${RESOURCE_ICON[k]} ${fmtNum(cost[k])}</span>`,
-  )}</div>`;
+    (k) => html`<span class="${have && have[k] < cost[k] ? 'miss' : ''}">${resIcon(k)}${fmtNum(cost[k])}</span>`,
+  )}${extra ?? ''}</div>`;
 }
 
 export function timer(endsAt: number, now: number, reload = true): SafeHtml {

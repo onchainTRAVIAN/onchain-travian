@@ -116,7 +116,7 @@ walletRouter.get('/shop/topup', requireAuth, (req, res) => {
   sendPage(
     req,
     res,
-    'Get credits',
+    'Buy Gold',
     topupView({
       accountId: ctx.user.id,
       balance: creditBalance(db, ctx.user.id),

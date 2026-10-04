@@ -5,7 +5,7 @@ import type { MovementView, StationedView } from '../../game/queries.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, timer } from './layout.js';
-import { movementList, unitsInline, unitsTable } from './parts.js';
+import { movementList, unitIcon, unitsInline, unitsTable } from './parts.js';
 
 export interface TroopsViewData {
   tribe: TribeId;
@@ -19,7 +19,7 @@ export interface TroopsViewData {
 }
 
 export function troopsView(d: TroopsViewData): SafeHtml {
-  return html`<h1>🚩 Rally Point</h1>
+  return html`<h1>Rally Point</h1>
     ${d.hasRally ? '' : html`<div class="note">You need a <a href="/slot/39">Rally Point</a> before you can send troops anywhere.</div>`}
     <h2>Your troops at home</h2>
     ${unitsTable(d.tribe, d.home)}
@@ -45,17 +45,17 @@ export function troopsView(d: TroopsViewData): SafeHtml {
 }
 
 const MISSIONS: { kind: SendInput['kind']; label: string; help: string }[] = [
-  { kind: 'raid', label: '💰 Raid', help: 'Grab resources and retreat. Both sides lose fewer troops.' },
-  { kind: 'attack', label: '⚔️ Attack', help: 'Fight to the end. Rams, catapults and chiefs only work here.' },
-  { kind: 'reinforce', label: '🛡️ Reinforce', help: 'Station troops to defend a village.' },
-  { kind: 'scout', label: '🔭 Scout', help: 'Spy on resources and troops (scouts only).' },
-  { kind: 'settle', label: '🧺 Settle', help: 'Found a new village with 3 settlers on an empty valley.' },
+  { kind: 'reinforce', label: 'Reinforcement', help: 'Station troops to defend a village.' },
+  { kind: 'attack', label: 'Attack: Normal', help: 'Fight to the end. Rams, catapults and chiefs only work here.' },
+  { kind: 'raid', label: 'Attack: Raid', help: 'Grab resources and retreat; fewer losses.' },
+  { kind: 'scout', label: 'Scouting', help: 'Spy on resources and troops (scouts only).' },
+  { kind: 'settle', label: 'Found new village', help: '3 settlers to an abandoned valley.' },
 ];
 
 export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean }): SafeHtml {
   const units = TRIBES[d.tribe].units;
   const kind = d.values.kind ?? 'raid';
-  return html`<h1>⚔️ Send troops</h1>
+  return html`<h1>Send troops</h1>
     <form method="post" action="/troops/send/preview">
       ${csrfField(d.csrf)}
       <fieldset class="plain"><legend><b>Target</b></legend>
@@ -81,7 +81,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
               if (have === 0) return '';
               const v = d.values.units?.[i];
               return html`<div class="unitrow">
-                <span class="uico" aria-hidden="true">${u.icon}</span>
+                <span class="uico" aria-hidden="true">${unitIcon(d.tribe, i, 20)}</span>
                 <label for="u${i}" class="small">${u.name}<br><span class="have"><a href="#u${i}" class="fill" data-fill="u${i}" data-value="${have}">all ${fmtNum(have)}</a></span></label>
                 <input id="u${i}" type="number" name="u${i}" min="0" max="${have}" value="${v && v > 0 ? v : ''}" placeholder="0" inputmode="numeric">
               </div>`;

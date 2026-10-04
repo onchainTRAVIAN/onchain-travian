@@ -59,7 +59,7 @@ shopRouter.post(
   formAction(orderId, (req, r, d) => {
     const ctx = authed(req);
     const price = finishConstructionNow(db, ctx.user.id, d.orderId, ctx.now);
-    setFlash(r, 'ok', `Construction finished for ${price} credits.`);
+    setFlash(r, 'ok', `Construction finished for ${price} Gold.`);
     r.redirect(303, backUrl(req, '/village'));
   }),
 );
@@ -69,7 +69,7 @@ shopRouter.post(
   formAction(orderId, (req, r, d) => {
     const ctx = authed(req);
     const price = finishTrainingNow(db, ctx.user.id, d.orderId, ctx.now);
-    setFlash(r, 'ok', `Training finished for ${price} credits.`);
+    setFlash(r, 'ok', `Training finished for ${price} Gold.`);
     r.redirect(303, backUrl(req, '/village'));
   }),
 );
@@ -79,7 +79,7 @@ shopRouter.post(
   formAction(orderId, (req, r, d) => {
     const ctx = authed(req);
     const price = finishResearchNow(db, ctx.user.id, d.orderId, ctx.now);
-    setFlash(r, 'ok', `Research finished for ${price} credits.`);
+    setFlash(r, 'ok', `Research finished for ${price} Gold.`);
     r.redirect(303, backUrl(req, '/village'));
   }),
 );

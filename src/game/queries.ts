@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import type { Q } from '../db/index.js';
-import { messages, movements, reports, tiles, troops, users, villages } from '../db/schema.js';
+import { heroes, messages, movements, reports, tiles, troops, users, villages } from '../db/schema.js';
 import { config } from '../config.js';
 import { distance, wrapCoord } from './rules/map.js';
 import type { TribeId, UnitCounts } from './rules/units.js';
@@ -261,4 +261,26 @@ export function playerProfile(q: Q, userId: number) {
   const user = q.select().from(users).where(eq(users.id, userId)).get();
   if (!user) return undefined;
   return { user, villages: userVillages(q, userId) };
+}
+
+export function villageRankings(q: Q, limit: number, offset: number) {
+  return q
+    .select({ id: villages.id, name: villages.name, x: villages.x, y: villages.y, pop: villages.pop, owner: users.username, ownerId: users.id })
+    .from(villages)
+    .leftJoin(users, eq(users.id, villages.userId))
+    .orderBy(desc(villages.pop), asc(villages.id))
+    .limit(limit)
+    .offset(offset)
+    .all();
+}
+
+export function heroRankings(q: Q, limit: number, offset: number) {
+  return q
+    .select({ name: heroes.name, level: heroes.level, xp: heroes.xp, owner: users.username, ownerId: users.id, tribe: users.tribe })
+    .from(heroes)
+    .innerJoin(users, eq(users.id, heroes.userId))
+    .orderBy(desc(heroes.xp), asc(heroes.id))
+    .limit(limit)
+    .offset(offset)
+    .all();
 }

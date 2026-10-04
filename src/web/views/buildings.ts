@@ -1,43 +1,57 @@
 import type { ResearchOption, ResearchOrderRow } from '../../game/actions/research.js';
 import type { OfferView } from '../../game/actions/market.js';
+import type { CelebrationOption, CelebrationRow } from '../../game/actions/celebration.js';
 import type { ExpansionCheck } from '../../game/engine/expansion.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
-import { RESOURCE_ICON, RESOURCE_KEYS, RESOURCE_LABEL, type Resources } from '../../game/rules/resources.js';
+import { RESOURCE_KEYS, RESOURCE_LABEL, type ResourceKey, type Resources } from '../../game/rules/resources.js';
+import type { TribeId } from '../../game/rules/units.js';
 import { instantPrice } from '../../game/actions/credits.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { costLine, csrfField, timer } from './layout.js';
+import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
+import { unitIcon } from './parts.js';
 
-function researchList(kind: 'academy' | 'blacksmith' | 'armoury', opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
+const KIND_TITLE = { academy: 'Research', blacksmith: 'Blacksmith upgrades', armoury: 'Armoury upgrades' } as const;
+
+function researchTable(
+  kind: 'academy' | 'blacksmith' | 'armoury',
+  tribe: TribeId,
+  opts: ResearchOption[],
+  orders: ResearchOrderRow[],
+  have: Resources,
+  csrf: string,
+  now: number,
+): SafeHtml {
   const running = orders.find((o) => o.kind === kind);
-  return html`
-    ${running
-      ? html`<div class="note">⏳ ${kind === 'academy' ? 'Researching' : 'Upgrading'} <b>${opts.find((o) => o.slot === running.unitSlot)?.unit.name ?? ''}</b>
-          ${kind !== 'academy' ? html` to level ${running.toLevel}` : ''} — done in ${timer(running.finishAt, now)}
-          <form method="post" action="/shop/finish/research" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${running.id}">
-          <button type="submit" class="small gold">⚡ ${instantPrice(running.finishAt - now)}</button></form></div>`
-      : ''}
-    ${opts.map(
-      (o) => html`<div class="card">
-        <div class="cardrow"><b>${o.unit.icon} ${o.unit.name}</b>${kind !== 'academy' ? html`<span class="small muted">level ${o.level}</span>` : o.done ? html`<span class="good small">✔ researched</span>` : ''}</div>
-        ${o.done && kind === 'academy'
-          ? ''
-          : html`${costLine(o.cost, have)}<div class="small muted">⏱ ${fmtDuration(o.timeMs)}</div>
-            ${o.available
-              ? html`<form method="post" action="/research">${csrfField(csrf)}<input type="hidden" name="kind" value="${kind}"><input type="hidden" name="unit" value="${o.slot}">
-                  <button type="submit" class="small">${kind === 'academy' ? 'Research' : `Upgrade to level ${o.level + 1}`}</button></form>`
-              : html`<div class="small warn">${o.reason}</div>`}`}
-      </div>`,
-    )}`;
+  const list = kind === 'academy' ? opts.filter((o) => !o.done) : opts;
+  const done = kind === 'academy' ? opts.filter((o) => o.done) : [];
+  return html`<table class="tb train"><thead><tr><th>${KIND_TITLE[kind]}</th><th>Action</th></tr></thead><tbody>
+    ${list.length === 0 ? html`<tr><td colspan="2" class="muted">There are no units left to research.</td></tr>` : ''}
+    ${list.map(
+      (o) => html`<tr><td><div class="tname">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b>${kind !== 'academy' ? html` <span class="small muted">(level ${o.level})</span>` : ''}</div>
+        ${costLine(o.cost, have, html`<span>${icon('res/clock', 'Duration')}${fmtDuration(o.timeMs)}</span>`)}</td>
+        <td class="center">${o.available
+          ? html`<form method="post" action="/research">${csrfField(csrf)}<input type="hidden" name="kind" value="${kind}"><input type="hidden" name="unit" value="${o.slot}">
+              <button type="submit" class="linkbtn">${kind === 'academy' ? 'Research' : 'Upgrade'}</button></form>`
+          : html`<span class="small none">${o.reason}</span>`}</td></tr>`,
+    )}
+  </tbody></table>
+  ${running
+    ? html`<table class="tb"><thead><tr><th colspan="3">In progress</th></tr></thead><tbody><tr>
+        <td>${unitIcon(tribe, running.unitSlot)} ${opts.find((o) => o.slot === running.unitSlot)?.unit.name ?? ''}${kind !== 'academy' ? html` (level ${running.toLevel})` : ''}</td>
+        <td class="num">${timer(running.finishAt, now)}</td>
+        <td><form method="post" action="/shop/finish/research">${csrfField(csrf)}<input type="hidden" name="orderId" value="${running.id}">
+          <button type="submit" class="small gold">${icon('res/gold', 'Gold', 12)} ${instantPrice(running.finishAt - now)}</button></form></td></tr></tbody></table>`
+    : ''}
+  ${done.length ? html`<p class="small muted">Researched: ${done.map((o) => html`${unitIcon(tribe, o.slot)} `)}</p>` : ''}`;
 }
 
-export function academyPanel(opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
-  return html`<h2>📜 Research</h2><p class="small muted">Research a unit once to train it in every building of this village.</p>${researchList('academy', opts, orders, have, csrf, now)}`;
+export function academyPanel(tribe: TribeId, opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
+  return researchTable('academy', tribe, opts, orders, have, csrf, now);
 }
 
-export function smithyPanel(kind: 'blacksmith' | 'armoury', opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
-  const what = kind === 'blacksmith' ? 'attack' : 'defence';
-  return html`<h2>Upgrades</h2><p class="small muted">Each level gives that unit +1.5% ${what}. Maximum level = building level.</p>${researchList(kind, opts, orders, have, csrf, now)}`;
+export function smithyPanel(kind: 'blacksmith' | 'armoury', tribe: TribeId, opts: ResearchOption[], orders: ResearchOrderRow[], have: Resources, csrf: string, now: number): SafeHtml {
+  return researchTable(kind, tribe, opts, orders, have, csrf, now);
 }
 
 export function marketPanel(d: {
@@ -48,78 +62,78 @@ export function marketPanel(d: {
   x?: number;
   y?: number;
 }): SafeHtml {
-  const resOptions = (sel: string) => RESOURCE_KEYS.map((k) => html`<option value="${k}"${k === sel ? html` selected` : ''}>${RESOURCE_ICON[k]} ${RESOURCE_LABEL[k]}</option>`);
-  return html`<h2>🐫 Merchants</h2>
-    <p>${d.merchants.free} of ${d.merchants.total} merchants free · each carries ${fmtNum(d.merchants.capacity)} · speed ${d.merchants.speed} fields/h</p>
-    <h3>Send resources</h3>
+  const resOptions = (sel: string) => RESOURCE_KEYS.map((k) => html`<option value="${k}"${k === sel ? html` selected` : ''}>${RESOURCE_LABEL[k]}</option>`);
+  const ri = (k: string) => resIcon(k as ResourceKey, 16);
+  return html`<h2>Send resources</h2>
+    <p>Merchants ${d.merchants.free}/${d.merchants.total} · each merchant can carry <b>${fmtNum(d.merchants.capacity)}</b> resources.</p>
     <form method="post" action="/market/send">
       ${csrfField(d.csrf)}
-      <div class="row">
-        <div><label for="mx">X</label><input id="mx" type="number" name="x" value="${d.x ?? ''}" required inputmode="numeric"></div>
-        <div><label for="my">Y</label><input id="my" type="number" name="y" value="${d.y ?? ''}" required inputmode="numeric"></div>
-      </div>
-      <div class="row">${RESOURCE_KEYS.map(
-        (k) => html`<div><label for="s${k}">${RESOURCE_ICON[k]}</label><input id="s${k}" type="number" name="${k}" min="0" placeholder="0" inputmode="numeric"></div>`,
-      )}</div>
-      <div class="actions"><button type="submit">Send merchants</button></div>
+      <table class="tb"><tbody>
+        ${RESOURCE_KEYS.map((k) => html`<tr><td>${resIcon(k)} ${RESOURCE_LABEL[k]}:</td><td><input id="s${k}" type="number" name="${k}" min="0" placeholder="0" inputmode="numeric"></td></tr>`)}
+        <tr><td>Village coordinates:</td><td>X <input type="number" name="x" value="${d.x ?? ''}" required inputmode="numeric"> Y <input type="number" name="y" value="${d.y ?? ''}" required inputmode="numeric"></td></tr>
+      </tbody></table>
+      <button type="submit">OK</button>
     </form>
-    <h3>Your offers</h3>
-    ${d.mine.length === 0
-      ? html`<p class="muted small">No open offers.</p>`
-      : html`<ul class="list">${d.mine.map(
-          (o) => html`<li><span class="grow">Offer ${RESOURCE_ICON[o.offerRes as keyof typeof RESOURCE_ICON]} ${fmtNum(o.offerAmount)} for ${RESOURCE_ICON[o.wantRes as keyof typeof RESOURCE_ICON]} ${fmtNum(o.wantAmount)}
-            <span class="sub">${o.merchants} merchant(s) reserved</span></span>
-            <form method="post" action="/market/cancel">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="small secondary">Cancel</button></form></li>`,
-        )}</ul>`}
-    <h3>Create an offer</h3>
+    <h2>Offer resources</h2>
     <form method="post" action="/market/offer">
       ${csrfField(d.csrf)}
-      <div class="row">
-        <div><label for="or">I offer</label><select id="or" name="offerRes">${resOptions('wood')}</select></div>
-        <div><label for="oa">Amount</label><input id="oa" type="number" name="offerAmount" min="1" required inputmode="numeric"></div>
-      </div>
-      <div class="row">
-        <div><label for="wr">I want</label><select id="wr" name="wantRes">${resOptions('iron')}</select></div>
-        <div><label for="wa">Amount</label><input id="wa" type="number" name="wantAmount" min="1" required inputmode="numeric"></div>
-      </div>
-      <label for="mh">Max travel time (hours, optional)</label>
-      <input id="mh" type="number" name="maxHours" min="1" max="96" inputmode="numeric">
-      <div class="actions"><button type="submit">Post offer</button></div>
+      <table class="tb"><tbody>
+        <tr><td>Offering:</td><td><input type="number" name="offerAmount" min="1" required inputmode="numeric"> <select name="offerRes">${resOptions('wood')}</select></td></tr>
+        <tr><td>Searching:</td><td><input type="number" name="wantAmount" min="1" required inputmode="numeric"> <select name="wantRes">${resOptions('iron')}</select></td></tr>
+        <tr><td>Max. time of transport:</td><td><input type="number" name="maxHours" min="1" max="96" inputmode="numeric"> hours</td></tr>
+      </tbody></table>
+      <button type="submit">OK</button>
     </form>
-    <h3>Offers from other players</h3>
+    ${d.mine.length
+      ? html`<table class="tb"><thead><tr><th>Own offers</th><th>Searching</th><th></th></tr></thead><tbody>${d.mine.map(
+          (o) => html`<tr><td>${ri(o.offerRes)} ${fmtNum(o.offerAmount)}</td><td>${ri(o.wantRes)} ${fmtNum(o.wantAmount)}</td>
+            <td><form method="post" action="/market/cancel">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="small secondary">cancel</button></form></td></tr>`,
+        )}</tbody></table>`
+      : ''}
+    <h2>Buy</h2>
+    <table class="tb"><thead><tr><th>Offered</th><th>Searching</th><th>Player</th><th>Duration</th><th>Action</th></tr></thead><tbody>
     ${d.others.length === 0
-      ? html`<p class="muted small">Nobody is trading right now.</p>`
-      : html`<ul class="list">${d.others.slice(0, 30).map(
-          (o) => html`<li><span class="grow">${RESOURCE_ICON[o.offerRes as keyof typeof RESOURCE_ICON]} ${fmtNum(o.offerAmount)} → ${RESOURCE_ICON[o.wantRes as keyof typeof RESOURCE_ICON]} ${fmtNum(o.wantAmount)}
-            <span class="sub">${o.owner} · ${o.villageName} · ${o.hours.toFixed(1)} h away</span></span>
-            <form method="post" action="/market/accept">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="small">Accept</button></form></li>`,
-        )}</ul>`}`;
+      ? html`<tr><td colspan="5" class="muted">There are no offers at the marketplace.</td></tr>`
+      : d.others.slice(0, 40).map(
+          (o) => html`<tr><td>${ri(o.offerRes)} ${fmtNum(o.offerAmount)}</td><td>${ri(o.wantRes)} ${fmtNum(o.wantAmount)}</td>
+            <td><a href="/map/tile?x=${o.x}&amp;y=${o.y}">${o.owner}</a></td><td class="num">${fmtDuration(o.hours * 3_600_000)}</td>
+            <td><form method="post" action="/market/accept">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="linkbtn">Accept offer</button></form></td></tr>`,
+        )}
+    </tbody></table>`;
+}
+
+export function celebrationPanel(opts: CelebrationOption[], running: CelebrationRow | undefined, have: Resources, csrf: string, now: number): SafeHtml {
+  return html`<table class="tb train"><thead><tr><th>Celebrations</th><th>Action</th></tr></thead><tbody>
+    ${opts.map(
+      (o) => html`<tr><td><b>${o.name}</b> <span class="small muted">(${fmtNum(o.culturePoints)} culture points)</span>
+        ${costLine(o.cost, have, html`<span>${icon('res/clock', 'Duration')}${fmtDuration(o.timeMs)}</span>`)}</td>
+        <td class="center">${o.available
+          ? html`<form method="post" action="/celebrate">${csrfField(csrf)}<input type="hidden" name="kind" value="${o.kind}"><button type="submit" class="linkbtn">hold</button></form>`
+          : html`<span class="small none">${o.reason}</span>`}</td></tr>`,
+    )}
+  </tbody></table>
+  ${running ? html`<p>🎉 A ${running.kind} celebration is running: ${timer(running.finishAt, now)} left (+${fmtNum(running.culturePoints)} culture points).</p>` : ''}`;
 }
 
 export function expansionPanel(check: ExpansionCheck, villages: number): SafeHtml {
-  return html`<h2>🧺 Expansion</h2>
-    <ul class="list">
-      <li><span class="grow">Culture points <span class="sub">${fmtNum(check.culturePoints)} / ${fmtNum(check.required)} needed for village ${villages + 1}</span></span></li>
-      <li><span class="grow">Expansion slots <span class="sub">${check.used} used of ${check.slots}</span></span></li>
-    </ul>
-    <p class="small muted">Train 3 settlers to found a new village on an empty valley, or a chief to conquer a village (its Residence/Palace must be destroyed first; capitals can't be taken). Slots come at Residence level 10 and 20, or Palace level 10, 15 and 20.</p>`;
+  return html`<table class="tb"><tbody>
+      <tr><th>Culture points</th><td>${fmtNum(check.culturePoints)} of ${fmtNum(check.required)} needed for village ${villages + 1}</td></tr>
+      <tr><th>Expansion slots</th><td>${check.used} used of ${check.slots}</td></tr>
+    </tbody></table>
+    <p class="small muted">Train 3 settlers to found a new village, or a chief to conquer one. Slots come at Residence level 10 and 20, Palace level 10, 15 and 20.</p>`;
 }
 
 export function embassyPanel(alliance: { id: number; name: string; tag: string } | null): SafeHtml {
-  return html`<h2>🤝 Alliance</h2>
-    ${alliance
-      ? html`<p>You are a member of <a href="/alliance/${alliance.id}">[${alliance.tag}] ${alliance.name}</a>.</p>`
-      : html`<p>You are not in an alliance yet. With an Embassy you can accept invitations; at level 3 you can found your own.</p>`}
-    <div class="actions"><a class="btn" href="/alliance">Open alliance</a></div>`;
+  return alliance
+    ? html`<p>Alliance: <a href="/alliance/${alliance.id}">[${alliance.tag}] ${alliance.name}</a></p>`
+    : html`<p>You are not in an alliance. <a href="/alliance">» Alliance overview</a></p>`;
 }
 
 export function mansionPanel(oases: { x: number; y: number; oasis: string | null }[], slots: number): SafeHtml {
-  return html`<h2>🌴 Oases</h2>
-    <p>You hold ${oases.length} of ${slots} oases (one more at level 10, 15 and 20).</p>
-    ${oases.length
-      ? html`<ul class="list">${oases.map(
-          (o) => html`<li><span class="grow"><a href="/map/tile?x=${o.x}&amp;y=${o.y}">(${o.x}|${o.y})</a> <span class="sub">${OASIS_LABEL[(o.oasis ?? 'wood') as OasisType]}</span></span></li>`,
-        )}</ul>`
-      : html`<p class="small muted">Clear an oasis within 3 fields of this village with an attack that includes your hero to capture it.</p>`}
-    <div class="actions"><a class="btn" href="/hero">🦸 Your hero</a></div>`;
+  return html`<table class="tb"><thead><tr><th colspan="2">Oases (${oases.length}/${slots})</th></tr></thead><tbody>
+    ${oases.length === 0
+      ? html`<tr><td colspan="2" class="muted">No oases annexed. Clear an oasis within 3 fields with an attack that includes your hero.</td></tr>`
+      : oases.map((o) => html`<tr><td><a href="/map/tile?x=${o.x}&amp;y=${o.y}">(${o.x}|${o.y})</a></td><td>${OASIS_LABEL[(o.oasis ?? 'wood') as OasisType]}</td></tr>`)}
+  </tbody></table>
+  <p><a href="/hero">» Your hero</a></p>`;
 }

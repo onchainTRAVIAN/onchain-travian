@@ -100,7 +100,7 @@ adminRouter.post(
   formAction(target.extend({ amount: z.coerce.number().int().min(-1_000_000).max(1_000_000).refine((n) => n !== 0, 'Enter an amount'), reason: z.string().trim().max(80).optional() }), (req, res, d) => {
     const ctx = authed(req);
     grantCredits(db, d.userId, d.amount, d.reason || 'Admin adjustment', `admin:${ctx.user.id}:${ctx.now}:${d.userId}`, ctx.now);
-    setFlash(res, 'ok', `${d.amount > 0 ? 'Granted' : 'Removed'} ${Math.abs(d.amount)} credits.`);
+    setFlash(res, 'ok', `${d.amount > 0 ? 'Granted' : 'Removed'} ${Math.abs(d.amount)} Gold.`);
     res.redirect(303, backUrl(req, '/admin'));
   }, '/admin'),
 );

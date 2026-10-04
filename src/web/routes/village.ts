@@ -13,7 +13,7 @@ import { GameError } from '../../game/errors.js';
 import { authed, setActiveVillage, setFlash } from '../session.js';
 import { fieldsView, townView, type VillageViewData } from '../views/village.js';
 import { slotView } from '../views/slot.js';
-import { formAction, intParam, loadGamePage, sendPage, type GamePage } from './helpers.js';
+import { backUrl, formAction, intParam, loadGamePage, sendPage, type GamePage } from './helpers.js';
 import type { SafeHtml } from '../html.js';
 import { academyOptions, researchOrdersOf, upgradeOptions } from '../../game/actions/research.js';
 import { listOffers, merchantInfo } from '../../game/actions/market.js';
@@ -22,7 +22,8 @@ import { membership } from '../../game/actions/alliance.js';
 import { oasesOwnedBy } from '../../game/engine/oasis.js';
 import { oasisSlots } from '../../game/rules/expansion.js';
 import { levelOf } from '../../game/engine/state.js';
-import { academyPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel } from '../views/buildings.js';
+import { academyPanel, celebrationPanel, embassyPanel, expansionPanel, mansionPanel, marketPanel, smithyPanel } from '../views/buildings.js';
+import { celebrationOptions, runningCelebration, startCelebration } from '../../game/actions/celebration.js';
 
 export const villageRouter = Router();
 
@@ -114,10 +115,12 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
   const have = stockOf(state.village);
   switch (id) {
     case 'academy':
-      return [academyPanel(academyOptions(db, state, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
+      return [academyPanel(state.tribe, academyOptions(db, state, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
     case 'blacksmith':
     case 'armoury':
-      return [smithyPanel(id, upgradeOptions(db, state, id, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
+      return [smithyPanel(id, state.tribe, upgradeOptions(db, state, id, ctx.now), researchOrdersOf(db, state.village.id), have, ctx.csrf, ctx.now)];
+    case 'townhall':
+      return [celebrationPanel(celebrationOptions(db, state), runningCelebration(db, state.village.id), have, ctx.csrf, ctx.now)];
     case 'market':
       return [
         marketPanel({
@@ -203,5 +206,15 @@ villageRouter.post(
     }
     setActiveVillage(req, data.villageId);
     res.redirect(303, '/fields');
+  }),
+);
+
+villageRouter.post(
+  '/celebrate',
+  formAction(z.object({ kind: z.enum(['small', 'great']) }), (req, res, data) => {
+    const ctx = authed(req);
+    startCelebration(db, ctx.user.id, ctx.villageId, data.kind, ctx.now);
+    setFlash(res, 'ok', 'The celebration has begun!');
+    res.redirect(303, backUrl(req, '/village'));
   }),
 );

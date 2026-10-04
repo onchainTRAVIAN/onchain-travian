@@ -6,7 +6,6 @@ import { csrfField } from './layout.js';
 
 export function landingView(stats: { players: number; online: number; villages: number }, csrf: string): SafeHtml {
   return html`<div class="hero">
-    <div class="big" aria-hidden="true">🏰</div>
     <h1>${config.WORLD_NAME}</h1>
     <p>Build your village, raise an army and conquer your neighbours in a classic strategy game for any phone or browser.</p>
   </div>
@@ -64,8 +63,8 @@ export function registerView(csrf: string, values: { username?: string; tribe?: 
       <legend><b>Choose your tribe</b> <span class="muted small">(this cannot be changed later)</span></legend>
       ${TRIBE_IDS.map((id) => {
         const t = TRIBES[id];
-        return html`<label class="choice"><input type="radio" name="tribe" value="${id}"${id === selected ? html` checked` : ''}>
-          <strong>${t.icon} ${t.name}</strong> <span class="muted small">— ${t.tagline}</span>
+        return html`<label class="choice tribepick"><img src="/static/img/units/${id}-1.svg" alt=""><input type="radio" name="tribe" value="${id}"${id === selected ? html` checked` : ''}>
+          <strong>${t.name}</strong> <span class="muted small">— ${t.tagline}</span>
           <div class="small">${t.description}</div>
           <ul>${t.strengths.map((s) => html`<li>${s}</li>`)}</ul>
         </label>`;

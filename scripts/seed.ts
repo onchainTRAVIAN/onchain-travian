@@ -37,14 +37,18 @@ function developVillage(villageId: number, fieldLevel: number) {
 const demo = await ensurePlayer('demo', 'demo12345', 'romans');
 if (demo.created) {
   developVillage(demo.villageId, 3);
-  setSlot(demo.villageId, 19, 'main', 5);
-  setSlot(demo.villageId, 20, 'warehouse', 6);
-  setSlot(demo.villageId, 21, 'granary', 5);
+  // Croplands a bit higher so the demo army doesn't starve.
+  db.update(slots).set({ level: 7 }).where(and(eq(slots.villageId, demo.villageId), eq(slots.building, 'cropland'))).run();
+  setSlot(demo.villageId, 26, 'main', 5);
+  setSlot(demo.villageId, 19, 'warehouse', 6);
+  setSlot(demo.villageId, 20, 'granary', 5);
   setSlot(demo.villageId, 22, 'barracks', 3);
   setSlot(demo.villageId, 23, 'academy', 2);
   setSlot(demo.villageId, 24, 'cranny', 4);
+  setSlot(demo.villageId, 28, 'embassy', 1);
+  setSlot(demo.villageId, 31, 'market', 1);
   setSlot(demo.villageId, 39, 'rally', 1);
-  setSlot(demo.villageId, 40, 'wall', 2);
+  setSlot(demo.villageId, 40, 'citywall', 2);
   db.update(villages).set({ wood: 2400, clay: 2600, iron: 1900, crop: 2100, resAt: now }).where(eq(villages.id, demo.villageId)).run();
   const t = emptyUnits();
   t[0] = 40;
@@ -58,7 +62,7 @@ for (const [i, name] of names.entries()) {
   const p = await ensurePlayer(name, `${name.toLowerCase()}-pass-123`, tribe);
   if (!p.created) continue;
   developVillage(p.villageId, 1 + (i % 4));
-  setSlot(p.villageId, 19, 'main', 2 + (i % 5));
+  setSlot(p.villageId, 26, 'main', 2 + (i % 5));
   db.update(users).set({ protectedUntil: i % 2 === 0 ? 0 : now + 12 * 3_600_000 }).where(eq(users.id, p.userId)).run();
   const t = emptyUnits();
   t[0] = 5 + i * 3;

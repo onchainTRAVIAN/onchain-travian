@@ -59,21 +59,21 @@ export function topupView(d: {
   csrf: string;
 }): SafeHtml {
   if (!cryptoEnabled()) {
-    return html`<h1>💎 Get credits</h1>
+    return html`<h1>Buy Gold</h1>
       <div class="note">Crypto payments are not switched on for this server yet. Admins: set <code>RPC_URL</code>, <code>PAYMENTS_ADDRESS</code> and <code>TOKEN_ADDRESS</code> in <code>.env</code>.</div>
-      <p class="small">Balance: 💎 ${fmtNum(d.balance)}</p>`;
+      <p class="small">Balance: ${fmtNum(d.balance)} Gold</p>`;
   }
   const units = (p: { asset: 'eth' | 'token'; amount: string }) =>
     parseUnitsSafe(p.amount, p.asset === 'eth' ? 18 : config.TOKEN_DECIMALS).toString();
-  return html`<h1>💎 Get credits</h1>
-    <p>Pay with ETH or <b>${config.TOKEN_SYMBOL}</b> on ${config.CHAIN_NAME}. Paying with ${config.TOKEN_SYMBOL} gives <b class="good">+${Math.round(config.TOKEN_BONUS * 100)}% more credits</b>.</p>
-    <div class="card cardrow"><span>Balance</span><span class="price">💎 ${fmtNum(d.balance)}</span></div>
+  return html`<h1>Buy Gold</h1>
+    <p>Pay with ETH or <b>${config.TOKEN_SYMBOL}</b> on ${config.CHAIN_NAME}. Paying with ${config.TOKEN_SYMBOL} gives <b class="good">+${Math.round(config.TOKEN_BONUS * 100)}% more Gold</b>.</p>
+    <div class="card cardrow"><span>Balance</span><span class="price">${fmtNum(d.balance)} Gold</span></div>
     <div data-wallet data-csrf="${d.csrf}" data-chain="${config.CHAIN_ID}" data-chain-name="${config.CHAIN_NAME}"
       data-payments="${config.PAYMENTS_ADDRESS ?? ''}" data-token="${config.TOKEN_ADDRESS ?? ''}" data-account="${d.accountId}" data-decimals="${config.TOKEN_DECIMALS}">
       <h2>Packages</h2>
       <div class="grid four">${d.packages.map(
         (p) => html`<button type="button" class="${p.asset === 'token' ? 'gold' : ''}" data-pay="${p.asset}" data-units="${units(p)}">
-          ${p.label}<br><small>💎 ${fmtNum(p.credits)}</small></button>`,
+          ${p.label}<br><small>${fmtNum(p.credits)} Gold</small></button>`,
       )}</div>
       <h2>Custom amount</h2>
       <div class="row">

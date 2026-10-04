@@ -1,6 +1,6 @@
-# Ancient Realms — WAP-style strategy game with a token economy
+# Ancient Realms — classic Travian-style strategy game with a token economy
 
-A Travian-like browser strategy game in the old WAP style: text and links, phone-first, playable without JavaScript. On top of it there is a credits shop, a paid news ticker, and a crypto layer: wallet sign-in, perks for token holders, and ETH/token top-ups.
+A browser strategy game built on the classic Travian 3.6 rules (2010–2015 era): Romans, Teutons and Gauls, exact unit and building numbers, and a classic layout (resource-field oval, village centre, round top menu). Original artwork; works on PC and phones. On top of it there is a credits shop, a paid news ticker, and a crypto layer: wallet sign-in, perks for token holders, and ETH/token top-ups.
 
 ## Run it
 
@@ -26,7 +26,7 @@ Crypto features switch off cleanly when `RPC_URL` / `PAYMENTS_ADDRESS` / `TOKEN_
 
 ## What's in the game
 
-- **Core:** 18 resource fields, 16 buildings, 3 tribes with 10 units each, training queues, a map that wraps at the edges, raids, attacks, scouting, reinforcements, battle reports, messages, rankings, beginner protection, starvation.
+- **Core:** 18 resource fields, 38 classic buildings (incl. Blacksmith/Armoury, Town Hall, bonus buildings, tribe buildings), Romans/Teutons/Gauls with 10 units each (exact T3.6 stats), training queues, a map that wraps at the edges, raids, attacks, scouting, reinforcements, battle reports, messages, rankings, beginner protection, starvation.
 - **Depth:** Academy research, Smithy upgrades, a hero (XP, skills, revive), oases with wild animals that you capture with the hero, culture points, settlers who found villages, chiefs who conquer them, a marketplace (send resources, trade offers), alliances (roles, invites, treaties, alliance chat).
 - **Social:** world chat with live refresh, plus a **paid news ticker**. Players book hourly slots and their message scrolls at the top for everyone.
 - **Premium:** an append-only credits ledger, boosts (production, build queue, training, attack, defence), instant finish, an NPC merchant.

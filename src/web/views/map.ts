@@ -7,64 +7,64 @@ import { html, type SafeHtml } from '../html.js';
 import { timer } from './layout.js';
 import { unitsTable } from './parts.js';
 
-function cellIcon(c: MapCell, myId: number): string {
+function cellImage(c: MapCell): string {
   if (c.village) {
-    if (c.village.userId === myId) return '🏰';
-    if (c.village.pop >= 300) return '🏯';
-    if (c.village.pop >= 100) return '🏘️';
-    return '🏠';
+    const p = c.village.pop;
+    return `village-${p >= 500 ? 4 : p >= 250 ? 3 : p >= 100 ? 2 : 1}`;
   }
   if (c.kind === 'oasis') {
-    switch (c.oasis as OasisType) {
-      case 'wood':
-      case 'wood_crop':
-        return '🌲';
-      case 'clay':
-      case 'clay_crop':
-        return '🟫';
-      case 'iron':
-      case 'iron_crop':
-        return '⛰️';
-      default:
-        return '💧';
-    }
+    const o = (c.oasis ?? 'wood') as OasisType;
+    if (o.startsWith('wood')) return 'oasis-wood';
+    if (o.startsWith('clay')) return 'oasis-clay';
+    if (o.startsWith('iron')) return 'oasis-iron';
+    return 'oasis-crop';
   }
-  return c.layout === '1-1-1-15' || c.layout === '3-3-3-9' ? '🌻' : '·';
+  return c.layout === '1-1-1-15' || c.layout === '3-3-3-9' ? 'valley-rich' : 'valley';
 }
 
 export function mapView(d: { grid: MapCell[][]; cx: number; cy: number; myId: number; homeX: number; homeY: number; step: number }): SafeHtml {
   const villages = d.grid.flat().filter((c) => c.village);
   const link = (x: number, y: number) => `/map?x=${x}&y=${y}`;
-  return html`<h1>🗺️ World map <span class="muted small">centre (${d.cx}|${d.cy})</span></h1>
-    <div class="tblwrap"><table class="map" aria-label="Map around ${d.cx}|${d.cy}">
-      ${d.grid.map(
-        (row) => html`<tr>${row.map((c) => {
-          const cls = [c.kind === 'oasis' ? 'oasis' : '', c.village?.userId === d.myId ? 'mine' : c.village ? 'other' : '', c.x === d.cx && c.y === d.cy ? 'center' : ''].join(' ');
-          const label = c.village ? `${c.village.name} (${c.x}|${c.y}) — ${c.village.owner}, ${c.village.pop} pop` : c.kind === 'oasis' ? `Oasis (${c.x}|${c.y})` : `Empty valley ${c.layout ?? ''} (${c.x}|${c.y})`;
-          return html`<td class="${cls}"><a href="/map/tile?x=${c.x}&amp;y=${c.y}" title="${label}" aria-label="${label}">${cellIcon(c, d.myId)}</a></td>`;
-        })}</tr>`,
-      )}
-    </table></div>
-    <div class="mapnav">
-      <span></span><a class="btn secondary small" href="${link(d.cx, d.cy + d.step)}">▲ North</a><span></span>
-      <a class="btn secondary small" href="${link(d.cx - d.step, d.cy)}">◀ West</a>
-      <a class="btn secondary small" href="${link(d.homeX, d.homeY)}">🏰 Home</a>
-      <a class="btn secondary small" href="${link(d.cx + d.step, d.cy)}">East ▶</a>
-      <span></span><a class="btn secondary small" href="${link(d.cx, d.cy - d.step)}">▼ South</a><span></span>
+  const xs = d.grid[0]?.map((c) => c.x) ?? [];
+  const ys = d.grid.map((row) => row[0]?.y ?? 0);
+  return html`<h1>Map <span class="muted">(${d.cx}|${d.cy})</span></h1>
+    <div class="mapwrap">
+      <div class="axis-y">${ys.map((y) => html`<span>${y}</span>`)}</div>
+      <table class="map" aria-label="Map around ${d.cx}|${d.cy}">
+        ${d.grid.map(
+          (row) => html`<tr>${row.map((c) => {
+            const cls = [c.village?.userId === d.myId ? 'mine' : c.village ? 'other' : '', c.x === d.cx && c.y === d.cy ? 'center' : ''].join(' ');
+            const label = c.village
+              ? `${c.village.name} (${c.x}|${c.y}) — Player: ${c.village.owner}, Population: ${c.village.pop}`
+              : c.kind === 'oasis'
+                ? `Unoccupied oasis (${c.x}|${c.y})`
+                : `Abandoned valley (${c.x}|${c.y}) ${c.layout ?? ''}`;
+            return html`<td class="${cls}"><a href="/map/tile?x=${c.x}&amp;y=${c.y}" title="${label}"><img src="/static/img/map/${cellImage(c)}.svg" alt="${label}"></a></td>`;
+          })}</tr>`,
+        )}
+      </table>
+      <div class="axis-x">${xs.map((x) => html`<span>${x}</span>`)}</div>
     </div>
-    <p class="legend">🏰 yours · 🏠 🏘️ 🏯 other villages (by size) · 🌲 🟫 ⛰️ 💧 oases · 🌻 crop-rich valley · · empty valley</p>
-    <form method="get" action="/map" class="row">
-      <div><label for="mx">X</label><input id="mx" type="number" name="x" value="${d.cx}" inputmode="numeric"></div>
-      <div><label for="my">Y</label><input id="my" type="number" name="y" value="${d.cy}" inputmode="numeric"></div>
-      <div><label>&nbsp;</label><button type="submit" class="block">Go</button></div>
+    <div class="mapnav">
+      <span></span><a class="btn secondary small" href="${link(d.cx, d.cy + d.step)}">▲ north</a><span></span>
+      <a class="btn secondary small" href="${link(d.cx - d.step, d.cy)}">◀ west</a>
+      <a class="btn secondary small" href="${link(d.homeX, d.homeY)}">home</a>
+      <a class="btn secondary small" href="${link(d.cx + d.step, d.cy)}">east ▶</a>
+      <span></span><a class="btn secondary small" href="${link(d.cx, d.cy - d.step)}">▼ south</a><span></span>
+    </div>
+    <form method="get" action="/map" class="actions center-actions">
+      <label for="mx">x</label><input id="mx" type="number" name="x" value="${d.cx}" inputmode="numeric">
+      <label for="my">y</label><input id="my" type="number" name="y" value="${d.cy}" inputmode="numeric">
+      <button type="submit" class="small">OK</button>
     </form>
-    <h2>Villages in view</h2>
+    <table class="tb"><thead><tr><th>Village</th><th>Player</th><th class="num">Population</th><th>Coordinates</th></tr></thead><tbody>
     ${villages.length === 0
-      ? html`<p class="muted small">No villages nearby.</p>`
-      : html`<ul class="list">${villages.map(
-          (c) => html`<li><span class="grow"><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a> <span class="sub">${c.village?.owner} · ${TRIBES[c.village?.tribe ?? 'romans'].name} · ${fmtNum(c.village?.pop ?? 0)} pop</span></span><span class="small muted">(${c.x}|${c.y})</span></li>`,
-        )}</ul>`}
-    <p class="small muted">The world spans ${-config.MAP_RADIUS}…${config.MAP_RADIUS} and wraps around at the edges.</p>`;
+      ? html`<tr><td colspan="4" class="muted">No villages in this area.</td></tr>`
+      : villages.map(
+          (c) => html`<tr><td><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a></td><td>${c.village?.owner} <span class="small muted">${TRIBES[c.village?.tribe ?? 'romans'].name}</span></td>
+            <td class="num">${fmtNum(c.village?.pop ?? 0)}</td><td>(${c.x}|${c.y})</td></tr>`,
+        )}
+    </tbody></table>`;
 }
 
 export interface TileViewData {

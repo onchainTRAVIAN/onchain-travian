@@ -1,24 +1,29 @@
-import { RESOURCE_ICON, RESOURCE_KEYS, sumRes } from '../../game/rules/resources.js';
+import { RESOURCE_KEYS, sumRes } from '../../game/rules/resources.js';
 import { TRIBES } from '../../game/rules/units.js';
 import type { BattleReportData, ReportData, ReportSide } from '../../game/engine/reports.js';
 import type { ReportFilter } from '../../game/queries.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { csrfField } from './layout.js';
+import { csrfField, icon, resIcon } from './layout.js';
 import { paginate, unitsTable } from './parts.js';
 
-const KIND_ICON: Record<string, string> = {
-  attack_won: '🟢⚔️',
-  attack_lost: '🔴⚔️',
-  defense_won: '🟢🛡️',
-  defense_lost: '🔴🛡️',
-  scout: '🔭',
-  reinforce: '🛡️',
-  return: '↩️',
-  trade: '🐫',
-  settle: '🧺',
-  starvation: '💀',
+const KIND_ICON: Record<string, [string, string]> = {
+  attack_won: ['ui/win', 'Won as attacker'],
+  attack_lost: ['ui/loss', 'Lost as attacker'],
+  defense_won: ['ui/win', 'Won as defender'],
+  defense_lost: ['ui/loss', 'Lost as defender'],
+  scout: ['ui/scout', 'Scouting'],
+  reinforce: ['ui/reinforce', 'Reinforcement'],
+  return: ['ui/return', 'Return'],
+  trade: ['ui/merchant', 'Trade'],
+  settle: ['ui/outgoing', 'New village'],
+  starvation: ['ui/loss', 'Starvation'],
 };
+
+function kindIcon(kind: string): SafeHtml {
+  const [path, alt] = KIND_ICON[kind] ?? ['ui/report', 'Report'];
+  return icon(path, alt, 16);
+}
 
 const FILTERS: { key: ReportFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -43,19 +48,21 @@ export function reportListView(d: {
     )}</nav>
     ${d.rows.length === 0
       ? html`<p class="muted">No reports yet. Battles, scouting and reinforcements show up here.</p>`
-      : html`<ul class="list">${d.rows.map(
-          (r) => html`<li class="${r.isRead ? '' : 'unread'}"><span aria-hidden="true">${KIND_ICON[r.kind] ?? '📜'}</span>
-            <span class="grow"><a href="/reports/${r.id}">${r.title}</a><span class="sub">${fmtAgo(r.createdAt, d.now)}</span></span></li>`,
-        )}</ul>`}
+      : html`<table class="tb"><thead><tr><th></th><th>Subject:</th><th>Sent:</th></tr></thead><tbody>${d.rows.map(
+          (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td>${kindIcon(r.kind)}</td>
+            <td><a href="/reports/${r.id}">${r.title}</a>${r.isRead ? '' : html` <span class="small bad">(new)</span>`}</td><td class="nowrap">${fmtAgo(r.createdAt, d.now)}</td></tr>`,
+        )}</tbody></table>`}
     ${paginate(`/reports?f=${d.filter}`, d.page, d.hasMore)}
     ${d.rows.length > 0
       ? html`<form method="post" action="/reports/read-all" class="actions">${csrfField(d.csrf)}<button type="submit" class="small secondary">Mark all as read</button></form>`
       : ''}`;
 }
 
-function sideBlock(title: string, s: ReportSide, hideUnits = false): SafeHtml {
-  return html`<h3>${title}: <a href="/map/tile?x=${s.x}&amp;y=${s.y}">${s.villageName}</a> <span class="muted small">${s.username} · ${TRIBES[s.tribe].name}</span></h3>
-    ${hideUnits ? html`<p class="muted small">No information — none of your troops survived to tell.</p>` : unitsTable(s.tribe, s.units, s.losses, { label: 'Troops' })}`;
+function sideBlock(title: string, s: ReportSide, hideUnits = false, extra?: SafeHtml): SafeHtml {
+  return html`<table class="report"><thead><tr><th class="side ${title === 'Attacker' ? 'att' : 'def'}">${title}</th>
+      <th><a href="/stats">${s.username}</a> from the village <a href="/map/tile?x=${s.x}&amp;y=${s.y}">${s.villageName}</a> <span class="small muted">(${TRIBES[s.tribe].name})</span></th></tr></thead>
+    <tbody><tr><td colspan="2">${hideUnits ? html`<p class="muted small">No information was gathered — none of your soldiers survived.</p>` : unitsTable(s.tribe, s.units, s.losses)}</td></tr>
+    ${extra ?? ''}</tbody></table>`;
 }
 
 function battleView(r: BattleReportData, viewerId: number): SafeHtml {
@@ -74,21 +81,21 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
           ? 'Defeat'
           : 'The village was overrun';
   return html`<p class="${won ? 'good' : 'bad'}"><b>${headline}</b></p>
-    ${sideBlock('Attacker', r.attacker)}
+    ${sideBlock('Attacker', r.attacker, false, r.mode !== 'scout' && sumRes(r.loot) > 0
+      ? html`<tr><th>Bounty</th><td><div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.loot[k])}</span>`)}</div>
+          <span class="small muted">${fmtNum(sumRes(r.loot))}/${fmtNum(r.capacity)} carried</span></td></tr>`
+      : undefined)}
     ${r.mode !== 'scout'
       ? r.defenders.length === 0
         ? html`<h3>Defender</h3><p class="muted small">The village was undefended.</p>`
         : r.defenders.map((s, i) => sideBlock(i === 0 ? 'Defender' : 'Reinforcement', s, r.defendersHidden && isAttacker))
       : ''}
-    ${r.mode !== 'scout' && sumRes(r.loot) > 0
-      ? html`<h3>💰 Loot</h3><div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${RESOURCE_ICON[k]} ${fmtNum(r.loot[k])}</span>`)}</div>
-        <p class="small muted">${fmtNum(sumRes(r.loot))} / ${fmtNum(r.capacity)} carried</p>`
-      : ''}
+
     ${r.wall ? html`<p>🧱 City Wall: level ${r.wall.from} → <b>${r.wall.to}</b></p>` : ''}
     ${r.building ? html`<p>☄️ ${r.building.name}: level ${r.building.from} → <b>${r.building.to}</b></p>` : ''}
     ${r.scout?.success && isAttacker
       ? html`<h3>🔭 Intelligence</h3>
-        ${r.scout.resources ? html`<div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${RESOURCE_ICON[k]} ${fmtNum(r.scout?.resources?.[k] ?? 0)}</span>`)}</div>` : ''}
+        ${r.scout.resources ? html`<div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.scout?.resources?.[k] ?? 0)}</span>`)}</div>` : ''}
         <p class="small">City Wall level ${r.scout.wallLevel ?? 0} · Cranny hides ${fmtNum(r.scout.crannyHides ?? 0)} of each</p>
         ${(r.scout.troops ?? []).length === 0 ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units))}`
       : ''}
@@ -110,7 +117,7 @@ export function reportView(d: { id: number; title: string; createdAt: number; da
       <a href="/map/tile?x=${r.to.x}&amp;y=${r.to.y}">${r.to.villageName}</a> (${r.to.username}).</p>${unitsTable(r.from.tribe, r.units, undefined, { hideEmpty: true })}`;
   else if (r.type === 'trade')
     body = html`<p><a href="/map/tile?x=${r.fromX}&amp;y=${r.fromY}">${r.fromName}</a> → <a href="/map/tile?x=${r.toX}&amp;y=${r.toY}">${r.toName}</a></p>
-      <div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${RESOURCE_ICON[k]} ${fmtNum(r.goods[k])}</span>`)}</div>`;
+      <div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.goods[k])}</span>`)}</div>`;
   else if (r.type === 'settle')
     body = r.success
       ? html`<p class="good">🧺 Your settlers founded <b>${r.villageName ?? 'a new village'}</b> at <a href="/map/tile?x=${r.x}&amp;y=${r.y}">(${r.x}|${r.y})</a>.</p>`

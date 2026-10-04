@@ -70,13 +70,36 @@ export function messageView(d: {
 /* ---------- Rankings ---------- */
 
 const RANK_TABS: { key: RankKind; label: string; col: string }[] = [
-  { key: 'population', label: 'Population', col: 'Pop.' },
+  { key: 'population', label: 'Players', col: 'Population' },
   { key: 'attack', label: 'Attackers', col: 'Points' },
   { key: 'defense', label: 'Defenders', col: 'Points' },
   { key: 'raid', label: 'Raiders', col: 'Loot' },
 ];
 
-const allianceTab = html`<a href="/alliances">Alliances</a>`;
+const extraTabs = (on: string) =>
+  html`<a href="/stats/villages" class="${on === 'villages' ? 'on' : ''}">Villages</a><a href="/stats/heroes" class="${on === 'heroes' ? 'on' : ''}">Heroes</a><a href="/alliances">Alliances</a>`;
+
+function statsTabs(on: string): SafeHtml {
+  return html`<nav class="tabs" aria-label="Ranking type">${RANK_TABS.map((t) => html`<a href="/stats?k=${t.key}" class="${t.key === on ? 'on' : ''}">${t.label}</a>`)}${extraTabs(on)}</nav>`;
+}
+
+export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; hasMore: boolean }): SafeHtml {
+  return html`<h1>Statistics</h1>${statsTabs('villages')}
+    <table class="tb"><thead><tr><th class="num">#</th><th>Village</th><th>Player</th><th class="num">Population</th><th>Coordinates</th></tr></thead><tbody>
+    ${d.rows.map(
+      (r, i) => html`<tr><td class="num">${d.offset + i + 1}.</td><td><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.name}</a></td>
+        <td>${r.ownerId ? html`<a href="/player/${r.ownerId}">${r.owner}</a>` : '-'}</td><td class="num">${fmtNum(r.pop)}</td><td>(${r.x}|${r.y})</td></tr>`,
+    )}</tbody></table>${paginate('/stats/villages', d.page, d.hasMore)}`;
+}
+
+export function heroRankingView(d: { rows: { name: string; level: number; xp: number; owner: string; ownerId: number; tribe: TribeId }[]; offset: number; page: number; hasMore: boolean }): SafeHtml {
+  return html`<h1>Statistics</h1>${statsTabs('heroes')}
+    <table class="tb"><thead><tr><th class="num">#</th><th>Hero</th><th>Player</th><th class="num">Level</th><th class="num">Experience</th></tr></thead><tbody>
+    ${d.rows.map(
+      (r, i) => html`<tr><td class="num">${d.offset + i + 1}.</td><td>${r.name}</td><td><a href="/player/${r.ownerId}">${r.owner}</a></td>
+        <td class="num">${r.level}</td><td class="num">${fmtNum(r.xp)}</td></tr>`,
+    )}</tbody></table>${paginate('/stats/heroes', d.page, d.hasMore)}`;
+}
 
 export function rankingView(d: {
   kind: RankKind;
@@ -88,13 +111,13 @@ export function rankingView(d: {
 }): SafeHtml {
   const tab = RANK_TABS.find((t) => t.key === d.kind) ?? RANK_TABS[0];
   const value = (r: (typeof d.rows)[number]) => (d.kind === 'attack' ? r.off : d.kind === 'defense' ? r.def : d.kind === 'raid' ? r.loot : r.pop);
-  return html`<h1>🏆 Rankings</h1>
-    <nav class="tabs" aria-label="Ranking type">${RANK_TABS.map((t) => html`<a href="/stats?k=${t.key}" class="${t.key === d.kind ? 'on' : ''}">${t.label}</a>`)}${allianceTab}</nav>
+  return html`<h1>Statistics</h1>
+    ${statsTabs(d.kind)}
     <div class="tblwrap"><table>
       <tr><th class="num">#</th><th>Player</th><th class="num">Villages</th><th class="num">${tab?.col ?? ''}</th></tr>
       ${d.rows.map(
         (r, i) => html`<tr class="${r.id === d.myId ? 'me' : ''}"><td class="num">${d.offset + i + 1}</td>
-          <td><a href="/player/${r.id}">${r.username}</a> <span class="muted small">${TRIBES[r.tribe].icon}</span></td>
+          <td><a href="/player/${r.id}">${r.username}</a> <span class="muted small">${TRIBES[r.tribe].name}</span></td>
           <td class="num">${r.villages}</td><td class="num">${fmtNum(value(r))}</td></tr>`,
       )}
     </table></div>
@@ -190,7 +213,7 @@ export function helpView(): SafeHtml {
       <li><span class="grow">🧺 <b>New villages</b>: collect culture points, build a Residence to level 10, train 3 settlers and send them to an empty valley. Chiefs can take over enemy villages.</span></li>
       <li><span class="grow">🐫 <b>Marketplace</b>: send resources to friends or trade on the market.</span></li>
       <li><span class="grow">🤝 <b>Alliances</b>: join with an Embassy, found one at Embassy level 3, chat privately and sign treaties.</span></li>
-      <li><span class="grow">💎 <b>Shop</b>: credits buy boosts, instant finishing and news-ticker messages. Holding the game token gives permanent perks.</span></li>
+      <li><span class="grow">💰 <b>Plus &amp; Gold</b>: Gold buys boosts, instant finishing and news-ticker messages. Holding the game token gives permanent perks.</span></li>
     </ul>
     <h2>This world</h2>
     <p>Speed x${config.WORLD_SPEED}. New players are protected for ${config.PROTECTION_HOURS} hours. The map wraps around at the edges.</p>`;

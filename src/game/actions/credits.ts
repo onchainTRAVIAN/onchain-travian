@@ -24,7 +24,7 @@ export function grantCredits(q: Q, userId: number, amount: number, reason: strin
 function spend(q: Q, userId: number, cost: number, reason: string, now: number): void {
   if (cost <= 0) return;
   const bal = creditBalance(q, userId);
-  if (bal < cost) throw new GameError(`This costs ${cost} credits, you have ${bal}. Top up in the shop.`);
+  if (bal < cost) throw new GameError(`This costs ${cost} Gold, you have ${bal}. Buy Gold under Plus & Gold.`);
   q.insert(creditsLedger)
     .values({ userId, amount: -cost, reason, idemKey: `spend:${userId}:${now}:${Math.random().toString(36).slice(2)}`, createdAt: now })
     .run();

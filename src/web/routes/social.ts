@@ -6,10 +6,10 @@ import { reports } from '../../db/schema.js';
 import { renameVillage } from '../../game/actions/account.js';
 import { deleteMessage, inbox, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
 import { parseReport } from '../../game/engine/reports.js';
-import { playerProfile, playerRank, rankings, reportList, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
+import { heroRankings, playerProfile, playerRank, rankings, reportList, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
 import { authed, setFlash } from '../session.js';
 import { reportListView, reportView } from '../views/reports.js';
-import { accountView, helpView, inboxView, messageView, playerView, rankingView, writeView } from '../views/social.js';
+import { accountView, heroRankingView, helpView, inboxView, messageView, playerView, rankingView, villageRankingView, writeView } from '../views/social.js';
 import { formAction, intParam, loadGamePage, pageParam, sendPage } from './helpers.js';
 import { requireAuth } from '../session.js';
 
@@ -172,6 +172,20 @@ socialRouter.get('/stats', (req, res) => {
     rankingView({ kind, rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE, myId: req.ctx.user?.id ?? null }),
     { nav: 'stats', chrome },
   );
+});
+
+socialRouter.get('/stats/villages', (req, res) => {
+  const p = pageParam(req.query.page);
+  const rows = villageRankings(db, PAGE + 1, (p - 1) * PAGE);
+  const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
+  sendPage(req, res, 'Statistics', villageRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE }), { nav: 'stats', chrome });
+});
+
+socialRouter.get('/stats/heroes', (req, res) => {
+  const p = pageParam(req.query.page);
+  const rows = heroRankings(db, PAGE + 1, (p - 1) * PAGE);
+  const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
+  sendPage(req, res, 'Statistics', heroRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE }), { nav: 'stats', chrome });
 });
 
 socialRouter.get('/player/:id', (req, res) => {

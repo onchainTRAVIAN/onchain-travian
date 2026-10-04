@@ -71,8 +71,8 @@ export async function indexDeposits(db: DB, client: PublicClient, now: number, p
             .values({
               fromUserId: null,
               toUserId: user.id,
-              subject: `💎 ${credits} credits added`,
-              body: `Your payment of ${depositLabel(args.asset, args.amount)} has arrived. ${credits} credits were added to your account. Thank you!\n\nTransaction: ${log.transactionHash}`,
+              subject: `${credits} Gold added`,
+              body: `Your payment of ${depositLabel(args.asset, args.amount)} has arrived. ${credits} Gold were added to your account. Thank you!\n\nTransaction: ${log.transactionHash}`,
               createdAt: now,
             })
             .run();

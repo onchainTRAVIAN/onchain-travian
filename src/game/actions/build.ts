@@ -80,6 +80,10 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   const no = (reason: string, waitMs?: number): BuildOption => ({ ...base, canBuild: false, reason, waitMs });
 
   if (base.maxed) return no(`Fully upgraded (level ${maxLevel})`);
+  if (def.tribe && def.tribe !== state.tribe) return no(`Only the ${TRIBES[def.tribe].name} can build this`);
+  if (def.capitalOnly && !state.village.isCapital) return no('Can only be built in your capital');
+  if (def.nonCapital && state.village.isCapital) return no('Cannot be built in your capital');
+
   if (pendingHere) return no('Already under construction');
 
   const kind = slotKind(slot);
@@ -105,9 +109,6 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   for (const req of def.requires) {
     if (levelOf(state, req.building) < req.level) return no(`Requires ${BUILDINGS[req.building].name} level ${req.level}`);
   }
-  if (def.tribe && def.tribe !== state.tribe) return no(`Only the ${TRIBES[def.tribe].name} can build this`);
-  if (def.capitalOnly && !state.village.isCapital) return no('Can only be built in your capital');
-  if (def.nonCapital && state.village.isCapital) return no('Cannot be built in your capital');
   if (def.onePerAccount && !slotRow?.building && state.userId !== null && ownsElsewhere(q, state.userId, state.village.id, def.id)) {
     return no(`You already have a ${def.name} in another village`);
   }
