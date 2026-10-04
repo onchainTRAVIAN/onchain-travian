@@ -152,7 +152,7 @@ export function updateDescription(db: DB, userId: number, description: string): 
 }
 
 export function allianceMembersList(q: Q, allianceId: number) {
-  const pop = sql<number>`coalesce((select sum(${villages.pop}) from ${villages} where ${villages.userId} = ${users.id}), 0)`;
+  const pop = sql<number>`coalesce((select sum(v.pop) from villages v where v.user_id = "users"."id"), 0)`;
   return q
     .select({
       userId: users.id,
@@ -161,7 +161,7 @@ export function allianceMembersList(q: Q, allianceId: number) {
       role: allianceMembers.role,
       lastSeenAt: users.lastSeenAt,
       pop,
-      villages: sql<number>`(select count(*) from ${villages} where ${villages.userId} = ${users.id})`,
+      villages: sql<number>`(select count(*) from villages v where v.user_id = "users"."id")`,
     })
     .from(allianceMembers)
     .innerJoin(users, eq(users.id, allianceMembers.userId))
@@ -171,13 +171,13 @@ export function allianceMembersList(q: Q, allianceId: number) {
 }
 
 export function allianceRankings(q: Q, limit: number, offset: number) {
-  const pop = sql<number>`coalesce((select sum(v.pop) from villages v join alliance_members am on am.user_id = v.user_id where am.alliance_id = ${alliances.id}), 0)`;
+  const pop = sql<number>`coalesce((select sum(v.pop) from villages v join alliance_members am on am.user_id = v.user_id where am.alliance_id = "alliances"."id"), 0)`;
   return q
     .select({
       id: alliances.id,
       name: alliances.name,
       tag: alliances.tag,
-      members: sql<number>`(select count(*) from ${allianceMembers} where ${allianceMembers.allianceId} = ${alliances.id})`,
+      members: sql<number>`(select count(*) from alliance_members m where m.alliance_id = "alliances"."id")`,
       pop,
     })
     .from(alliances)

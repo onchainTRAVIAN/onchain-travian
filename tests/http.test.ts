@@ -173,3 +173,15 @@ describe('playing through the web', () => {
     expect(sent.text).toContain('Hello');
   });
 });
+
+describe('rankings data', () => {
+  it('counts each player’s own villages and population', async () => {
+    const { rankings } = await import('../src/game/queries.js');
+    const rows = rankings(db, 'population', 100, 0);
+    expect(rows.length).toBeGreaterThan(1);
+    for (const r of rows) expect(r.villages).toBe(1);
+    const pops = new Set(rows.map((r) => r.pop));
+    expect(rows.every((r) => r.pop > 0 && r.pop < 50)).toBe(true);
+    expect(pops.size).toBeGreaterThanOrEqual(1);
+  });
+});

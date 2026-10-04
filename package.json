@@ -10,7 +10,8 @@
     "seed": "tsx scripts/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "chain:deploy": "tsx scripts/deploy-local.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",

@@ -182,6 +182,16 @@ export function helpView(): SafeHtml {
       <li><span class="grow"><b>Reinforce</b>: station your troops in a friend's village to defend it.</span></li>
     </ul>
     <p>Infantry and cavalry are defended against differently. Check each unit's 🛡️ numbers (vs infantry / vs cavalry) when choosing defenders.</p>
+    <h2>Growing your empire</h2>
+    <ul class="list">
+      <li><span class="grow">🦸 <b>Hero</b>: joins your attacks, gains experience and skill points. Put points into strength, bonuses or resources.</span></li>
+      <li><span class="grow">📜 <b>Academy &amp; Smithy</b>: research new units, then upgrade them for +1.5% per level.</span></li>
+      <li><span class="grow">🌴 <b>Oases</b>: clear the animals with your hero to capture an oasis (Hero's Mansion level 10+) for bonus production.</span></li>
+      <li><span class="grow">🧺 <b>New villages</b>: collect culture points, build a Residence to level 10, train 3 settlers and send them to an empty valley. Chiefs can take over enemy villages.</span></li>
+      <li><span class="grow">🐫 <b>Marketplace</b>: send resources to friends or trade on the market.</span></li>
+      <li><span class="grow">🤝 <b>Alliances</b>: join with an Embassy, found one at Embassy level 3, chat privately and sign treaties.</span></li>
+      <li><span class="grow">💎 <b>Shop</b>: credits buy boosts, instant finishing and news-ticker messages. Holding the game token gives permanent perks.</span></li>
+    </ul>
     <h2>This world</h2>
     <p>Speed x${config.WORLD_SPEED}. New players are protected for ${config.PROTECTION_HOURS} hours. The map wraps around at the edges.</p>`;
 }

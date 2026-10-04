@@ -31,8 +31,8 @@ adminRouter.get('/admin', (req, res) => {
   const players = db
     .select({
       id: users.id, username: users.username, role: users.role, banned: users.banned, mutedUntil: users.mutedUntil, lastSeenAt: users.lastSeenAt,
-      credits: sql<number>`coalesce((select sum(amount) from credits_ledger c where c.user_id = ${users.id}), 0)`,
-      villages: sql<number>`(select count(*) from ${villages} where ${villages.userId} = ${users.id})`,
+      credits: sql<number>`coalesce((select sum(c.amount) from credits_ledger c where c.user_id = "users"."id"), 0)`,
+      villages: sql<number>`(select count(*) from villages v where v.user_id = "users"."id")`,
     })
     .from(users)
     .where(q ? like(users.usernameLower, `%${q.toLowerCase().replace(/[%_]/g, '')}%`) : undefined)

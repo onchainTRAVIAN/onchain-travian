@@ -129,8 +129,8 @@ export function troopsAway(q: Q, villageId: number): StationedView[] {
 export type RankKind = 'population' | 'attack' | 'defense' | 'raid';
 
 export function rankings(q: Q, kind: RankKind, limit: number, offset: number) {
-  const pop = sql<number>`coalesce((select sum(${villages.pop}) from ${villages} where ${villages.userId} = ${users.id}), 0)`;
-  const vcount = sql<number>`(select count(*) from ${villages} where ${villages.userId} = ${users.id})`;
+  const pop = sql<number>`coalesce((select sum(v.pop) from villages v where v.user_id = "users"."id"), 0)`;
+  const vcount = sql<number>`(select count(*) from villages v where v.user_id = "users"."id")`;
   const orderCol =
     kind === 'attack' ? users.offPoints : kind === 'defense' ? users.defPoints : kind === 'raid' ? users.lootTotal : pop;
   return q

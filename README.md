@@ -1,41 +1,59 @@
-# Ancient Realms — WAP-style strategy game
+# Ancient Realms — WAP-style strategy game with a token economy
 
-A Travian-like browser strategy game in the old WAP style: text and links, phone-first, playable with no JavaScript.
+A Travian-like browser strategy game in the old WAP style: text and links, phone-first, playable without JavaScript. On top of it there is a credits shop, a paid news ticker, and a crypto layer: wallet sign-in, perks for token holders, and ETH/token top-ups.
 
 ## Run it
 
 ```bash
 npm install
-cp .env.example .env        # adjust world speed, map size, etc.
-npm run seed                # optional: demo account "demo" / "demo12345" + neighbours
+cp .env.example .env        # world speed, map size, prices, crypto settings
+npm run seed                # optional demo data: log in as "demo" / "demo12345"
 npm run dev                 # http://localhost:3000
 ```
 
-Production: `npm run build && npm start` (set `NODE_ENV=production` and a real `SESSION_SECRET`).
+The first account that registers becomes the admin (`/admin`). For production: `npm run build && npm start` with `NODE_ENV=production` and a real `SESSION_SECRET`.
 
-The first registered account becomes admin.
+### Crypto on a local chain
+
+```bash
+anvil --block-time 2                          # terminal 1 (Foundry)
+(cd contracts && forge build)                 # compile the contracts once
+npm run chain:deploy                          # deploys token + GamePayments, prints .env lines
+# paste the printed lines into .env, then: npm run dev
+```
+
+Crypto features switch off cleanly when `RPC_URL` / `PAYMENTS_ADDRESS` / `TOKEN_ADDRESS` are empty. To deploy to a testnet, see `contracts/README.md`.
+
+## What's in the game
+
+- **Core:** 18 resource fields, 16 buildings, 3 tribes with 10 units each, training queues, a map that wraps at the edges, raids, attacks, scouting, reinforcements, battle reports, messages, rankings, beginner protection, starvation.
+- **Depth:** Academy research, Smithy upgrades, a hero (XP, skills, revive), oases with wild animals that you capture with the hero, culture points, settlers who found villages, chiefs who conquer them, a marketplace (send resources, trade offers), alliances (roles, invites, treaties, alliance chat).
+- **Social:** world chat with live refresh, plus a **paid news ticker**. Players book hourly slots and their message scrolls at the top for everyone.
+- **Premium:** an append-only credits ledger, boosts (production, build queue, training, attack, defence), instant finish, an NPC merchant.
+- **Crypto:**
+  - Sign-In with Ethereum, for linking a wallet and for logging in.
+  - Token-holder tiers (Bronze to Diamond, by share of supply or top rank). A tier uses the *lowest* of your last N balance checks, so a short buy doesn't qualify.
+  - ETH and token top-ups through the `GamePayments` contract. Tokens give +20% credits.
+  - An indexer credits each deposit exactly once, after confirmations, and sends the player an in-game message.
+- **Admin:** stats, announcements, ban/mute, grant credits, ticker moderation (removing a message refunds the player), deleting chat messages.
+
+## How it works
+
+- **Stack:** TypeScript (strict), Express 5, server-rendered HTML, SQLite (better-sqlite3 + Drizzle), Zod, Argon2id, helmet with a strict CSP, viem, and Foundry for the contracts.
+- **Lazy simulation:** resources, training, loyalty, hero health and culture points are calculated from timestamps whenever they are read (`src/game/engine/state.ts`).
+- **Ordered events:** construction, research, troop arrivals and hero revivals run strictly in time order (`processDue` in `src/game/engine/events.ts`). A 1-second worker runs them, and every request runs them first.
+- **Pure rules:** the game rules in `src/game/rules/` are pure functions with unit tests.
+- **One bonus pipeline:** every bonus is a row in `perks`. Shop boosts and holder tiers write rows there, and the game reads them through `getModifiers()` (`src/game/modifiers.ts`), with caps.
+- **Crypto code:** the indexer is `src/crypto/indexer.ts`, holder tiers are `src/crypto/holders.ts` and `src/crypto/tiers.ts`, and wallet sign-in is `src/crypto/wallet.ts`. The background workers are in `src/crypto/worker.ts`.
 
 ## Scripts
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server with reload |
-| `npm test` | Unit + game-flow + HTTP tests (in-memory DB, time-warp clock) |
-| `npm run typecheck` | TypeScript strict check |
-| `npm run db:generate` | New migration after editing `src/db/schema.ts` |
+| `npm test` | Unit, game-flow, HTTP and on-chain tests (anvil tests run when Foundry is installed) |
+| `npm run typecheck` | Strict TypeScript check |
+| `npm run db:generate` | Create a migration after editing `src/db/schema.ts` |
 | `npm run seed` | Demo data |
-
-## How it works
-
-- **Stack:** TypeScript, Express 5, server-rendered HTML, SQLite (better-sqlite3 + Drizzle), Zod, Argon2id, helmet.
-- **Lazy economy:** villages store resources plus a timestamp; amounts are computed on read (`src/game/engine/state.ts`).
-- **Event processing:** construction and troop arrivals are processed strictly in time order (`processDue` in `src/game/engine/events.ts`), by a 1-second worker and before every request.
-- **Rules are pure functions** in `src/game/rules/` (buildings, units, battle, map) and fully unit-tested.
-- **Modifiers** (`src/game/modifiers.ts`): every bonus (premium, token-holder tiers, events) is a row in `perks`. Formulas read the folded `Modifiers`, so new bonus sources need no game-logic changes.
-
-## Roadmap
-
-1. ✅ Core game: fields, buildings, training, map, raids/attacks/scouting/reinforcements, reports, messages, rankings, protection.
-2. Full game: tribe research and smithy upgrades, heroes, oases, settlers and conquering, marketplace, alliances, admin panel.
-3. Credits shop (off-chain): instant finish, production boosts, extra build slot.
-4. Crypto layer: wallet login (SIWE), token-holder perk tiers, ETH/token top-ups with on-chain indexer.
+| `npm run chain:deploy` | Deploy the contracts to a local anvil node |
+| `cd contracts && forge test` | Contract tests |

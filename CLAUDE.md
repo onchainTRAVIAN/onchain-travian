@@ -9,3 +9,6 @@ WAP-style Travian-like game. TS strict, Express 5 server-rendered HTML (no clien
 - Views use the escape-by-default `html``` tag (`src/web/html.ts`). No inline styles/scripts (CSP is `'self'`).
 - Schema change → edit `src/db/schema.ts` then `npm run db:generate`.
 - Verify with `npm run typecheck && npm test`.
+- Crypto: `src/crypto/` (SIWE wallet, holder tiers, deposit indexer, workers). Contract in `contracts/` (Foundry, `~/.foundry/bin`). ABIs copied to `src/crypto/*.ts` — re-copy after contract changes.
+- Correlated subqueries: reference the outer table as raw `"users"."id"` — drizzle drops table qualifiers on single-table selects.
+- Local chain E2E: `anvil --block-time 2`, `npm run chain:deploy`, paste env lines.
