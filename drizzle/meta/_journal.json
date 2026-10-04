@@ -36,6 +36,13 @@
       "when": 1791131240749,
       "tag": "0004_weekly",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791132054022,
+      "tag": "0005_protection",
+      "breakpoints": true
     }
   ]
 }

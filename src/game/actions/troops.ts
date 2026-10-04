@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { heroes, movements, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
@@ -131,8 +131,12 @@ export function sendTroops(db: DB, userId: number, villageId: number, input: Sen
     const units = cleanUnits(input.units);
     setTroopsAt(tx, villageId, villageId, subUnits(troopsAt(tx, villageId, villageId), units));
     if (input.kind !== 'reinforce' && input.kind !== 'settle' && preview.targetKind === 'village') {
-      // Attacking another player ends your own beginner protection.
-      tx.update(users).set({ protectedUntil: now }).where(eq(users.id, userId)).run();
+      // Attacking another player ends your own protection (beginner or bought); the 8 h wait
+      // before buying protection again counts from now.
+      tx.update(users)
+        .set({ protectedUntil: sql`min(${users.protectedUntil}, ${now})`, boughtProtectionEnd: sql`min(${users.boughtProtectionEnd}, ${now})` })
+        .where(eq(users.id, userId))
+        .run();
     }
     if (input.hero) tx.update(heroes).set({ status: 'moving', locationId: null }).where(eq(heroes.userId, userId)).run();
     const catapultTarget =

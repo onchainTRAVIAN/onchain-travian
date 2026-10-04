@@ -19,6 +19,8 @@ export const users = sqliteTable(
     createdAt: integer('created_at').notNull(),
     lastSeenAt: integer('last_seen_at').notNull(),
     protectedUntil: integer('protected_until').notNull(),
+    /** End of the last protection bought with Gold (another can be bought 8 h after it ends). */
+    boughtProtectionEnd: integer('bought_protection_end').notNull().default(0),
     offPoints: integer('off_points').notNull().default(0),
     defPoints: integer('def_points').notNull().default(0),
     lootTotal: integer('loot_total').notNull().default(0),

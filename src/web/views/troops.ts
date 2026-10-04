@@ -4,7 +4,7 @@ import type { SendInput, SendPreview } from '../../game/actions/troops.js';
 import type { MovementView, StationedView } from '../../game/queries.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { csrfField, timer } from './layout.js';
+import { csrfField, icon, timer } from './layout.js';
 import { movementList, unitIcon, unitsInline, unitsTable } from './parts.js';
 
 export interface TroopsViewData {
@@ -52,7 +52,7 @@ const MISSIONS: { kind: SendInput['kind']; label: string; help: string }[] = [
   { kind: 'settle', label: 'Found new village', help: '3 settlers to an abandoned valley.' },
 ];
 
-export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean }): SafeHtml {
+export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<SendInput>; csrf: string; heroHome: boolean; carryMult: number }): SafeHtml {
   const units = TRIBES[d.tribe].units;
   const kind = d.values.kind ?? 'attack';
   // Classic layout: three columns of units (infantry | cavalry | siege & specials).
@@ -62,7 +62,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
     if (!u) return html`<td></td>`;
     const have = d.home[i] ?? 0;
     const v = d.values.units?.[i];
-    return html`<td class="nowrap">${unitIcon(d.tribe, i)} <label class="sr" for="u${i}">${u.name}</label><input class="w30" id="u${i}" type="number" name="u${i}" min="0" max="${have}" value="${v && v > 0 ? v : ''}" inputmode="numeric"${have === 0 ? html` disabled` : ''}>
+    return html`<td class="nowrap">${unitIcon(d.tribe, i)} <label class="sr" for="u${i}">${u.name}</label><input class="w30 su-in" id="u${i}" type="number" name="u${i}" min="0" max="${have}" value="${v && v > 0 ? v : ''}" inputmode="numeric" data-carry="${Math.floor(u.carry * d.carryMult * 100) / 100}"${have === 0 ? html` disabled` : ''}>
       ${have > 0 ? html`<a href="#u${i}" class="fill" data-fill="u${i}" data-value="${have}">(${fmtNum(have)})</a>` : html`<span class="none">(0)</span>`}</td>`;
   };
   return html`<h1>Send troops</h1>
@@ -72,6 +72,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
         ${[0, 1, 2, 3].map((r) => html`<tr>${cols.map((c) => (c[r] !== undefined ? cell(c[r] as number) : html`<td></td>`))}</tr>`)}
         ${d.heroHome ? html`<tr><td colspan="3"><label>${unitIcon(d.tribe, 10)} <input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> Hero</label></td></tr>` : ''}
       </tbody></table>
+      <p class="carryline">${icon('res/wood', 'Resources', 18, 12)} Can carry: <b id="carry-total">0</b> resources</p>
       <table class="plain"><tbody><tr>
         <td>${MISSIONS.map((m) => html`<label class="block"><input type="radio" name="kind" value="${m.kind}"${m.kind === kind ? html` checked` : ''}> ${m.label}</label>`)}</td>
         <td><b>x</b> <input type="text" name="x" value="${d.values.x ?? ''}" class="w30" required inputmode="numeric">
@@ -86,7 +87,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
     </form>`;
 }
 
-export function confirmView(d: { tribe: TribeId; input: SendInput; preview: SendPreview; csrf: string; now: number }): SafeHtml {
+export function confirmView(d: { tribe: TribeId; input: SendInput; preview: SendPreview; csrf: string; now: number; carry: number }): SafeHtml {
   const m = MISSIONS.find((x) => x.kind === d.input.kind);
   const arrive = d.now + d.preview.travelMs;
   return html`<h1>Confirm: ${m?.label ?? d.input.kind}</h1>
@@ -94,6 +95,9 @@ export function confirmView(d: { tribe: TribeId; input: SendInput; preview: Send
       <li><span class="grow">Target <span class="sub">${d.preview.targetName} (${d.input.x}|${d.input.y}) · ${d.preview.targetOwner}</span></span></li>
       <li><span class="grow">Distance <span class="sub">${d.preview.distance.toFixed(1)} fields</span></span></li>
       <li><span class="grow">Travel time <span class="sub">${fmtDuration(d.preview.travelMs)} — arrives in ${timer(arrive, d.now, false)}</span></span></li>
+      ${d.input.kind !== 'scout' && d.input.kind !== 'reinforce' && d.input.kind !== 'settle'
+        ? html`<li><span class="grow">Can carry <span class="sub">${fmtNum(d.carry)} resources</span></span></li>`
+        : ''}
     </ul>
     <h2>Troops</h2>
     ${d.input.units.some((n) => n > 0) ? unitsTable(d.tribe, d.input.units, undefined, { hideEmpty: true }) : ''}

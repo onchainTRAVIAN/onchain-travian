@@ -477,3 +477,4 @@ ul.list li img.avatar.sm { margin-right: 8px; }
 #vmap2.js.pt { cursor: pointer; }
 #vmap2 .bld.hov img { filter: drop-shadow(0 0 1.5px #71d000) drop-shadow(0 0 3px #71d000) brightness(1.06); }
 #vmap2.wallhov .wall { filter: drop-shadow(0 0 2px #71d000) brightness(1.05); }
+.carryline { margin: 4px 0 8px; font-size: 12px; } .carryline img { vertical-align: middle; }

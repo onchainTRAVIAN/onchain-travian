@@ -10,7 +10,7 @@ const EnvSchema = z.object({
   WORLD_SPEED: z.coerce.number().positive().max(1000).default(1),
   TROOP_SPEED: z.coerce.number().positive().max(1000).default(1),
   MAP_RADIUS: z.coerce.number().int().min(5).max(400).default(50),
-  PROTECTION_HOURS: z.coerce.number().min(0).max(24 * 30).default(72),
+  PROTECTION_HOURS: z.coerce.number().min(0).max(24 * 30).default(24),
 
   // Premium / news ticker
   TICKER_PRICE_PER_HOUR: z.coerce.number().int().min(0).default(20),

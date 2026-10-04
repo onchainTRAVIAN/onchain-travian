@@ -1,5 +1,5 @@
 import { config } from '../../config.js';
-import { TRANSFER_MAX, NPC_TRADE_PRICE, PRODUCTS, TICKER_MAX_HOURS, TICKER_MAX_LENGTH } from '../../game/actions/credits.js';
+import { PROTECTION_PRICE, TRANSFER_MAX, NPC_TRADE_PRICE, PRODUCTS, TICKER_MAX_HOURS, TICKER_MAX_LENGTH } from '../../game/actions/credits.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
 import { fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
@@ -12,6 +12,7 @@ export function shopView(d: {
   capacity: Resources;
   history: { amount: number; reason: string; createdAt: number }[];
   sendTo: string;
+  protection: { protectedUntil: number; canBuyAt: number };
   csrf: string;
   now: number;
 }): SafeHtml {
@@ -21,6 +22,16 @@ export function shopView(d: {
     <div class="card cardrow"><span>Your balance</span><span class="price">${fmtNum(d.balance)} Gold</span>
       <a class="btn gold" href="/shop/topup">Buy Gold</a></div>
     <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold.</p>
+    <h2 id="protection">Protection</h2>
+    <div class="card"><div class="cardrow"><b>🛡️ 24 hours of protection</b><span class="price">${PROTECTION_PRICE} Gold</span></div>
+      <div class="small">Nobody can attack, raid or scout your villages for 24 hours. Attacking another player ends it early.
+        After bought protection ends you can buy it again only after 8 hours.</div>
+      ${d.protection.protectedUntil > d.now
+        ? html`<div class="small good">You are protected for ${timer(d.protection.protectedUntil, d.now, false)}.</div>`
+        : d.protection.canBuyAt > d.now
+          ? html`<div class="small bad">You can buy protection again in ${timer(d.protection.canBuyAt, d.now, false)}.</div>`
+          : html`<form method="post" action="/shop/protection">${csrfField(d.csrf)}<button type="submit" class="small${d.balance < PROTECTION_PRICE ? ' secondary' : ''}">Buy protection</button></form>`}
+    </div>
     <h2 id="gold">Send Gold to a player</h2>
     <form method="post" action="/shop/transfer" class="block">${csrfField(d.csrf)}
       <table class="tb"><tbody>

@@ -15,6 +15,9 @@
 - Oases hold resources: unoccupied oases gather their bonus resources (40/h per 25% × speed, cap 1000 × speed up to 80k, start half full); winning attacks/raids loot them; scouts and the oasis page show the stock. Held oases don't gather.
 - Player activity is private: no "last seen"/online status on profiles or alliance member lists (admin panel only).
 - Training table shows a live total (resources, upkeep, time) for everything entered; shortages in red.
+- Beginner protection lasts 24 h (was 72). Protection can be bought for 80 Gold (24 h): not while protected, and only 8 h after the last bought protection ended; attacking ends it early.
+- "Finish now" costs 1 Gold per started minute left (min 2), so longer jobs cost more.
+- Send-troops form shows the live carry capacity; the confirm page shows it too.
 - Founding an alliance costs 280 Gold (`ALLIANCE_FOUND_PRICE`), on top of Embassy level 3.
 - Live world speed x100 (`WORLD_SPEED`/`TROOP_SPEED` Railway variables).
 

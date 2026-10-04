@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `bought_protection_end` integer DEFAULT 0 NOT NULL;

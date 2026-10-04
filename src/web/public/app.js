@@ -172,6 +172,21 @@
     );
   }
 
+  // Send troops: live carry capacity of the selected units.
+  var carryEl = document.getElementById('carry-total');
+  if (carryEl) {
+    var sendForm = carryEl.closest('form');
+    var recarry = function () {
+      var t = 0;
+      var ins = sendForm.querySelectorAll('.su-in');
+      for (var i = 0; i < ins.length; i++) t += Math.max(0, Math.floor(Number(ins[i].value) || 0)) * (Number(ins[i].getAttribute('data-carry')) || 0);
+      carryEl.textContent = Math.floor(t).toLocaleString('en-US');
+    };
+    sendForm.addEventListener('input', recarry);
+    sendForm.addEventListener('click', function () { setTimeout(recarry, 0); });
+    recarry();
+  }
+
   // Training: live total cost of everything entered in the training table.
   var tt = document.getElementById('train-total');
   if (tt) {

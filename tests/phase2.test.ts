@@ -32,6 +32,8 @@ import {
   grantCredits,
   npcTrade,
   transferGold,
+  buyProtection,
+  instantPrice,
   removeTicker,
   tickerAvailability,
 } from '../src/game/actions/credits.js';
@@ -50,6 +52,7 @@ type P = { userId: number; villageId: number };
 let a: P;
 let b: P;
 let c: P;
+let d: P;
 
 function setSlot(villageId: number, slot: number, building: string, level: number) {
   db.update(slots).set({ building, level }).where(and(eq(slots.villageId, villageId), eq(slots.slot, slot))).run();
@@ -88,6 +91,7 @@ beforeAll(async () => {
   a = await registerPlayer(db, { username: 'Arthur', password: 'password123', tribe: 'romans' }, clock.now());
   b = await registerPlayer(db, { username: 'Bjorn', password: 'password123', tribe: 'teutons' }, clock.now());
   c = await registerPlayer(db, { username: 'Celt', password: 'password123', tribe: 'gauls' }, clock.now());
+  d = await registerPlayer(db, { username: 'Dido', password: 'password123', tribe: 'gauls' }, clock.now());
   for (const p of [a, b, c]) {
     setSlot(p.villageId, 26, 'main', 10);
     setSlot(p.villageId, 20, 'warehouse', 20);
@@ -418,6 +422,28 @@ describe('credits shop & news ticker', () => {
     expect(() => transferGold(db, a.userId, 'nobody', 1, '', clock.now())).toThrow(/No player/);
     expect(() => transferGold(db, a.userId, 'Bjorn', fromBefore, '', clock.now())).toThrow(/only have/);
     expect(creditBalance(db, a.userId)).toBe(fromBefore - 120);
+  });
+
+  it('protection for Gold: 24 h, not while protected, and only 8 h after the last bought one ended', () => {
+    const u = d;
+    grantCredits(db, u.userId, 400, 'test', 'prot-grant', clock.now());
+    db.update(users).set({ protectedUntil: clock.now() + HOUR }).where(eq(users.id, u.userId)).run();
+    expect(() => buyProtection(db, u.userId, clock.now())).toThrow(/already protected/);
+    clock.advance(HOUR + 1000);
+    const bal = creditBalance(db, u.userId);
+    const until = buyProtection(db, u.userId, clock.now());
+    expect(until - clock.now()).toBe(24 * HOUR);
+    expect(creditBalance(db, u.userId)).toBe(bal - 80);
+    clock.advance(24 * HOUR + 1000);
+    expect(() => buyProtection(db, u.userId, clock.now())).toThrow(/buy protection again in 8 h/);
+    clock.advance(8 * HOUR);
+    expect(buyProtection(db, u.userId, clock.now())).toBeGreaterThan(clock.now());
+  });
+
+  it('finish-now price grows with the time left (1 Gold per minute)', () => {
+    expect(instantPrice(30_000)).toBe(2);
+    expect(instantPrice(45 * 60_000)).toBe(45);
+    expect(instantPrice(2 * HOUR + 1)).toBe(121);
   });
 
   it('players book ticker slots that show for everyone and can be removed with a refund', () => {

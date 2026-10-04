@@ -37,8 +37,9 @@ export function creditHistory(q: Q, userId: number, limit = 30) {
 /* ---------- Instant finish ---------- */
 
 /** 2 credits per hour left, minimum 2. */
+/** "Finish now" price: 1 Gold per started minute still to go (at least 2). */
 export function instantPrice(msLeft: number): number {
-  return Math.max(2, Math.ceil((msLeft / 3_600_000) * 2));
+  return Math.max(2, Math.ceil(msLeft / 60_000));
 }
 
 export function finishConstructionNow(db: DB, userId: number, orderId: number, now: number): number {
@@ -202,6 +203,36 @@ export function npcTrade(db: DB, userId: number, villageId: number, target: Reso
     spend(tx, userId, NPC_TRADE_PRICE, 'NPC merchant', now);
     setResources(tx, villageId, result);
     return result;
+  });
+}
+
+/* ---------- Protection for Gold ---------- */
+
+export const PROTECTION_PRICE = 80;
+export const PROTECTION_BUY_MS = 24 * 3_600_000;
+/** After bought protection ends you stay attackable at least this long before buying again. */
+export const PROTECTION_COOLDOWN_MS = 8 * 3_600_000;
+
+export function protectionStatus(q: Q, userId: number, now: number): { protectedUntil: number; canBuyAt: number } {
+  const u = q.select({ p: users.protectedUntil, b: users.boughtProtectionEnd }).from(users).where(eq(users.id, userId)).get();
+  const protectedUntil = u?.p ?? 0;
+  const canBuyAt = Math.max(protectedUntil, (u?.b ?? 0) > 0 ? (u?.b ?? 0) + PROTECTION_COOLDOWN_MS : 0);
+  return { protectedUntil, canBuyAt };
+}
+
+/** Buy 24 h of protection: only while unprotected, and not within 8 h after the last bought one ended. */
+export function buyProtection(db: DB, userId: number, now: number): number {
+  return db.transaction((tx) => {
+    const st = protectionStatus(tx, userId, now);
+    assertGame(st.protectedUntil <= now, 'You are already protected');
+    if (st.canBuyAt > now) {
+      const mins = Math.ceil((st.canBuyAt - now) / 60_000);
+      throw new GameError(`You can buy protection again in ${Math.floor(mins / 60)} h ${mins % 60} min`);
+    }
+    spend(tx, userId, PROTECTION_PRICE, 'Protection (24 h)', now);
+    const until = now + PROTECTION_BUY_MS;
+    tx.update(users).set({ protectedUntil: until, boughtProtectionEnd: until }).where(eq(users.id, userId)).run();
+    return until;
   });
 }
 

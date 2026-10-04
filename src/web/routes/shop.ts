@@ -15,6 +15,8 @@ import {
   myTickerBookings,
   npcTrade,
   transferGold,
+  buyProtection,
+  protectionStatus,
   tickerAvailability,
 } from '../../game/actions/credits.js';
 import { capacityFor, stockOf } from '../../game/engine/state.js';
@@ -39,12 +41,23 @@ shopRouter.get('/shop', (req, res_) => {
       capacity: capacityFor(page.state),
       history: creditHistory(db, ctx.user.id, 20),
       sendTo: typeof req.query.to === 'string' ? req.query.to.slice(0, 20) : '',
+      protection: protectionStatus(db, ctx.user.id, ctx.now),
       csrf: ctx.csrf,
       now: ctx.now,
     }),
     { nav: 'shop', chrome: page.chrome },
   );
 });
+
+shopRouter.post(
+  '/shop/protection',
+  formAction(z.object({}), (req, r) => {
+    const ctx = authed(req);
+    buyProtection(db, ctx.user.id, ctx.now);
+    setFlash(r, 'ok', 'Your villages are protected for the next 24 hours.');
+    r.redirect(303, '/shop#protection');
+  }, '/shop#protection'),
+);
 
 shopRouter.post(
   '/shop/transfer',
