@@ -607,6 +607,7 @@ function handleMovement(q: Q, mv: MovementRow): void {
       handleReinforce(q, mv, t);
       break;
     case 'return':
+    case 'delivery':
       handleReturn(q, mv, t);
       break;
     case 'settle':

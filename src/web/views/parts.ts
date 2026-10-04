@@ -8,7 +8,7 @@ import {
 } from '../../game/rules/buildings.js';
 import { crannyCapacity, fieldProduction, storageCapacity, trapCapacity } from '../../game/rules/production.js';
 import { oasisSlots, expansionSlots } from '../../game/rules/expansion.js';
-import { TRIBES, totalUnits, type TribeId, type UnitCounts } from '../../game/rules/units.js';
+import { TRIBES, emptyUnits, totalUnits, type TribeId, type UnitCounts } from '../../game/rules/units.js';
 import type { MovementView } from '../../game/queries.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
@@ -62,6 +62,7 @@ const KIND_LABEL: Record<MovementView['kind'], string> = {
   settle: 'Found new village',
   trade: 'Merchants',
   merchant_return: 'Merchants returning',
+  delivery: 'Gold market delivery',
 };
 
 /** Classic "Troop movements" table. */
@@ -76,7 +77,7 @@ export function movementList(moves: MovementView[], now: number): SafeHtml {
       ico = icon(hostile ? 'ui/incoming' : m.kind === 'trade' ? 'ui/merchant' : 'ui/reinforce', hostile ? 'Incoming attack' : KIND_LABEL[m.kind], 16);
       text = hostile ? html`<b class="bad">Incoming ${m.kind === 'scout' ? 'scouts' : 'attack'}</b> from ${link}` : html`${KIND_LABEL[m.kind]} from ${link}`;
     } else if (m.direction === 'home') {
-      ico = icon(m.kind === 'merchant_return' ? 'ui/merchant' : 'ui/return', KIND_LABEL[m.kind], 16);
+      ico = icon(m.kind === 'merchant_return' || (m.kind === 'delivery' && !hasTroops(m.units ?? emptyUnits())) ? 'ui/merchant' : 'ui/return', KIND_LABEL[m.kind], 16);
       text = html`${KIND_LABEL[m.kind]} from ${m.otherName}`;
     } else {
       const map: Record<string, string> = { reinforce: 'ui/reinforce', scout: 'ui/scout', trade: 'ui/merchant', raid: 'ui/raid', settle: 'ui/outgoing' };

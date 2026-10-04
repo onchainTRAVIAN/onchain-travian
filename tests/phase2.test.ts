@@ -40,6 +40,7 @@ import { getModifiers } from '../src/game/modifiers.js';
 import { emptyUnits } from '../src/game/rules/units.js';
 import { res } from '../src/game/rules/resources.js';
 import { config } from '../src/config.js';
+import { buyListing, cancelListing, listResources, listTroops } from '../src/game/actions/goldmarket.js';
 
 const HOUR = 3_600_000;
 const T0 = Date.UTC(2026, 2, 1);
@@ -418,5 +419,54 @@ describe('starvation', () => {
     const left = home(c.villageId)[0] ?? 0;
     expect(left).toBeLessThan(100_000);
     expect(db.select().from(reports).where(and(eq(reports.userId, c.userId), eq(reports.kind, 'starvation'))).all()).toHaveLength(1);
+  });
+});
+
+describe('gold market', () => {
+  it('sells resources and troops for Gold with escrow, tribe rule and delivery', async () => {
+    const r2 = await registerPlayer(db, { username: 'Romulus', password: 'password123', tribe: 'romans' }, clock.now());
+    grantCredits(db, b.userId, 1000, 'test', 'gm-grant-b', clock.now());
+    grantCredits(db, r2.userId, 1000, 'test', 'gm-grant-r2', clock.now());
+    // Resources: escrowed on listing.
+    db.update(villages).set({ wood: 3000, clay: 3000, iron: 3000, crop: 3000, resAt: clock.now() }).where(eq(villages.id, a.villageId)).run();
+    const resId = listResources(db, a.userId, a.villageId, res(2000, 0, 0, 0), 50, clock.now());
+    expect(Math.floor(village(a.villageId).wood)).toBe(1000);
+    expect(() => listResources(db, a.userId, a.villageId, res(5000, 0, 0, 0), 50, clock.now())).toThrow(/Not enough wood/);
+    expect(() => buyListing(db, a.userId, a.villageId, resId, clock.now())).toThrow(/own offer/);
+    const sellerBefore = creditBalance(db, a.userId);
+    db.update(villages).set({ wood: 0, resAt: clock.now() }).where(eq(villages.id, b.villageId)).run();
+    const { arriveAt } = buyListing(db, b.userId, b.villageId, resId, clock.now());
+    expect(creditBalance(db, a.userId)).toBe(sellerBefore + 50);
+    expect(() => buyListing(db, r2.userId, r2.villageId, resId, clock.now())).toThrow(/faster/);
+    clock.advance(arriveAt - clock.now() + 1000);
+    processDue(db, clock.now());
+    expect(village(b.villageId).wood).toBeGreaterThanOrEqual(2000);
+    // Troops: only own tribe may buy; settlers/chiefs can't be sold.
+    const units = emptyUnits();
+    units[0] = 50;
+    units[9] = 1;
+    setTroopsAt(db, a.villageId, a.villageId, units);
+    const chief = emptyUnits();
+    chief[9] = 1;
+    expect(() => listTroops(db, a.userId, a.villageId, chief, 10, clock.now())).toThrow(/Settlers and chiefs/);
+    const sell = emptyUnits();
+    sell[0] = 30;
+    const trId = listTroops(db, a.userId, a.villageId, sell, 100, clock.now());
+    expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(20);
+    expect(() => buyListing(db, b.userId, b.villageId, trId, clock.now())).toThrow(/Only Romans/);
+    const del = buyListing(db, r2.userId, r2.villageId, trId, clock.now());
+    clock.advance(del.arriveAt - clock.now() + 1000);
+    processDue(db, clock.now());
+    expect(troopsAt(db, r2.villageId, r2.villageId)[0]).toBe(30);
+    // Not enough Gold → nothing changes; cancel returns escrow.
+    const sell2 = emptyUnits();
+    sell2[0] = 20;
+    const expensive = listTroops(db, a.userId, a.villageId, sell2, 999_999, clock.now());
+    const r2Gold = creditBalance(db, r2.userId);
+    expect(() => buyListing(db, r2.userId, r2.villageId, expensive, clock.now())).toThrow(/This costs/);
+    expect(creditBalance(db, r2.userId)).toBe(r2Gold);
+    cancelListing(db, a.userId, expensive, clock.now());
+    expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(20);
+    expect(() => cancelListing(db, a.userId, expensive, clock.now())).toThrow(/closed/);
   });
 });

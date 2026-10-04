@@ -151,7 +151,7 @@ export const movements = sqliteTable(
   'movements',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    kind: text('kind', { enum: ['attack', 'raid', 'reinforce', 'scout', 'return', 'settle', 'trade', 'merchant_return'] }).notNull(),
+    kind: text('kind', { enum: ['attack', 'raid', 'reinforce', 'scout', 'return', 'settle', 'trade', 'merchant_return', 'delivery'] }).notNull(),
     fromVillageId: integer('from_village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
     toVillageId: integer('to_village_id').references(() => villages.id, { onDelete: 'set null' }),
     /** Where the troops set out from (for returns: the village they are coming back from). */
@@ -353,6 +353,26 @@ export const creditsLedger = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [uniqueIndex('credits_idem_idx').on(t.idemKey), index('credits_user_idx').on(t.userId)],
+);
+
+/** Gold market: resources or troops a player sells to others for Gold. Goods are held in escrow. */
+export const marketListings = sqliteTable(
+  'market_listings',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    sellerId: integer('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    villageId: integer('village_id').references(() => villages.id, { onDelete: 'set null' }),
+    kind: text('kind', { enum: ['resources', 'troops'] }).notNull(),
+    tribe: text('tribe').notNull(),
+    goods: text('goods').notNull(),
+    units: text('units').notNull(),
+    price: integer('price').notNull(),
+    status: text('status', { enum: ['open', 'sold', 'cancelled'] }).notNull().default('open'),
+    buyerId: integer('buyer_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull(),
+    closedAt: integer('closed_at'),
+  },
+  (t) => [index('market_open_idx').on(t.status, t.kind), index('market_seller_idx').on(t.sellerId)],
 );
 
 /** Paid news-ticker messages shown to every player during their time slot. */

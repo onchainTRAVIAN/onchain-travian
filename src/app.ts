@@ -14,6 +14,7 @@ import { economyRouter } from './web/routes/economy.js';
 import { heroRouter } from './web/routes/hero.js';
 import { communityRouter } from './web/routes/community.js';
 import { shopRouter } from './web/routes/shop.js';
+import { goldmarketRouter } from './web/routes/goldmarket.js';
 import { adminRouter } from './web/routes/admin.js';
 import { walletRouter } from './web/routes/wallet.js';
 import { sendPage } from './web/routes/helpers.js';
@@ -60,13 +61,14 @@ export function createApp() {
   app.use(communityRouter);
   app.use(adminRouter);
   app.use(walletRouter);
-  app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map', '/research', '/market', '/hero', '/shop', '/celebrate'], requireAuth);
+  app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map', '/research', '/market', '/hero', '/shop', '/celebrate', '/goldmarket'], requireAuth);
   app.use(villageRouter);
   app.use(troopsRouter);
   app.use(mapRouter);
   app.use(economyRouter);
   app.use(heroRouter);
   app.use(shopRouter);
+  app.use(goldmarketRouter);
 
   app.use((req: Request, res: Response) => {
     sendPage(req, res, 'Not found', html`<h1>Lost in the wilderness</h1><p>This page does not exist.</p><div class="actions"><a class="btn" href="/">Back to safety</a></div>`, {

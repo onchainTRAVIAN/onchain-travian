@@ -59,7 +59,7 @@ export function villageMovements(q: Q, villageId: number): MovementView[] {
   const out: MovementView[] = [];
   for (const r of rows) {
     const from = info.get(r.fromVillageId);
-    if (r.kind === 'return' || r.kind === 'merchant_return') {
+    if (r.kind === 'return' || r.kind === 'merchant_return' || r.kind === 'delivery') {
       if (r.fromVillageId !== villageId) continue;
       out.push({
         id: r.id, kind: r.kind, hero: r.hero, merchants: r.merchants, direction: 'home', arriveAt: r.arriveAt, departAt: r.departAt,

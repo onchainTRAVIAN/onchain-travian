@@ -20,6 +20,7 @@ export function shopView(d: {
   return html`<h1>Plus &amp; Gold</h1>
     <div class="card cardrow"><span>Your balance</span><span class="price">${fmtNum(d.balance)} Gold</span>
       <a class="btn gold" href="/shop/topup">Buy Gold</a></div>
+    <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold.</p>
     <h2 id="gold">Send Gold to a player</h2>
     <form method="post" action="/shop/transfer" class="block">${csrfField(d.csrf)}
       <table class="tb"><tbody>

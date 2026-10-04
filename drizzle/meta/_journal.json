@@ -15,6 +15,13 @@
       "when": 1791127597582,
       "tag": "0001_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791128487472,
+      "tag": "0002_goldmarket",
+      "breakpoints": true
     }
   ]
 }

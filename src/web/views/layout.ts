@@ -5,6 +5,8 @@ import type { UserRow } from '../../game/actions/account.js';
 import type { Flash } from '../session.js';
 import { fmtClock, fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
+import { avatarUrl } from '../../game/actions/avatar.js';
+import { TRIBES, type TribeId } from '../../game/rules/units.js';
 
 export interface Chrome {
   user: UserRow;
@@ -95,33 +97,52 @@ function resourceBar(v: VillageRow, eco: Economy, now: number, credits: number):
   </tr></table></div>`;
 }
 
-function sideNavi(c: Chrome | null | undefined, csrf: string): SafeHtml {
+function mi(href: string, ico: string, label: SafeHtml | string, on = false): SafeHtml {
+  return html`<a href="${href}" class="${on ? 'on' : ''}"${on ? html` aria-current="page"` : ''}><img src="/static/img/menu/${ico}.svg" width="16" height="16" alt="">${label}</a>`;
+}
+
+function sideNavi(c: Chrome | null | undefined, csrf: string, nav: NavKey | undefined): SafeHtml {
   if (!c) {
-    return html`<div id="side_navi"><div class="grp"><a href="/">Home</a><a href="/login">Login</a><a href="/register">Register</a></div><div class="grp"><a href="/stats">Statistics</a><a href="/help">Instructions</a></div></div>`;
+    return html`<nav id="side_navi" class="sp" aria-label="Menu"><div class="sp-body">
+      ${mi('/', 'home', 'Home')}${mi('/login', 'profile', 'Login')}${mi('/register', 'plus', 'Register')}
+      <div class="sp-sep"></div>${mi('/stats', 'stats', 'Statistics')}${mi('/help', 'help', 'Instructions')}</div></nav>`;
   }
-  return html`<div id="side_navi">
-    <div class="phead">${c.user.username}</div>
-    <div class="grp"><a href="/fields">Home</a><a href="/help">Instructions</a><a href="/account">Profile</a>
-      <form method="post" action="/logout"><input type="hidden" name="_csrf" value="${csrf}"><button type="submit" class="lnk">Log out</button></form></div>
-    <div class="grp"><a href="/troops">Rally Point</a><a href="/hero">Hero${c.heroAlert ? html` <span class="c2">(!)</span>` : ''}</a><a href="/alliance">Alliance</a><a href="/chat">Chat</a></div>
-    <div class="grp"><a href="/shop"><span class="c1">Plus</span> &amp; Gold</a><a href="/wallet">Wallet</a>${c.user.role === 'admin' ? html`<a href="/admin">Admin</a>` : ''}</div>
-  </div>`;
+  const u = c.user;
+  return html`<nav id="side_navi" class="sp" aria-label="Menu">
+    <a class="sp-user" href="/account" title="Your profile"><img class="avatar" src="${avatarUrl(u)}" width="30" height="30" alt="">
+      <span><b>${u.username}</b><small>${TRIBES[u.tribe as TribeId]?.name ?? ''}</small></span></a>
+    <div class="sp-body">
+      <div class="sp-label">Village</div>
+      ${mi('/fields', 'home', 'Home', nav === 'fields' || nav === 'village')}
+      ${mi('/troops', 'rally', 'Rally point', nav === 'troops')}
+      ${mi('/hero', 'hero', html`Hero${c.heroAlert ? html` <span class="sp-badge">!</span>` : ''}`, nav === 'hero')}
+      ${mi('/goldmarket', 'market', 'Gold market')}
+      <div class="sp-label">Community</div>
+      ${mi('/alliance', 'alliance', 'Alliance', nav === 'alliance')}
+      ${mi('/chat', 'chat', 'Chat', nav === 'chat')}
+      ${mi('/stats', 'stats', 'Statistics', nav === 'stats')}
+      <div class="sp-label">Account</div>
+      ${mi('/shop', 'gold', html`Plus &amp; Gold`, nav === 'shop')}
+      ${mi('/wallet', 'wallet', 'Wallet')}
+      ${mi('/account', 'profile', 'Profile', nav === 'account')}
+      ${u.role === 'admin' ? mi('/admin', 'admin', 'Admin') : ''}
+      ${mi('/help', 'help', 'Instructions')}
+      <form method="post" action="/logout"><input type="hidden" name="_csrf" value="${csrf}"><button type="submit" class="lnk"><img src="/static/img/menu/logout.svg" width="16" height="16" alt="">Log out</button></form>
+    </div>
+  </nav>`;
 }
 
 function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
   if (!c) return html`<div id="side_info"></div>`;
   return html`<div id="side_info">
-    <table><thead><tr><td colspan="3">Villages:</td></tr></thead><tbody>
-    ${c.villages.map(
-      (v) => html`<tr><td class="dot">•</td><td class="link${v.id === c.village.id ? ' hl' : ''}">
-        <form method="post" action="/village/switch"><input type="hidden" name="_csrf" value="${csrf}"><input type="hidden" name="villageId" value="${v.id}"><button type="submit" class="lnk">${v.name}</button></form></td>
-        <td class="coords">(${v.x}|${v.y})</td></tr>`,
-    )}
-    </tbody></table>
-    <table class="box"><thead><tr><td colspan="2">Links:</td></tr></thead><tbody>
-      <tr><td class="dot">•</td><td class="link"><a href="/troops/send">Send troops</a></td></tr>
-      <tr><td class="dot">•</td><td class="link"><a href="/shop/ticker">News ticker</a></td></tr>
-    </tbody></table>
+    <section class="sp"><h3 class="sp-head">Villages <span>${c.villages.length}</span></h3>
+      <ul class="sp-villages">${c.villages.map(
+        (v) => html`<li class="${v.id === c.village.id ? 'on' : ''}">
+          <form method="post" action="/village/switch"><input type="hidden" name="_csrf" value="${csrf}"><input type="hidden" name="villageId" value="${v.id}">
+          <button type="submit" class="lnk"${v.id === c.village.id ? html` aria-current="true"` : ''}><span class="vn">${v.name}</span><span class="vc">(${v.x}|${v.y})</span></button></form></li>`,
+      )}</ul></section>
+    <section class="sp"><h3 class="sp-head">Links</h3>
+      <div class="sp-body">${mi('/troops/send', 'send', 'Send troops')}${mi('/goldmarket', 'market', 'Gold market')}${mi('/shop/ticker', 'news', 'News ticker')}</div></section>
   </div>`;
 }
 
@@ -146,7 +167,7 @@ export function layout(o: PageOpts): SafeHtml {
   ${c ? resourceBar(c.village, c.eco, o.now, c.credits) : ''}
   ${tickerBar(o.ticker ?? [], o.announcement)}
   <div id="mid">
-    ${sideNavi(c, o.csrf)}
+    ${sideNavi(c, o.csrf, o.nav)}
     <div id="content">
       ${o.flash ? html`<div class="flash ${o.flash.type}" role="${o.flash.type === 'error' ? 'alert' : 'status'}">${o.flash.text}</div>` : ''}
       ${o.body}
