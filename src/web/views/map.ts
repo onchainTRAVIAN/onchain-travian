@@ -57,12 +57,13 @@ export function mapView(d: { grid: MapCell[][]; cx: number; cy: number; myId: nu
         <label for="my">y</label> <input id="my" type="text" name="y" value="${d.cy}" inputmode="numeric">
         <button type="submit" class="small">OK</button>
       </form>
-      <table id="map_info"><thead><tr><th colspan="2">Details:</th></tr></thead><tbody>
+
+    </div>
+<table id="map_info"><thead><tr><th colspan="2">Details:</th></tr></thead><tbody>
         ${center?.village
           ? html`<tr><th>Village</th><td>${center.village.name}</td></tr><tr><th>Player</th><td>${center.village.owner}</td></tr><tr><th>Population</th><td>${fmtNum(center.village.pop)}</td></tr>`
           : html`<tr><th>Field</th><td>${center?.kind === 'oasis' ? 'Oasis' : 'Abandoned valley'}</td></tr>`}
       </tbody></table>
-    </div>
     <p class="small"><a href="${link(d.homeX, d.homeY)}">» Back to your village</a></p>
     <table><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
     ${villages.length === 0

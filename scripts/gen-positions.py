@@ -20,9 +20,9 @@ out += ['#vmap2 .b39 { left: 316px; top: 161px; z-index: 30; }', '#vmap2 .l39 { 
 out.append('/* map: 7x7 diamond tiles */')
 for x in range(7):
     for y in range(7):
-        out.append(f'#mapc .t{x}{y} {{ left: {16+37*x+36*y}px; top: {104+20*x-20*y}px; z-index: {10+x-y+7}; }}')
+        out.append(f'#mapc .t{x}{y} {{ left: {16+37*x+36*y}px; top: {124+20*x-20*y}px; z-index: {10+x-y+7}; }}')
 for k in range(7):
-    out.append(f'#mapc .mx{k} {{ left: {4+37*k}px; top: {150+20*k}px; }}')
-    out.append(f'#mapc .my{k} {{ left: {300+36*k}px; top: {268-20*k}px; }}')
-out += ['#mapc .ar-n { left: 404px; top: 26px; }', '#mapc .ar-e { left: 404px; top: 214px; }', '#mapc .ar-s { left: 124px; top: 214px; }', '#mapc .ar-w { left: 124px; top: 26px; }']
+    out.append(f'#mapc .mx{k} {{ left: {4+37*k}px; top: {170+20*k}px; }}')
+    out.append(f'#mapc .my{k} {{ left: {300+36*k}px; top: {288-20*k}px; }}')
+out += ['#mapc .ar-n { left: 404px; top: 46px; }', '#mapc .ar-e { left: 404px; top: 234px; }', '#mapc .ar-s { left: 124px; top: 234px; }', '#mapc .ar-w { left: 124px; top: 46px; }']
 print('\n'.join(out))
