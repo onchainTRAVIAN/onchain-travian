@@ -18,10 +18,12 @@ export function unitName(tribe: TribeId, slot: number): string {
   return TRIBES[tribe].units[slot]?.name ?? '?';
 }
 
-/** 16px unit icon (slot 10 = hero). */
-export function unitIcon(tribe: TribeId, slot: number, size = 16): SafeHtml {
-  if (slot === 10) return icon('units/hero', 'Hero', size);
-  return icon(`units/${tribe}-${slot + 1}`, unitName(tribe, slot), size);
+/** 16px unit icon (slot 10 = hero), linking to the troop's information page unless `link` is false. */
+export function unitIcon(tribe: TribeId, slot: number, size = 16, link = true): SafeHtml {
+  const img = slot === 10 ? icon('units/hero', 'Hero', size) : icon(`units/${tribe}-${slot + 1}`, unitName(tribe, slot), size);
+  if (!link) return img;
+  const href = slot === 10 ? '/hero' : `/unit/${tribe}/${slot + 1}`;
+  return html`<a href="${href}" class="uico" title="${slot === 10 ? 'Hero' : unitName(tribe, slot)}">${img}</a>`;
 }
 
 /** Classic troop table: unit icons across, then Troops and (optionally) Casualties rows. */

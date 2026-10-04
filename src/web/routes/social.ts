@@ -13,6 +13,8 @@ function allianceTagFull(userId: number): { id: number; tag: string; name: strin
 import { renameVillage } from '../../game/actions/account.js';
 import { AVATAR_MAX_UPLOAD, avatarPath, hasAvatar, removeAvatar, saveAvatar, setBio } from '../../game/actions/avatar.js';
 import { GameError } from '../../game/errors.js';
+import { TRIBES } from '../../game/rules/units.js';
+import { unitInfoView, unitsIndexView } from '../views/units.js';
 import { WEEKLY_CATEGORIES, lastWinners, medalsOf, weekStart, weeklyStandings } from '../../game/actions/weekly.js';
 import { deleteMessage, inbox, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
 import { parseReport } from '../../game/engine/reports.js';
@@ -334,6 +336,25 @@ socialRouter.get('/stats/week', (req, res) => {
     weeklyView({ category, rows: weeklyStandings(db, category, ws, 50), weekStart: ws, now: req.ctx.now, myId: req.ctx.user?.id ?? null, winners: lastWinners(db) }),
     { nav: 'stats', chrome: req.ctx.user ? loadGamePage(req).chrome : null },
   );
+});
+
+const UNIT_TRIBES = ['romans', 'teutons', 'gauls', 'nature'] as const;
+
+socialRouter.get('/unit/:tribe/:n', (req, res) => {
+  const tribe = UNIT_TRIBES.find((t) => t === req.params.tribe);
+  const n = intParam(req.params.n, 0);
+  if (!tribe || n < 1 || n > 10) {
+    res.redirect(303, '/units');
+    return;
+  }
+  sendPage(req, res, TRIBES[tribe].units[n - 1]?.name ?? 'Troop', unitInfoView({ tribe, slot: n - 1 }), {
+    chrome: req.ctx.user ? loadGamePage(req).chrome : null,
+  });
+});
+
+socialRouter.get('/units', (req, res) => {
+  const tribe = UNIT_TRIBES.find((t) => t === req.query.t) ?? null;
+  sendPage(req, res, 'Troops', unitsIndexView({ tribe }), { chrome: req.ctx.user ? loadGamePage(req).chrome : null });
 });
 
 socialRouter.get('/help', (req, res) => {

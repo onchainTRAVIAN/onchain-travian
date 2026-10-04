@@ -478,3 +478,11 @@ ul.list li img.avatar.sm { margin-right: 8px; }
 #vmap2 .bld.hov img { filter: drop-shadow(0 0 1.5px #71d000) drop-shadow(0 0 3px #71d000) brightness(1.06); }
 #vmap2.wallhov .wall { filter: drop-shadow(0 0 2px #71d000) brightness(1.05); }
 .carryline { margin: 4px 0 8px; font-size: 12px; } .carryline img { vertical-align: middle; }
+/* Troop info */
+a.uico { display: inline-block; line-height: 0; vertical-align: middle; }
+a.uico:hover img { filter: drop-shadow(0 0 1.5px #71d000); }
+.unitinfo { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 10px; }
+.unitbig { flex: none; background: radial-gradient(ellipse at 50% 70%, #f1ecd8, #fbfaf5 70%); border: 1px solid #e3dcc6; border-radius: 6px; }
+.unitstats { flex: 1; min-width: 240px; }
+.unitstats table th, .unitinfo + h2 + table th { text-align: left; font-weight: normal; color: #555; width: 45%; }
+.unittabs a { padding: 2px 4px; }

@@ -70,7 +70,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
       ${csrfField(d.csrf)}
       <table id="troops" class="a2b"><tbody>
         ${[0, 1, 2, 3].map((r) => html`<tr>${cols.map((c) => (c[r] !== undefined ? cell(c[r] as number) : html`<td></td>`))}</tr>`)}
-        ${d.heroHome ? html`<tr><td colspan="3"><label>${unitIcon(d.tribe, 10)} <input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> Hero</label></td></tr>` : ''}
+        ${d.heroHome ? html`<tr><td colspan="3"><label>${unitIcon(d.tribe, 10, 16, false)} <input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> Hero</label></td></tr>` : ''}
       </tbody></table>
       <p class="carryline">${icon('res/wood', 'Resources', 18, 12)} Can carry: <b id="carry-total">0</b> resources</p>
       <table class="plain"><tbody><tr>

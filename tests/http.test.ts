@@ -33,6 +33,18 @@ beforeAll(() => {
 });
 
 describe('public pages', () => {
+  it('troop guide pages render, including for visitors', async () => {
+    for (const path of ['/units', '/units?t=gauls', '/unit/romans/1', '/unit/teutons/9', '/unit/gauls/10', '/unit/nature/10']) {
+      const res = await request(app).get(path);
+      expect(res.status, path).toBe(200);
+    }
+    const leg = await request(app).get('/unit/romans/1');
+    expect(leg.text).toContain('Legionnaire');
+    expect(leg.text).toContain('/static/img/units/big/romans-1.svg');
+    const bad = await request(app).get('/unit/romans/99');
+    expect(bad.status).toBe(303);
+  });
+
   it('landing, login, register, rankings and help render', async () => {
     for (const path of ['/', '/login', '/register', '/stats', '/help']) {
       const res = await request(app).get(path);

@@ -142,7 +142,7 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
           <button type="submit" class="lnk"${v.id === c.village.id ? html` aria-current="true"` : ''}><span class="vn">${v.name}</span><span class="vc">(${v.x}|${v.y})</span></button></form></li>`,
       )}</ul></section>
     <section class="sp"><h3 class="sp-head">Links</h3>
-      <div class="sp-body">${mi('/troops/send', 'send', 'Send troops')}${mi('/goldmarket', 'market', 'Gold market')}${mi('/shop/ticker', 'news', 'News ticker')}</div></section>
+      <div class="sp-body">${mi('/troops/send', 'send', 'Send troops')}${mi('/goldmarket', 'market', 'Gold market')}${mi('/units', 'hero', 'Troop guide')}${mi('/shop/ticker', 'news', 'News ticker')}</div></section>
   </div>`;
 }
 
