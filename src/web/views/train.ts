@@ -6,7 +6,7 @@ import { UNIT_GUIDE } from '../../game/rules/unitguide.js';
 import { fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon } from './layout.js';
-import { unitIcon } from './parts.js';
+import { panel, unitIcon } from './parts.js';
 import { trainingQueue } from './village.js';
 
 export interface TrainGroup {
@@ -18,18 +18,18 @@ export interface TrainGroup {
 }
 
 /** Every unit this village can train, from all its training buildings, in one form. */
-export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Resources; home: UnitCounts; owned: UnitCounts; csrf: string; now: number }): SafeHtml {
+export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Resources; home: UnitCounts; owned: UnitCounts; academySlot: number | null; csrf: string; now: number }): SafeHtml {
   const any = d.groups.some((g) => g.options.some((o) => o.available));
   const head = html`<div class="vtitle"><h1>Train troops</h1><span class="vmeta">all training buildings of this village in one place</span></div>`;
   if (d.groups.length === 0) {
-    return html`${head}<p class="note">Build a <b>Barracks</b> (Main Building 3, Rally Point 1) to start training soldiers. Stable, Workshop and the Great Barracks/Stable add more units.</p>`;
+    return html`${head}${panel('No training buildings yet', html`<p class="small">Build a <a href="/village"><b>Barracks</b></a> (Main Building 3, Rally Point 1) to start training soldiers. Stable, Workshop and the Great Barracks/Stable add more units.</p>`)}`;
   }
   return html`${head}
     <form method="post" action="/train/all" class="block">${csrfField(d.csrf)}
     ${d.groups.map(
       (g) => html`<section class="spanel tgroup"><h3 class="sp-head"><a href="/slot/${g.slot}">${BUILDINGS[g.building].name}</a><span>level ${g.level}</span></h3>
         ${g.options.length === 0
-          ? html`<p class="pad small muted">No units researched for this building yet — research them in the <a href="/build?b=academy">Academy</a>.</p>`
+          ? html`<p class="pad small muted">No units researched for this building yet — research them in the ${d.academySlot ? html`<a href="/slot/${d.academySlot}">Academy</a>` : 'Academy'}.</p>`
           : html`<table class="build_details tall"><tbody>${g.options.map(
               (o) => html`<tr>
                 <td class="desc">${unitIcon(d.tribe, o.slot)} <b>${o.unit.name}</b> <span class="avail" title="${fmtNum(d.home[o.slot] ?? 0)} at home now · ${fmtNum(d.owned[o.slot] ?? 0)} in total (incl. away and on the move)">(You have: ${fmtNum(d.owned[o.slot] ?? 0)})</span>
@@ -50,7 +50,7 @@ export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Re
           <b>Total:</b>
           <span id="tt-wood">${resIcon('wood')}0</span><span id="tt-clay">${resIcon('clay')}0</span><span id="tt-iron">${resIcon('iron')}0</span><span id="tt-crop">${resIcon('crop')}0</span>
           <span id="tt-upkeep">${icon('res/cropuse', 'Crop consumption', 18, 12)}0</span><span id="tt-time">${icon('res/clock', 'Duration', 18, 12)}0:00:00</span><span id="tt-carry" class="carry"><b>can carry</b> 0</span>
-          <button type="submit">Train all</button>
+          <button type="submit" class="gbtn green">Train all</button>
         </div>
         <p class="small muted">Each building trains its own queue at the same time. The total cost counts everything you entered; if resources run out, the first rows are trained first.</p>`
       : ''}

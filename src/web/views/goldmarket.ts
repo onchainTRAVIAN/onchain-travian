@@ -6,7 +6,7 @@ import { TRIBES, type TribeId, type UnitCounts } from '../../game/rules/units.js
 import { fmtAgo, fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, icon, resIcon } from './layout.js';
-import { unitIcon, unitsInline } from './parts.js';
+import { goldBtn, panel, unitIcon, unitsInline, woodTabs } from './parts.js';
 
 export type GoldTab = 'resources' | 'troops' | 'sell' | 'mine';
 
@@ -32,18 +32,21 @@ export function goldMarketView(d: {
   csrf: string;
   now: number;
 }): SafeHtml {
-  const t = (id: GoldTab, label: string) => html`<a href="/goldmarket?tab=${id}" class="${d.tab === id ? 'on' : ''}">${label}</a>`;
   const tribeName = TRIBES[d.tribe].name;
-  const head = html`<h1>Gold market</h1>
-    <p class="small">Buy and sell resources and troops for Gold with other players. Your balance: ${gold(d.balance)}
-      · deliveries go to <b>${d.here.name}</b> (${d.here.x}|${d.here.y}).</p>
-    <p class="tabs">${t('resources', 'Buy resources')}${t('troops', `Buy ${tribeName} troops`)}${t('sell', 'Sell')}${t('mine', 'My offers')}</p>`;
+  const head = html`<div class="shophead"><h1>Gold market</h1><span class="shopbal" title="Your Gold">${icon('res/gold', 'Gold', 24, 16)} <b>${fmtNum(d.balance)}</b></span></div>
+    ${woodTabs([
+      { href: '/goldmarket?tab=resources', label: 'Buy resources', on: d.tab === 'resources' },
+      { href: '/goldmarket?tab=troops', label: `Buy ${tribeName} troops`, on: d.tab === 'troops' },
+      { href: '/goldmarket?tab=sell', label: 'Sell', on: d.tab === 'sell' },
+      { href: '/goldmarket?tab=mine', label: 'My offers', on: d.tab === 'mine' },
+    ], 'Gold market')}
+    <div class="woodbody">
+    <p class="small muted">Trade resources and troops for Gold with other players. Deliveries go to <b>${d.here.name}</b> (${d.here.x}|${d.here.y}).</p>`;
 
   const time = (l: ListingView) =>
     l.fromX !== null && l.fromY !== null ? fmtDuration(deliveryTimeMs(l, { x: l.fromX, y: l.fromY }, d.here)) : '-';
   const buyBtn = (l: ListingView) =>
-    html`<form method="post" action="/goldmarket/buy">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}">
-      <button type="submit" class="small${d.balance < l.price ? ' secondary' : ''}">Buy</button></form>`;
+    html`<form method="post" action="/goldmarket/buy">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}">${goldBtn('Buy', l.price, d.balance >= l.price)}</form>`;
 
   if (d.tab === 'resources' || d.tab === 'troops') {
     const isRes = d.tab === 'resources';
@@ -51,24 +54,22 @@ export function goldMarketView(d: {
       ${isRes
         ? html`<p class="small muted">Cheapest first. Resources arrive by merchant; anything over your storage is lost, so make room first.</p>`
         : html`<p class="small muted">You can only buy troops of your own tribe (${tribeName}). They walk to your village and join your army.</p>`}
-      <div class="tblwrap"><table><thead><tr><th>Offer</th>${isRes ? html`<th>Per 1,000</th>` : ''}<th>Price</th><th>Seller</th><th>Time</th><th></th></tr></thead><tbody>
+      <div class="tblwrap"><table class="tb"><thead><tr><th>Offer</th>${isRes ? html`<th>Per 1,000</th>` : ''}<th>Seller</th><th>Time</th><th></th></tr></thead><tbody>
       ${d.listings.length === 0
-        ? html`<tr><td colspan="${isRes ? 6 : 5}" class="none center">No offers right now. <a href="/goldmarket?tab=sell">Sell something yourself »</a></td></tr>`
+        ? html`<tr><td colspan="${isRes ? 5 : 4}" class="none center">No offers right now. <a href="/goldmarket?tab=sell">Sell something yourself »</a></td></tr>`
         : d.listings.map(
             (l) => html`<tr><td>${goodsCell(l)}</td>
               ${isRes ? html`<td class="num small">${(l.price / Math.max(1, sumRes(parseResources(l.goods)) / 1000)).toFixed(1)}</td>` : ''}
-              <td class="num">${gold(l.price)}</td>
               <td><a href="/player/${l.sellerId}">${l.seller}</a></td><td class="num">${time(l)}</td>
               <td class="center">${buyBtn(l)}</td></tr>`,
           )}
-      </tbody></table></div>`;
+      </tbody></table></div></div>`;
   }
 
   if (d.tab === 'sell') {
     const units = TRIBES[d.tribe].units;
     return html`${head}
-      <h2>Sell resources</h2>
-      <form method="post" action="/goldmarket/sell/resources" class="block">${csrfField(d.csrf)}
+      ${panel('Sell resources', html`<form method="post" action="/goldmarket/sell/resources" class="block">${csrfField(d.csrf)}
         <table class="tb"><tbody>
         ${RESOURCE_KEYS.map(
           (k) => html`<tr><td>${resIcon(k)} <label for="sr${k}">${RESOURCE_LABEL[k]}</label></td>
@@ -78,9 +79,8 @@ export function goldMarketView(d: {
         <tr><td><label for="srp">Price</label></td><td><input id="srp" type="number" name="price" min="1" max="${LISTING_MAX_PRICE}" required inputmode="numeric"> Gold</td><td></td></tr>
         </tbody></table>
         <p><button type="submit">Put on the market</button></p>
-      </form>
-      <h2>Sell troops</h2>
-      <p class="small muted">Only troops at home in ${d.here.name}. Settlers and chiefs can't be sold. Only ${tribeName} players can buy them.</p>
+      </form>`, { pad: false })}
+      ${panel('Sell troops', html`<p class="small muted pad">Only troops at home in ${d.here.name}. Settlers and chiefs can't be sold. Only ${tribeName} players can buy them.</p>
       <form method="post" action="/goldmarket/sell/troops" class="block">${csrfField(d.csrf)}
         <table class="tb"><tbody>
         ${SELLABLE_SLOTS.map((i) => {
@@ -92,12 +92,12 @@ export function goldMarketView(d: {
         <tr><td><label for="stp">Price</label></td><td><input id="stp" type="number" name="price" min="1" max="${LISTING_MAX_PRICE}" required inputmode="numeric"> Gold</td><td></td></tr>
         </tbody></table>
         <p><button type="submit">Put on the market</button></p>
-      </form>
-      <p class="small muted">Your goods are held by the market until someone buys them. Cancel any time under “My offers” to get them back.</p>`;
+      </form>`, { pad: false })}
+      <p class="small muted">Your goods are held by the market until someone buys them. Cancel any time under “My offers”: they walk back to your village.</p></div>`;
   }
 
   return html`${head}
-    <div class="tblwrap"><table><thead><tr><th>Offer</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>
+    <div class="tblwrap"><table class="tb"><thead><tr><th>Offer</th><th>Price</th><th>Status</th><th></th></tr></thead><tbody>
     ${d.listings.length === 0
       ? html`<tr><td colspan="4" class="none center">You have no offers or purchases yet.</td></tr>`
       : d.listings.map((l) => {
@@ -116,7 +116,7 @@ export function goldMarketView(d: {
                 <form method="post" action="/goldmarket/cancel" class="inline">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}"><button type="submit" class="small secondary">Cancel</button></form>`
               : ''}</td></tr>`;
         })}
-    </tbody></table></div>`;
+    </tbody></table></div></div>`;
 }
 
 /** Edit an open offer: price and amounts (inputs allow up to what's in the offer plus what's in the village). */
@@ -150,16 +150,18 @@ export function goldEditView(d: {
         <td class="small muted">in offer ${fmtNum(inOffer)}${canChange ? html`, at home ${fmtNum(atHome)}` : ''}</td></tr>`;
     })}`;
   }
-  return html`<h1>Edit offer</h1>
-    <p class="tabs"><a href="/goldmarket?tab=mine">« My offers</a></p>
+  return html`<h1>Gold market</h1>
+    ${woodTabs([{ href: '/goldmarket?tab=mine', label: '« My offers' }, { href: '#', label: 'Edit offer', on: true }], 'Gold market')}
+    <div class="woodbody">
     <p class="small">${canChange
-      ? html`Raising an amount takes the extra from <b>${d.villageName}</b>; lowering it gives the difference back right away.`
+      ? html`Raising an amount takes the extra from <b>${d.villageName}</b>; lowering it sends the difference walking back to the village.`
       : html`The village of this offer is no longer yours, so only the price can change.`}</p>
-    <form method="post" action="/goldmarket/edit" class="block">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}">
+    <form method="post" action="/goldmarket/edit" class="block spanel pad">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}">
       <table class="tb"><tbody>
         ${rows}
         <tr><td><label for="ep">Price</label></td><td><input id="ep" type="number" name="price" min="1" max="${LISTING_MAX_PRICE}" value="${l.price}" required inputmode="numeric"> Gold</td><td></td></tr>
       </tbody></table>
       <p><button type="submit">Save changes</button> <a href="/goldmarket?tab=mine" class="small">cancel</a></p>
-    </form>`;
+    </form>
+    </div>`;
 }

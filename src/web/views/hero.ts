@@ -6,7 +6,7 @@ import type { Resources } from '../../game/rules/resources.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, timer } from './layout.js';
-import { unitIcon } from './parts.js';
+import { panel, svgBar, unitIcon } from './parts.js';
 
 /** The hero's portrait gets a grander backdrop and frame every 5 levels (stages 1–5). */
 export function heroStage(level: number): number {
@@ -30,10 +30,10 @@ function trainPanel(d: {
   have: Resources;
   csrf: string;
 }): SafeHtml {
-  if (d.mansion < 1) return html`<p class="note">Build a Hero's Mansion in ${d.villageName} to train a hero from one of your soldiers.</p>`;
-  if (d.candidates.length === 0) return html`<p class="note">Research a fighting unit first: any infantry or cavalry (no scouts, siege engines, chiefs or settlers) can become a hero.</p>`;
-  return html`<h2>Train a hero in ${d.villageName}</h2>
-    <p class="small">Choose the soldier who becomes your hero. The hero keeps that unit's strengths and speed; the soldier is used up.</p>
+  if (d.mansion < 1) return panel('Train a hero', html`<p class="small">Build a <a href="/slot/34">Hero's Mansion</a> in ${d.villageName} to train a hero from one of your soldiers.</p>`);
+  if (d.candidates.length === 0) return panel('Train a hero', html`<p class="small">Research a fighting unit first: any infantry or cavalry (no scouts, siege engines, chiefs or settlers) can become a hero.</p>`);
+  return html`<section class="spanel"><h3 class="sp-head">Train a hero<span>in ${d.villageName}</span></h3>
+    <p class="small pad">Choose the soldier who becomes your hero. The hero keeps that unit's strengths and speed; the soldier is used up.</p>
     <table class="tb"><thead><tr><th>Unit</th><th>Hero at level 0</th><th>Cost</th><th></th></tr></thead><tbody>
     ${d.candidates.map((c) => {
       const s = heroCombat(c.unit, 0, 0);
@@ -44,7 +44,7 @@ function trainPanel(d: {
           ? html`<form method="post" action="/hero/train">${csrfField(d.csrf)}<input type="hidden" name="slot" value="${c.slot}"><button type="submit" class="small">Train</button></form>`
           : html`<span class="none small">none at home</span>`}</td></tr>`;
     })}
-    </tbody></table>`;
+    </tbody></table></section>`;
 }
 
 export function heroView(d: {
@@ -63,8 +63,8 @@ export function heroView(d: {
   const h = d.hero;
   const train = trainPanel({ tribe: d.tribe, mansion: d.mansion, villageName: d.villageName, candidates: d.candidates, have: d.have, csrf: d.csrf });
   if (!h) {
-    return html`<h1>Hero</h1>
-      <p>In classic Travian your hero is trained in the Hero's Mansion from one of your own soldiers. It fights with its army, gains experience from every enemy it helps defeat, captures oases and makes its army stronger.</p>
+    return html`<div class="vtitle"><h1>Hero</h1><span class="vmeta">none yet</span></div>
+      <p class="small">Your hero is trained in the Hero's Mansion from one of your own soldiers. It fights with its army, gains experience from every enemy it helps defeat, captures oases and makes its army stronger.</p>
       ${train}`;
   }
   const unit = (TRIBES[d.tribe].units[h.unitSlot] ?? TRIBES[d.tribe].units[0]) as UnitDef;
@@ -84,13 +84,10 @@ export function heroView(d: {
     { key: 'defBonus', label: 'Defence bonus', value: h.defBonus, effect: `+${(h.defBonus * HERO_BONUS_PER_POINT * 100).toFixed(1)}% defence for its army` },
     { key: 'regen', label: 'Regeneration', value: h.regen, effect: `${heroRegenPerDay(h.regen)}% health per day${config.WORLD_SPEED !== 1 ? ` (×${config.WORLD_SPEED})` : ''}` },
   ];
-  const meter = (pct: number, cls: string) => {
-    const w = Math.max(0, Math.min(100, pct));
-    return html`<svg class="meter ${cls}" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="8" rx="4" class="bg"></rect>${w > 0 ? html`<rect width="${w}" height="8" rx="4" class="fg"></rect>` : ''}</svg>`;
-  };
+  const meter = (pct: number, cls: string) => svgBar(pct, cls, 8);
   const healthCls = h.health >= 60 ? 'good' : h.health >= 25 ? 'mid' : 'low';
   const where = h.status === 'away' && d.locationName ? `in ${d.locationName}` : h.status === 'home' ? `in ${d.homeName}` : '';
-  return html`<h1>Hero</h1>
+  return html`<div class="vtitle"><h1>Hero</h1><span class="vmeta">${h.name} · level ${h.level}</span></div>
     <div class="spanel herocard">
       <div class="portrait"><img class="bd" src="/static/img/hero/backdrop-${heroStage(h.level)}.svg" width="120" height="150" alt="">
         <img class="fig" src="/static/img/units/big/${d.tribe}-${h.unitSlot + 1}.svg" width="120" height="140" alt="${unit.name}">
@@ -112,10 +109,10 @@ export function heroView(d: {
     </div>
     ${h.status === 'dead'
       ? html`<div class="spanel heroact"><h3 class="sp-head">Revive ${h.name} in ${d.homeName}</h3><div class="pad">${costLine(heroReviveCost(unit, h.level), d.homeHave)}
-          <form method="post" action="/hero/revive">${csrfField(d.csrf)}<button type="submit">Revive</button></form></div></div>
+          <form method="post" action="/hero/revive">${csrfField(d.csrf)}<button type="submit" class="gbtn green">Revive</button></form></div></div>
         <p class="small muted">Or train a new hero instead:</p>${train}`
       : ''}
-    ${h.status === 'reviving' && h.reviveAt ? html`<div class="note">Ready in ${timer(h.reviveAt, d.now)}.</div>` : ''}
+    ${h.status === 'reviving' && h.reviveAt ? html`<p class="small good">Ready in ${timer(h.reviveAt, d.now)}.</p>` : ''}
     ${h.status === 'home'
       ? html`<p class="heroactions"><a class="btn" href="/troops/send">Send with troops</a> <a class="btn secondary" href="/simulator">Simulate a battle</a> <a class="btn secondary" href="/map">Find oases to capture</a></p>`
       : ''}
@@ -124,7 +121,7 @@ export function heroView(d: {
       ${skills.map(
         (sk) => html`<div class="skill"><label for="sk-${sk.key}"><b>${sk.label}</b><span class="small muted">${sk.effect}</span></label>
           ${meter((sk.value / HERO_SKILL_MAX) * 100, 'pts')}
-          <input id="sk-${sk.key}" type="number" name="${sk.key}" value="${sk.value}" min="${redistribute ? 0 : sk.value}" max="${HERO_SKILL_MAX}" class="w30" inputmode="numeric" aria-label="${sk.label} points"></div>`,
+          <input id="sk-${sk.key}" type="number" name="${sk.key}" value="${sk.value}" min="${redistribute ? 0 : sk.value}" max="${HERO_SKILL_MAX}" class="w30" inputmode="numeric"></div>`,
       )}
       <div class="skillfoot"><button type="submit">Save points</button> <span class="small muted">${redistribute
         ? 'At level 0 you can move points freely.'

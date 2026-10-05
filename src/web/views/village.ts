@@ -50,13 +50,13 @@ function incomingAlert(moves: MovementView[], now: number): SafeHtml {
 
 function protectionNote(until: number, now: number): SafeHtml {
   if (until <= now) return html``;
-  return html`<div class="note">🛡️ Beginner’s protection: ${timer(until, now, false)} left. Attacking another player ends it.</div>`;
+  return html`<p class="small good protnote">${icon('ui/reinforce', '', 14)} Beginner’s protection: ${timer(until, now, false)} left. Attacking another player ends it.</p>`;
 }
 
 /** Classic "Building:" construction list. */
 export function buildQueue(orders: BuildOrderRow[], now: number, csrf: string): SafeHtml {
   if (orders.length === 0) return html``;
-  return html`<table class="tb"><thead><tr><th colspan="4">Building:</th></tr></thead><tbody>${orders.map((o) => {
+  return html`<section class="spanel queue"><h3 class="sp-head">Building<span>${orders.length}</span></h3><table class="tb"><tbody>${orders.map((o) => {
     const l = buildingLabel(o.building);
     return html`<tr>
       <td><form method="post" action="/build/cancel" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
@@ -66,7 +66,7 @@ export function buildQueue(orders: BuildOrderRow[], now: number, csrf: string): 
       <td><form method="post" action="/shop/finish/build" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
         <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(workLeft(o.startAt, o.finishAt, now))}</button></form></td>
     </tr>`;
-  })}</tbody></table>`;
+  })}</tbody></table></section>`;
 }
 
 export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: number, csrf?: string): SafeHtml {
@@ -76,7 +76,7 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
     html`<form method="post" action="/shop/finish/train">${csrfField(csrf ?? '')}<input type="hidden" name="orderId" value="${o.id}">
       <button type="submit" class="small gold" title="${title}">${label}${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(endOf(o) - now)}</button></form>`;
   const last = orders[orders.length - 1] as TrainOrderRow;
-  return html`<table class="tb"><thead><tr><th>Training</th><th>Duration</th><th>Finished</th>${csrf ? html`<th></th>` : ''}</tr></thead><tbody>${orders.map((o, i) => {
+  return html`<section class="spanel queue"><h3 class="sp-head">Training<span>${orders.length}</span></h3><table class="tb"><thead><tr><th>Unit</th><th>Duration</th><th>Finished</th>${csrf ? html`<th></th>` : ''}</tr></thead><tbody>${orders.map((o, i) => {
     const u = TRIBES[tribe].units[o.unitSlot];
     const end = endOf(o);
     return html`<tr><td>${unitIcon(tribe, o.unitSlot)} ${fmtNum(o.total - o.done)} ${u?.name ?? '?'}</td>
@@ -84,7 +84,7 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
       ${csrf ? html`<td>${finish(o, '', i === 0 ? 'Finish this batch now' : 'Finish this batch and all batches above it now')}</td>` : ''}</tr>`;
   })}
   ${csrf && orders.length > 1 ? html`<tr class="finishall"><td colspan="3" class="small muted">Finishing a row also finishes every batch above it.</td><td>${finish(last, 'All ', 'Finish the whole queue now')}</td></tr>` : ''}
-  </tbody></table>`;
+  </tbody></table></section>`;
 }
 
 const FIELD_KIND: Record<string, string> = { woodcutter: 'wood', claypit: 'clay', ironmine: 'iron', cropland: 'crop' };
@@ -92,7 +92,7 @@ const FIELD_KIND: Record<string, string> = { woodcutter: 'wood', claypit: 'clay'
 /** Village name plaque above the village pictures: name, coordinates, population, capital. */
 function villageTitle(d: VillageViewData): SafeHtml {
   const v = d.state.village;
-  return html`<div class="vtitle"><h1 class="vname" data-rename tabindex="0" title="Click to rename this village">${v.name}</h1>
+  return html`<div class="vtitle"><h1 class="vname" data-rename tabindex="0" role="button" title="Click to rename this village">${v.name}</h1>
     <a class="vedit" href="/account" data-rename title="Rename this village" aria-label="Rename this village"><img src="/static/img/ui/edit.svg" width="14" height="14" alt=""></a>
     <form method="post" action="/account/rename" class="vrename" hidden>${csrfField(d.csrf)}
       <label for="vrn" class="sr">Village name</label><input id="vrn" type="text" name="name" value="${v.name}" minlength="2" maxlength="30" required>

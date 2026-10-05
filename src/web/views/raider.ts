@@ -38,10 +38,9 @@ export function raiderPanel(d: RaiderPanelData): SafeHtml {
   const log = raiderLog(r);
   const usable = units.map((u, i) => ((u.type === 'inf' || u.type === 'cav') && u.carry > 0 ? i : -1)).filter((i) => i >= 0);
   const plannedTroops = d.plan.raids.reduce((s, t) => s + (t.units ?? []).reduce((a, b) => a + b, 0), 0);
-  const plannedCarry = d.plan.raids.reduce((s, t) => s + (t.carry ?? 0), 0);
   const plannedLoot = d.plan.raids.reduce((s, t) => s + Math.min(t.loot, t.carry ?? 0), 0);
 
-  return html`<div class="raider card ${r.enabled ? 'on' : ''}">
+  return html`<div class="raider spanel ${r.enabled ? 'on' : ''}">
     <div class="raider-head">
       <b class="raider-title">Oasis Raider</b>
       ${r.enabled
@@ -55,7 +54,7 @@ export function raiderPanel(d: RaiderPanelData): SafeHtml {
     <p class="small raider-stats">Today: <b>${fmtNum(d.today.raids)}</b> oasis raids came back with <b>${resIcon('wood')}${fmtNum(d.today.loot)}</b> resources.
       In range: ${fmtNum(d.plan.targets.length)} free oases, ${fmtNum(d.plan.raids.length)} worth raiding now.</p>
 
-    <h3>Next check would send ${d.plan.raids.length ? html`<span class="small muted">${fmtNum(d.plan.raids.length)} raids · ${fmtNum(plannedTroops)} troops · can bring ${fmtNum(plannedLoot)}${plannedCarry > plannedLoot ? '' : ''}</span>` : ''}</h3>
+    <h3>Next check would send ${d.plan.raids.length ? html`<span class="small muted">${fmtNum(d.plan.raids.length)} raids · ${fmtNum(plannedTroops)} troops · can bring ${fmtNum(plannedLoot)}</span>` : ''}</h3>
     ${d.plan.raids.length === 0
       ? html`<p class="small muted">Nothing right now — ${d.plan.targets.length === 0 ? 'no free oases in range (raise the range below)' : 'no oasis has enough loot and no animals, or your troops are out. It checks again automatically.'}</p>`
       : html`<div class="mvscroll short"><table class="tb"><thead><tr><th>Oasis</th><th class="num">Dist.</th><th class="num">Loot there</th><th>Troops</th><th class="num">Carry</th></tr></thead><tbody>${d.plan.raids.map(

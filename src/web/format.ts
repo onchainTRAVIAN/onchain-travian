@@ -43,6 +43,3 @@ export function fmtAgo(ts: number, now: number): string {
   return `${Math.floor(s / 86400)} d ago`;
 }
 
-export function plural(n: number, word: string): string {
-  return `${fmtNum(n)} ${word}${n === 1 ? '' : 's'}`;
-}

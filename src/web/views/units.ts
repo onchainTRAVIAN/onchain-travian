@@ -6,7 +6,7 @@ import { TRIBES, researchCost, researchTimeMs, smithyCost, smithyTimeMs, trainTi
 import { fmtDuration, fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon } from './layout.js';
-import { unitIcon } from './parts.js';
+import { tribeMark, unitIcon, woodTabs } from './parts.js';
 import { UNIT_GUIDE } from '../../game/rules/unitguide.js';
 
 const BUILDING_NAME: Record<UnitDef['building'], string> = {
@@ -40,11 +40,13 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
   const train = trainTimeMs(u, 1, config.WORLD_SPEED);
   const research = !isNature && needsResearch(d.slot, u);
   const smithy = !isNature && u.type !== 'chief' && u.type !== 'settler';
-  return html`<h1>${u.name} <span class="lvl">${t.name}</span></h1>
-    <p class="tabs unittabs">${t.units.map(
-      (x, i) => html`<a href="/unit/${d.tribe}/${i + 1}" class="${i === d.slot ? 'on' : ''}" title="${x.name}">${unitIcon(d.tribe, i, 16, false)}</a>`,
-    )}</p>
-    <div class="unitinfo">
+  return html`<h1>Troops</h1>
+    ${woodTabs((['romans', 'teutons', 'gauls', 'nature', 'natars'] as TribeId[]).map((x) => ({ href: `/units?t=${x}`, label: TRIBES[x].name, on: x === d.tribe })), 'Tribe')}
+    <div class="woodbody">
+    <nav class="pilltabs unittabs" aria-label="Unit">${t.units.map(
+      (x, i) => html`<a href="/unit/${d.tribe}/${i + 1}" class="${i === d.slot ? 'on' : ''}" title="${x.name}"${i === d.slot ? html` aria-current="page"` : ''}>${unitIcon(d.tribe, i, 16, false)}</a>`,
+    )}</nav>
+    <div class="unitinfo spanel pad"><h2 class="unitname">${u.name}</h2>
       <img class="unitbig" src="/static/img/units/big/${d.tribe}-${n}.svg" width="120" height="140" alt="${u.name}">
       <div class="unitstats">
         <p><b>${UNIT_GUIDE[u.id]?.kind ?? ''}</b> — ${UNIT_GUIDE[u.id]?.use ?? u.description}</p>
@@ -77,7 +79,8 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
           ${smithy ? html`<tr><th>Upgrades</th><td><a href="#upgrades">» stats at every Blacksmith / Armoury level</a></td></tr>` : ''}
         </tbody></table>`}
     ${smithy ? upgradeTable(u) : ''}
-    <p><a href="/units?t=${d.tribe}">» All ${t.name} troops</a> | <a href="/units">» All tribes</a></p>`;
+    <p><a href="/units?t=${d.tribe}">» All ${t.name} troops</a> | <a href="/units">» All tribes</a></p>
+    </div>`;
 }
 
 /** Stats at every Blacksmith (attack) / Armoury (defence) level, with the cost and time of each step. */
@@ -105,15 +108,15 @@ function pctUp(u: UnitDef, stat: number, level: number): string {
 export function unitsIndexView(d: { tribe: TribeId | null }): SafeHtml {
   const tribes: TribeId[] = d.tribe ? [d.tribe] : ['romans', 'teutons', 'gauls', 'nature', 'natars'];
   return html`<h1>Troops</h1>
-    <p class="tabs">${(['romans', 'teutons', 'gauls', 'nature', 'natars'] as TribeId[]).map(
-      (t) => html`<a href="/units?t=${t}" class="${d.tribe === t ? 'on' : ''}">${TRIBES[t].name}</a>`,
-    )}<a href="/units" class="${d.tribe === null ? 'on' : ''}">All</a></p>
+    ${woodTabs([...(['romans', 'teutons', 'gauls', 'nature', 'natars'] as TribeId[]).map((t) => ({ href: `/units?t=${t}`, label: TRIBES[t].name, on: d.tribe === t })), { href: '/units', label: 'All', on: d.tribe === null }], 'Tribe')}
+    <div class="woodbody">
     ${tribes.map(
-      (t) => html`<h2>${TRIBES[t].name}</h2>
-        <div class="tblwrap"><table><thead><tr><th>Troop</th><th class="num">Attack</th><th class="num">Def. inf.</th><th class="num">Def. cav.</th><th class="num">Speed</th><th class="num">Carry</th><th class="num">Upkeep</th></tr></thead><tbody>
+      (t) => html`<section class="spanel"><h3 class="sp-head"><span class="sph">${tribeMark(t, 18)} ${TRIBES[t].name}</span></h3>
+        <div class="tblwrap"><table class="tb"><thead><tr><th>Troop</th><th class="num">Attack</th><th class="num">Def. inf.</th><th class="num">Def. cav.</th><th class="num">Speed</th><th class="num">Carry</th><th class="num">Upkeep</th></tr></thead><tbody>
         ${TRIBES[t].units.map(
           (u, i) => html`<tr><td>${unitIcon(t, i)} <a href="/unit/${t}/${i + 1}">${u.name}</a><br><span class="small muted">${UNIT_GUIDE[u.id]?.kind ?? ''}</span></td><td class="num">${u.attack}</td><td class="num">${u.defInf}</td><td class="num">${u.defCav}</td>
             <td class="num">${u.speed}</td><td class="num">${t === 'nature' ? '-' : u.carry}</td><td class="num">${u.upkeep}</td></tr>`,
-        )}</tbody></table></div>`,
-    )}`;
+        )}</tbody></table></div></section>`,
+    )}
+    </div>`;
 }

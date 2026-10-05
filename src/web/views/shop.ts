@@ -4,14 +4,14 @@ import { PROTECTION_PRICE, TRANSFER_MAX, NPC_TRADE_PRICE, PRODUCTS, TICKER_MAX_H
 import { GOLD_CLUB_PRICE } from '../../game/actions/goldclub.js';
 import { NAME_CHANGE_PRICE } from '../../game/actions/account.js';
 import { ETH_ASSET, GOLD_PACKAGES, formatUnitsShort, weiForUsd } from '../../crypto/pricing.js';
-import { hasAsset } from '../assets.js';
+import { assetUrl, hasAsset } from '../assets.js';
 import { goldBtn } from './parts.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, icon, resIcon, timer } from './layout.js';
 
-export type ShopTab = 'buy' | 'adv' | 'specials' | 'history';
+export type ShopTab = 'buy' | 'adv' | 'specials' | 'history' | 'wallet';
 
 const PRODUCT_ART: Record<string, string> = {
   prod_wood: 'wood',
@@ -34,9 +34,9 @@ function art(name: string, alt = ''): SafeHtml {
 
 const goldPrice = (price: number, enough: boolean, label: string): SafeHtml => goldBtn(label, price, enough);
 
-function shopTabs(tab: ShopTab): SafeHtml {
-  const t = (id: ShopTab, label: string) => html`<a href="/shop?tab=${id}" class="${tab === id ? 'on' : ''}"${tab === id ? html` aria-current="page"` : ''}>${label}</a>`;
-  return html`<nav class="woodtabs" aria-label="Shop">${t('buy', 'Buy Gold')}${t('adv', 'Advantages')}${t('specials', 'Specials')}${t('history', 'History')}</nav>`;
+export function shopTabs(tab: ShopTab): SafeHtml {
+  const t = (id: ShopTab, label: string, href = `/shop?tab=${id}`) => html`<a href="${href}" class="${tab === id ? 'on' : ''}"${tab === id ? html` aria-current="page"` : ''}>${label}</a>`;
+  return html`<nav class="woodtabs" aria-label="Shop">${t('buy', 'Buy Gold')}${t('adv', 'Advantages')}${t('specials', 'Specials')}${t('wallet', 'Wallet', '/wallet')}${t('history', 'History')}</nav>`;
 }
 
 export function shopView(d: {
@@ -98,7 +98,7 @@ function buyTab(d: { balance: number; accountId: number; ethUsd: number; ethUsdA
         : ''}
     </div></div>
     </div>
-    ${on ? html`<script src="/static/wallet.js" defer></script>` : ''}`;
+    ${on ? html`<script src="${assetUrl('wallet.js')}" defer></script>` : ''}`;
 }
 
 function advTab(d: { balance: number; boosts: { source: string; expiresAt: number | null }[]; goldClub: boolean; csrf: string; now: number }): SafeHtml {
@@ -169,7 +169,7 @@ function specialsTab(d: {
     <section class="spanel special">${head('ticker', 'ticker', 'News ticker', `${config.TICKER_PRICE_PER_HOUR} Gold per hour`)}
       <div class="pad"><p class="small">Put your message on the scrolling news line at the top of every player's screen.</p><a class="btn" href="/shop/ticker">Book a time slot</a></div></section>
     <section class="spanel special"><h3 class="sp-head">Finish immediately</h3>
-      <div class="pad"><p class="small">Tap the <span class="btn gold small">⚡</span> button next to any construction, training or research to finish it now. The price follows the time left: ${config.WORLD_SPEED !== 1 ? `on this x${config.WORLD_SPEED} world about 1 Gold per ${Math.max(1, Math.round(100 / config.WORLD_SPEED))} minute${Math.round(100 / config.WORLD_SPEED) === 1 ? '' : 's'} left` : '1 Gold per 100 minutes left'}, at least 2. A training row also finishes the batches above it.</p>
+      <div class="pad"><p class="small">Tap the <b>finish now</b> button (with the Gold coin) next to any construction, training or research to finish it now. The price follows the time left: ${config.WORLD_SPEED !== 1 ? `on this x${config.WORLD_SPEED} world about 1 Gold per ${Math.max(1, Math.round(100 / config.WORLD_SPEED))} minute${Math.round(100 / config.WORLD_SPEED) === 1 ? '' : 's'} left` : '1 Gold per 100 minutes left'}, at least 2. A training row also finishes the batches above it.</p>
       <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold. » <a href="/account">Change your player name</a> (${fmtNum(NAME_CHANGE_PRICE)} Gold).</p></div></section>`;
 }
 
@@ -221,15 +221,17 @@ export function tickerView(d: {
     const iso = new Date(t).toISOString();
     return `${iso.slice(5, 10)} ${iso.slice(11, 16)} UTC`;
   };
-  return html`<div class="vtitle"><h1>News ticker</h1><span class="vmeta">${d.live} message${d.live === 1 ? '' : 's'} running now</span></div>
-    <section class="spanel"><h3 class="sp-head">Post a message<span>${config.TICKER_PRICE_PER_HOUR} Gold per hour</span></h3>
+  return html`<div class="shophead"><h1>Plus &amp; Gold</h1><span class="shopbal" title="Your Gold">${icon('res/gold', 'Gold', 24, 16)} <b>${fmtNum(d.balance)}</b></span></div>
+    ${shopTabs('specials')}
+    <div class="woodbody">
+    <section class="spanel"><h3 class="sp-head">News ticker: post a message<span>${config.TICKER_PRICE_PER_HOUR} Gold per hour · ${d.live} running now</span></h3>
       <form method="post" action="/shop/ticker" class="pad block">${csrfField(d.csrf)}
         <p class="small">Your message scrolls across the top of the game for <b>every player</b>, starting now. Post as many as you like — they take turns. No links. Balance: <b>${fmtNum(d.balance)} Gold</b> · <a href="/wallet">get Gold</a></p>
         <label for="tb" class="sr">Message</label>
         <input id="tb" type="text" name="body" required minlength="3" maxlength="${TICKER_MAX_LENGTH}" placeholder="e.g. [RT] Round Table is recruiting!" class="tickerin">
         <p><label for="th">Show it for</label> <select id="th" name="hours">${Array.from({ length: TICKER_MAX_HOURS }, (_, i) => i + 1).map(
           (h) => html`<option value="${h}">${h} hour${h === 1 ? '' : 's'} — ${h * config.TICKER_PRICE_PER_HOUR} Gold</option>`,
-        )}</select> <button type="submit" class="gold">Post and pay</button></p>
+        )}</select> ${goldBtn('Post and pay', config.TICKER_PRICE_PER_HOUR, d.balance >= config.TICKER_PRICE_PER_HOUR)} <span class="small muted">× hours</span></p>
       </form></section>
     <section class="spanel"><h3 class="sp-head">Your messages<span>${d.mine.length}</span></h3>
     ${d.mine.length === 0
@@ -237,6 +239,7 @@ export function tickerView(d: {
       : html`<ul class="flist">${d.mine.map(
           (m) => html`<li>“${m.body}”<span class="fsum">${fmtSlot(m.startsAt)} → ${fmtSlot(m.endsAt)} · ${m.price} Gold
             ${m.status === 'removed' ? ' · removed by a moderator' : m.startsAt <= d.now && m.endsAt > d.now ? ' · live now' : m.endsAt <= d.now ? ' · ended' : ''}</span></li>`,
-        )}</ul>`}</section>`;
+        )}</ul>`}</section>
+    </div>`;
 }
 

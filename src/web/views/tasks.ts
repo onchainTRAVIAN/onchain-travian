@@ -1,3 +1,4 @@
+import { svgBar } from './parts.js';
 import type { TaskStatus } from '../../game/actions/tasks.js';
 import { TASK_CHAPTERS, type TaskReward } from '../../game/rules/tasks.js';
 import { faqTopic } from '../../game/rules/faq.js';
@@ -12,8 +13,7 @@ export function rewardChips(r: TaskReward): SafeHtml {
 }
 
 function meter(have: number, need: number): SafeHtml {
-  const w = Math.max(0, Math.min(100, Math.round((have / Math.max(1, need)) * 100)));
-  return html`<span class="tprog"><svg viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="6" rx="3" class="bg"></rect>${w ? html`<rect width="${w}" height="6" rx="3" class="fg"></rect>` : ''}</svg><span class="small muted">${fmtNum(have)}/${fmtNum(need)}</span></span>`;
+  return html`<span class="tprog">${svgBar((have / Math.max(1, need)) * 100, 'tprog')}<span class="small muted">${fmtNum(have)}/${fmtNum(need)}</span></span>`;
 }
 
 function claimForm(s: TaskStatus, csrf: string, cls = ''): SafeHtml {

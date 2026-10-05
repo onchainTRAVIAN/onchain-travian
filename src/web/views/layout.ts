@@ -43,6 +43,10 @@ export type NavKey =
   | 'alliance'
   | 'stats'
   | 'shop'
+  | 'goldmarket'
+  | 'wallet'
+  | 'admin'
+  | 'help'
   | 'account';
 
 export interface PageOpts {
@@ -152,17 +156,17 @@ function sideNavi(c: Chrome | null | undefined, csrf: string, nav: NavKey | unde
       ${mi('/troops/train', menuIcon('train', 'rally'), 'Train troops', nav === 'train')}
       ${mi('/troops', 'rally', 'Rally point', nav === 'troops')}
       ${mi('/hero', 'hero', html`Hero${c.heroAlert ? html` <span class="sp-badge">!</span>` : ''}`, nav === 'hero')}
-      ${mi('/goldmarket', 'market', 'Gold market')}
+      ${mi('/goldmarket', 'market', 'Gold market', nav === 'goldmarket')}
       <div class="sp-label">Community</div>
       ${mi('/alliance', 'alliance', 'Alliance', nav === 'alliance')}
       ${mi('/chat', 'chat', 'Chat', nav === 'chat')}
       ${mi('/stats', 'stats', 'Statistics', nav === 'stats')}
       <div class="sp-label">Account</div>
       ${mi('/shop', 'gold', html`Plus &amp; Gold`, nav === 'shop')}
-      ${mi('/wallet', 'wallet', 'Wallet')}
+      ${mi('/wallet', 'wallet', 'Wallet', nav === 'wallet')}
       ${mi('/account', 'profile', 'Profile', nav === 'account')}
-      ${u.role === 'admin' ? mi('/admin', 'admin', 'Admin') : ''}
-      ${mi('/help', menuIcon('guide', 'help'), 'Game guide')}
+      ${u.role === 'admin' ? mi('/admin', 'admin', 'Admin', nav === 'admin') : ''}
+      ${mi('/help', menuIcon('guide', 'help'), 'Game guide', nav === 'help')}
       <form method="post" action="/logout"><input type="hidden" name="_csrf" value="${csrf}"><button type="submit" class="lnk"><img src="/static/img/menu/logout.svg" width="16" height="16" alt="">Log out</button></form>
     </div>
   </nav>`;

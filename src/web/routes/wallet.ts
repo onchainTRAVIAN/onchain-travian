@@ -7,12 +7,10 @@ import { creditBalance } from '../../game/actions/credits.js';
 import { prepareSiwe, verifySiwe, linkWallet, unlinkWallet, userByWallet, walletOf, type SiweRequest } from '../../crypto/wallet.js';
 import { latestSnapshots } from '../../crypto/holders.js';
 import { tierById } from '../../crypto/tiers.js';
-import { packages } from '../../crypto/pricing.js';
-import { userDeposits } from '../../crypto/indexer.js';
 import { users, villages } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { authed, createSession, requireAuth, setFlash } from '../session.js';
-import { topupView, walletView } from '../views/wallet.js';
+import { walletView } from '../views/wallet.js';
 import { formAction, loadGamePage, sendPage } from './helpers.js';
 
 export const walletRouter = Router();
@@ -40,12 +38,13 @@ walletRouter.get('/wallet', requireAuth, (req, res) => {
     res,
     'Wallet',
     walletView({
+      balance: creditBalance(db, ctx.user.id),
       address: w?.address ?? null,
       tier: tierById(w?.tier),
       snapshots: w ? latestSnapshots(db, w.address, Math.max(config.HOLDER_MIN_SNAPSHOTS, 3)) : [],
       csrf: ctx.csrf,
     }),
-    { nav: 'account', chrome: page.chrome },
+    { nav: 'wallet', chrome: page.chrome },
   );
 });
 

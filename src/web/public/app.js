@@ -39,7 +39,7 @@
       if (rate >= 0) v = base >= cap ? base : Math.min(cap, v);
       v = Math.max(0, Math.floor(v));
       r.textContent = v.toLocaleString('en-US');
-      var cell = r.closest('.res');
+      var cell = r.closest('td');
       if (cell) cell.classList.toggle('full', rate >= 0 && v >= cap);
     }
   }
@@ -365,7 +365,8 @@
       restEl.className = rest === 0 ? 'c1' : rest < 0 ? 'bad' : 'c2';
     };
     npc.addEventListener('input', update);
-    document.getElementById('npc-dist').addEventListener('click', function () {
+    var distBtn = document.getElementById('npc-dist');
+    if (distBtn) distBtn.addEventListener('click', function () {
       // Entered too much: take the excess back from the largest amounts first.
       var over = sum() - total;
       if (over > 0) {

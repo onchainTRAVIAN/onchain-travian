@@ -61,7 +61,7 @@ adminRouter.get('/admin', (req, res) => {
       csrf: ctx.csrf,
       now: ctx.now,
     }),
-    { chrome: page.chrome },
+    { nav: 'admin', chrome: page.chrome },
   );
 });
 

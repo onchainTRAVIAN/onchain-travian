@@ -1,3 +1,4 @@
+import { simLink } from './map.js';
 import { RESOURCE_KEYS, sumRes, type Resources } from '../../game/rules/resources.js';
 import { TRIBES } from '../../game/rules/units.js';
 import { battleOutcome, type BattleReportData, type ReportData, type ReportSide } from '../../game/engine/reports.js';
@@ -69,7 +70,7 @@ export function reportListView(d: {
     return `/reports?${p.toString()}`;
   };
   const buttons = html`<div class="rbtns"><button type="submit" name="act" value="readall" class="gbtn green">Mark all as read</button>
-    <button type="submit" name="act" value="deleteall" class="gbtn green" data-confirm="Delete all ${d.filter === 'all' ? '' : 'these '}reports? This can't be undone.">Delete all${d.filter === 'all' ? '' : ' in this tab'}</button></div>`;
+    <button type="submit" name="act" value="deleteall" class="gbtn secondary" data-confirm="Delete all ${d.filter === 'all' ? '' : 'these '}reports? This can't be undone.">Delete all${d.filter === 'all' ? '' : ' in this tab'}</button></div>`;
   const selRow = (id: string) => html`<div class="rsel"><label><input type="checkbox" id="${id}" data-checkall> Select all</label>
     <span class="rselact"><button type="submit" name="act" value="read" class="small secondary">Mark as read</button> <button type="submit" name="act" value="delete" class="small secondary">Delete</button></span></div>`;
   return html`<h1>Reports</h1>
@@ -106,7 +107,7 @@ type HeroLine = NonNullable<BattleReportData['heroes']>[number];
 
 /** Simulator link with what the scouts saw (up to three armies, the wall) and your own troops. */
 function scoutSimLink(r: BattleReportData): string {
-  const p: Record<string, string> = { mine: '1', mode: 'attack' };
+  const p: Record<string, string> = { mode: 'attack' };
   if (r.oasis) {
     p.oasis = '1';
   }
@@ -117,12 +118,9 @@ function scoutSimLink(r: BattleReportData): string {
     });
   });
   if (r.scout?.wallLevel) p.wall = String(r.scout.wallLevel);
-  return `/simulator?${simParams(p)}`;
+  return simLink(p);
 }
 
-function simParams(p: Record<string, string>): string {
-  return new URLSearchParams(p).toString();
-}
 
 /** Bar comparing two strengths (or carried vs capacity); SVG so it works under the CSP. */
 function splitBar(a: number, b: number, clsA: string, clsB: string): SafeHtml {
@@ -130,6 +128,7 @@ function splitBar(a: number, b: number, clsA: string, clsB: string): SafeHtml {
   const w = total > 0 ? Math.max(1, Math.min(99, Math.round((a / total) * 100))) : 50;
   return html`<svg class="rbar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="8" class="${clsB}"></rect><rect width="${w}" height="8" class="${clsA}"></rect></svg>`;
 }
+
 
 function sideBlock(title: string, role: 'att' | 'def', s: ReportSide, hideUnits = false, extra?: SafeHtml, hero?: HeroLine): SafeHtml {
   const sent = s.units.reduce((x, y) => x + y, 0);
@@ -215,12 +214,13 @@ export function reportView(d: { id: number; title: string; createdAt: number; da
       <div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.goods[k])}</span>`)}</div>`;
   else if (r.type === 'settle')
     body = r.success
-      ? html`<p class="good">🧺 Your settlers founded <b>${r.villageName ?? 'a new village'}</b> at <a href="/map/tile?x=${r.x}&amp;y=${r.y}">(${r.x}|${r.y})</a>.</p>`
+      ? html`<p class="good">Your settlers founded <b>${r.villageName ?? 'a new village'}</b> at <a href="/map/tile?x=${r.x}&amp;y=${r.y}">(${r.x}|${r.y})</a>.</p>`
       : html`<p class="bad">${r.reason ?? 'It did not work out.'}</p>`;
   else
     body = d.title.startsWith('Troops starved')
       ? html`<p class="bad">Your granary ran empty and these troops deserted from ${r.villageName}:</p>${unitsTable(r.tribe, r.units, undefined, { hideEmpty: true })}`
       : html`<p>Troops returned to ${r.villageName}.</p>${unitsTable(r.tribe, r.units, undefined, { hideEmpty: true })}`;
+  if (r && r.type !== 'battle') body = html`<section class="spanel"><div class="pad">${body}</div></section>`;
   const outcome = r && r.type === 'battle' ? battleOutcomeOf(r, d.viewerId) : null;
   return html`<div class="spanel rephead">
       <span class="ricon">${outcome ? icon(`ui/rep-${outcome === 'none' ? 'g' : outcome === 'some' ? 'y' : 'r'}`, '', 28) : icon('ui/report', '', 28)}</span>

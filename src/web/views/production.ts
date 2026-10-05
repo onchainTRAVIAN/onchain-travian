@@ -1,18 +1,17 @@
 import type { ResourceBreakdown } from '../../game/engine/breakdown.js';
 import { RESOURCE_LABEL } from '../../game/rules/resources.js';
-import { fmtNum } from '../format.js';
+import { fmtNum, fmtSigned } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon, timer } from './layout.js';
 
-const signed = (n: number) => `${n >= 0 ? '+' : '−'}${fmtNum(Math.abs(Math.round(n)))}`;
+const signed = (n: number) => fmtSigned(Math.round(n));
 const pctText = (p: number) => `${p >= 0 ? '+' : '−'}${Math.round(Math.abs(p) * 1000) / 10}%`;
 
 export function productionView(d: { villageName: string; speed: number; rows: ResourceBreakdown[]; now: number }): SafeHtml {
-  return html`<h1>Production <span class="lvl">${d.villageName}</span></h1>
-    <p class="tabs">${d.rows.map((r) => html`<a href="#${r.key}">${resIcon(r.key)} ${RESOURCE_LABEL[r.key]}</a>`)}</p>
-    <p class="small muted">Per hour, at world speed x${d.speed}. Bonuses are a share of the base production from your fields.</p>
+  return html`<div class="vtitle"><h1>Production</h1><span class="vmeta">${d.villageName} · per hour at world speed x${d.speed}</span></div>
+    <nav class="pilltabs" aria-label="Resource">${d.rows.map((r) => html`<a href="#${r.key}">${resIcon(r.key)} ${RESOURCE_LABEL[r.key]}</a>`)}</nav>
     ${d.rows.map(
-      (r) => html`<h2 id="${r.key}">${resIcon(r.key)} ${RESOURCE_LABEL[r.key]} <span class="small muted">${fmtNum(Math.round(r.net))} per hour</span></h2>
+      (r) => html`<section class="spanel" id="${r.key}"><h3 class="sp-head"><span class="sph">${resIcon(r.key)} ${RESOURCE_LABEL[r.key]}</span><span>${fmtNum(Math.round(r.net))} per hour</span></h3>
         <div class="tblwrap"><table class="tb prodtb"><tbody>
           <tr><th colspan="3">Base production</th></tr>
           ${r.fields.length === 0
@@ -34,6 +33,7 @@ export function productionView(d: { villageName: string; speed: number; rows: Re
               ${r.upkeep.map((u) => html`<tr><td>${u.label}</td><td></td><td class="num bad">${signed(u.perHour)}</td></tr>`)}
               <tr class="sum"><td><b>Net crop</b></td><td></td><td class="num ${r.net < 0 ? 'bad' : ''}"><b>${signed(r.net)}</b></td></tr>`
             : ''}
-        </tbody></table></div>`,
-    )}`;
+        </tbody></table></div></section>`,
+    )}
+    <p class="small muted">Bonuses are a share of the base production from your fields.</p>`;
 }

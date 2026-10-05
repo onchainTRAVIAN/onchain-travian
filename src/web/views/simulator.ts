@@ -6,6 +6,7 @@ import { TRIBES, type TribeId, type UnitCounts } from '../../game/rules/units.js
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon } from './layout.js';
+import { rallyTabs } from './troops.js';
 import { unitIcon } from './parts.js';
 
 const TRIBE_CHOICES: { id: TribeId; label: string }[] = [
@@ -91,7 +92,7 @@ function lossCostTable(input: SimInput, r: SimResult): SafeHtml {
   const defNote = input.defenders.every((d) => free(d.tribe)) ? '(animals cost nothing)' : undefined;
   const net = r.attackerWon ? r.carry - sumRes(att) : -sumRes(att);
   return html`<h3 class="simh">Losses in resources</h3>
-    <div class="tscroll"><table class="tb simcost"><thead><tr><th></th>${RESOURCE_KEYS.map((k) => html`<th>${resIcon(k)}</th>`)}<th>Total</th></tr></thead><tbody>
+    <div class="tblwrap"><table class="tb simcost"><thead><tr><th></th>${RESOURCE_KEYS.map((k) => html`<th>${resIcon(k)}</th>`)}<th>Total</th></tr></thead><tbody>
       ${costRow('Attacker lost', att, 'att', attNote)}
       ${costRow('Defender lost', def, 'def', defNote)}
     </tbody></table></div>
@@ -108,7 +109,7 @@ export function simResultPanel(input: SimInput, r: SimResult): SafeHtml {
   const ramSlot = TRIBES[att.tribe].units.findIndex((u) => u.type === 'ram');
   const rams = ramSlot >= 0 ? att.units[ramSlot] ?? 0 : 0;
   const pct = (x: number) => `${Math.round(x * 100)}%`;
-  return html`<h2>Result</h2>
+  return html`<h2 class="simh">Result</h2>
     <p class="simhead ${r.attackerWon ? 'att' : 'def'}"><b>${r.attackerWon ? (input.mode === 'raid' ? 'The raid succeeds' : 'The attacker wins') : 'The defender holds'}</b>
       <span class="small muted"> · attack ${fmtNum(Math.round(r.attackPower))} vs defence ${fmtNum(Math.round(r.defensePower))}${input.village && r.morale < 0.999 ? ` · morale ${pct(r.morale)}` : ''}</span></p>
     ${lossTable(att.tribe, 'Attacker', 'att', att.units, r.attackerLosses, !!att.hero, r.heroDied.attacker, r.trapped)}
@@ -133,8 +134,9 @@ export function simulatorView(d: { input: SimPageInput; result: SimResult; world
   const i = d.input;
   const extra = [i.defenders[1], i.defenders[2]];
   const blank = (t: TribeId): SimArmy => ({ tribe: t, units: Array(10).fill(0), levels: Array(10).fill(0), hero: null });
-  return html`<h1>Combat simulator</h1>
-    <p class="tabs"><a href="/troops">Overview</a><a href="/troops/send">Send troops</a><a href="/troops/farmlist">Farm list</a><a href="/simulator" class="on">Combat simulator</a></p>
+  return html`<h1>Rally Point</h1>
+    ${rallyTabs('simulator')}
+    <div class="woodbody">
     <form method="get" action="/simulator" id="simform" class="simform">
       <div class="spanel simvil"><div class="pad"><label for="defv"><b>Your village:</b></label>
         <select id="defv" name="defv">${i.villages.map((v) => html`<option value="${v.id}"${v.id === i.defv ? html` selected` : ''}>${v.name} (${fmtNum(v.pop)})</option>`)}</select>
@@ -142,7 +144,7 @@ export function simulatorView(d: { input: SimPageInput; result: SimResult; world
         <button type="submit" name="natar" value="1" class="small secondary">${icon('tribe/natars', '', 14)} Natars attack it</button>
         <span class="small muted">Fills in the troops standing in that village (yours and reinforcements), your hero, wall, residence and traps.</span></div></div>
       ${i.natar
-        ? html`<div class="note small">A typical Natar ${i.mode === 'raid' ? 'raid' : 'attack'} on <b>${i.natar.name}</b>: Natars size their army to your strength (${fmtNum(i.natar.strength)} — your defence plus population), between ${Math.round(NATAR_FACTOR_MIN * 100)}% and ${Math.round(NATAR_FACTOR_MAX * 100)}% of it; this shows the middle.
+        ? html`<div class="spanel pad small">A typical Natar ${i.mode === 'raid' ? 'raid' : 'attack'} on <b>${i.natar.name}</b>: Natars size their army to your strength (${fmtNum(i.natar.strength)} — your defence plus population), between ${Math.round(NATAR_FACTOR_MIN * 100)}% and ${Math.round(NATAR_FACTOR_MAX * 100)}% of it; this shows the middle.
           ${i.natar.playerPop < NATAR_MIN_POP ? html` <b>You have ${fmtNum(i.natar.playerPop)} population — Natars only attack players with ${NATAR_MIN_POP} or more.</b>` : ''}</div>`
         : ''}
       <p class="simmode">
@@ -172,5 +174,6 @@ export function simulatorView(d: { input: SimPageInput; result: SimResult; world
       <p><button type="submit">Simulate</button> <a href="/simulator" class="small">reset to my troops</a></p>
       <p class="small muted">Uses the same battle rules as real fights (world speed x${d.worldSpeed} does not change fighting). Random catapult targets are not simulated.</p>
     </form>
-    <div id="simresult" aria-live="polite">${simResultPanel(d.input, d.result)}</div>`;
+    <div id="simresult" aria-live="polite">${simResultPanel(d.input, d.result)}</div>
+    </div>`;
 }

@@ -5,7 +5,7 @@ import { TRIBES, type TribeId } from '../../game/rules/units.js';
 import type { RankKind } from '../../game/queries.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { pager as numPager } from './parts.js';
+import { goldBtn, pager as numPager, panel, svgBar, tribeMark, woodTabs } from './parts.js';
 import { csrfField, timer } from './layout.js';
 import { avatarUrl } from '../../game/actions/avatar.js';
 import { WEEK_MS, WEEKLY_CATEGORIES, WEEKLY_LABEL, WEEKLY_PRIZES, type MedalView, type WeeklyCategory, type WeeklyRow } from '../../game/actions/weekly.js';
@@ -21,30 +21,34 @@ export function inboxView(d: {
   csrf: string;
 }): SafeHtml {
   return html`<h1>Messages</h1>
-    <nav class="tabs" aria-label="Mailbox">
-      <a href="/messages" class="${d.box === 'in' ? 'on' : ''}">Inbox</a>
-      <a href="/messages?box=out" class="${d.box === 'out' ? 'on' : ''}">Sent</a>
-      <a href="/messages/new">✏️ Write</a>
-    </nav>
+    ${mailTabs(d.box)}
+    <div class="woodbody">
     ${d.rows.length === 0
       ? html`<p class="muted">${d.box === 'in' ? 'Your inbox is empty.' : 'You have not sent any messages.'}</p>`
       : html`<form method="post" action="/messages/bulk" class="bulk">${csrfField(d.csrf)}<input type="hidden" name="box" value="${d.box}">
-        <table class="tb"><thead><tr><th class="chk"><label class="sr" for="chkall">Select all</label><input type="checkbox" id="chkall" data-checkall title="Select all"></th><th>Subject</th><th>${d.box === 'in' ? 'From' : 'To'}</th><th>Sent</th></tr></thead><tbody>${d.rows.map(
+        <table class="tb rlist"><thead><tr><th class="chk"><label class="sr" for="chkall">Select all</label><input type="checkbox" id="chkall" data-checkall title="Select all"></th><th>Subject</th><th>${d.box === 'in' ? 'From' : 'To'}</th><th>Sent</th></tr></thead><tbody>${d.rows.map(
           (m) => html`<tr class="${d.box === 'in' && !m.isRead ? 'unread' : ''}"><td class="chk"><label class="sr" for="m${m.id}">Select</label><input type="checkbox" id="m${m.id}" name="ids" value="${m.id}"></td>
             <td><a href="/messages/${m.id}">${m.subject}</a>${d.box === 'in' && !m.isRead ? html` <span class="small bad">(new)</span>` : ''}</td><td>${m.other}</td><td class="nowrap">${fmtAgo(m.createdAt, d.now)}</td></tr>`,
         )}</tbody></table>
-        <p class="bulkbar"><button type="submit" name="act" value="delete" class="small">Delete selected</button>
+        <p class="bulkbar"><button type="submit" name="act" value="delete" class="small secondary">Delete selected</button>
           ${d.box === 'in'
             ? html`<button type="submit" name="act" value="read" class="small secondary">Mark selected as read</button>
-              <span class="sep"></span><button type="submit" name="act" value="readall" class="small secondary">Mark all as read</button>`
+              <span class="sep"></span><button type="submit" name="act" value="readall" class="gbtn green">Mark all as read</button>`
             : ''}</p>
         </form>`}
-    ${numPager(d.box === 'out' ? '/messages?box=out' : '/messages', d.page, d.pages)}`;
+    <div class="rbottom">${numPager(d.box === 'out' ? '/messages?box=out' : '/messages', d.page, d.pages)}</div>
+    </div>`;
+}
+
+function mailTabs(box: 'in' | 'out' | 'new'): SafeHtml {
+  return woodTabs([{ href: '/messages', label: 'Inbox', on: box === 'in' }, { href: '/messages?box=out', label: 'Sent', on: box === 'out' }, { href: '/messages/new', label: 'Write', on: box === 'new' }], 'Mailbox');
 }
 
 export function writeView(d: { to: string; subject: string; body: string; csrf: string }): SafeHtml {
-  return html`<h1>✏️ New message</h1>
-    <form method="post" action="/messages">
+  return html`<h1>Messages</h1>
+    ${mailTabs('new')}
+    <div class="woodbody">
+    ${panel('New message', html`<form method="post" action="/messages" class="stack">
       ${csrfField(d.csrf)}
       <label for="to">To (player name)</label>
       <input id="to" type="text" name="to" value="${d.to}" required maxlength="20">
@@ -52,9 +56,9 @@ export function writeView(d: { to: string; subject: string; body: string; csrf: 
       <input id="subj" type="text" name="subject" value="${d.subject}" required maxlength="80">
       <label for="body">Message</label>
       <textarea id="body" name="body" required maxlength="5000">${d.body}</textarea>
-      <div class="actions"><button type="submit" class="block">Send</button></div>
-    </form>
-    <div class="actions"><a class="btn secondary" href="/messages">← Inbox</a></div>`;
+      <div class="actions"><button type="submit" class="gbtn green">Send</button> <a class="btn secondary" href="/messages">« Inbox</a></div>
+    </form>`)}
+    </div>`;
 }
 
 export function messageView(d: {
@@ -69,13 +73,16 @@ export function messageView(d: {
   csrf: string;
 }): SafeHtml {
   const reSubject = d.subject.startsWith('Re: ') ? d.subject : `Re: ${d.subject}`;
-  return html`<h1>${d.subject}</h1>
-    <p class="muted small">From ${d.fromId ? html`<a href="/player/${d.fromId}">${d.fromName}</a>` : d.fromName} to ${d.toName} · ${fmtDateTime(d.createdAt)} UTC</p>
-    <div class="note msgbody">${d.body}</div>
+  return html`<h1>Messages</h1>
+    ${mailTabs('in')}
+    <div class="woodbody">
+    ${panel(d.subject, html`<p class="muted small">From ${d.fromId ? html`<a href="/player/${d.fromId}">${d.fromName}</a>` : d.fromName} to ${d.toName} · ${fmtDateTime(d.createdAt)} UTC</p>
+    <div class="msgbody">${d.body}</div>
     <div class="actions">
-      ${d.canReply ? html`<a class="btn" href="/messages/new?to=${encodeURIComponent(d.fromName)}&amp;subject=${encodeURIComponent(reSubject)}">↩️ Reply</a>` : ''}
-      <a class="btn secondary" href="/messages">← Inbox</a>
-      <form method="post" action="/messages/${d.id}/delete">${csrfField(d.csrf)}<button type="submit" class="secondary">🗑 Delete</button></form>
+      ${d.canReply ? html`<a class="gbtn green" href="/messages/new?to=${encodeURIComponent(d.fromName)}&amp;subject=${encodeURIComponent(reSubject)}">Reply</a>` : ''}
+      <a class="btn secondary" href="/messages">« Inbox</a>
+      <form method="post" action="/messages/${d.id}/delete">${csrfField(d.csrf)}<button type="submit" class="secondary">Delete</button></form>
+    </div>`)}
     </div>`;
 }
 
@@ -89,7 +96,7 @@ const RANK_TABS: { key: RankKind; label: string; title: string; col: string }[] 
 ];
 
 /** Statistics navigation: folder tabs, plus the player sub-tabs underneath. */
-function statsTabs(main: 'players' | 'alliances' | 'villages' | 'heroes' | 'week', sub?: string): SafeHtml {
+export function statsTabs(main: 'players' | 'alliances' | 'villages' | 'heroes' | 'week' | 'wonders', sub?: string): SafeHtml {
   const t = (href: string, on: boolean, label: string) => html`<a href="${href}" class="${on ? 'on' : ''}"${on ? html` aria-current="page"` : ''}>${label}</a>`;
   const subNav =
     main === 'players'
@@ -97,7 +104,7 @@ function statsTabs(main: 'players' | 'alliances' | 'villages' | 'heroes' | 'week
       : main === 'alliances'
         ? html`<nav class="pilltabs" aria-label="Ranking">${ALLY_TABS.map((r) => t(`/alliances?k=${r.key}`, r.key === sub, r.label))}</nav>`
         : html``;
-  return html`<nav class="woodtabs" aria-label="Statistics">${t('/stats', main === 'players', 'Players')}${t('/alliances', main === 'alliances', 'Alliances')}${t('/stats/villages', main === 'villages', 'Villages')}${t('/stats/heroes', main === 'heroes', 'Heroes')}${t('/stats/week', main === 'week', 'Top 10')}${t('/endgame', false, 'Wonders')}</nav>
+  return html`<nav class="woodtabs" aria-label="Statistics">${t('/stats', main === 'players', 'Players')}${t('/alliances', main === 'alliances', 'Alliances')}${t('/stats/villages', main === 'villages', 'Villages')}${t('/stats/heroes', main === 'heroes', 'Heroes')}${t('/stats/week', main === 'week', 'Top 10')}${t('/endgame', main === 'wonders', 'Wonders')}</nav>
     <div class="woodbody statbody">${subNav}`;
 }
 
@@ -177,17 +184,13 @@ function rankFoot(form: SafeHtml, pages: SafeHtml): SafeHtml {
 /** Thin bar under a value, relative to the leader (SVG works under the CSP). */
 function vbar(value: number, top: number): SafeHtml {
   if (top <= 0) return html``;
-  const w = Math.max(1, Math.round((value / top) * 100));
-  return html`<svg class="vbar" viewBox="0 0 100 3" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="3" class="bg"></rect><rect width="${w}" height="3" class="fg"></rect></svg>`;
+  return svgBar(Math.max(1, (value / top) * 100), 'vbar', 3);
 }
 
 function rankCell(rank: number): SafeHtml {
   return rank <= 3 ? html`<td class="ra top">${medalImg(rank, 18)}</td>` : html`<td class="ra">${rank}.</td>`;
 }
 
-function tribeMark(tribe: TribeId): SafeHtml {
-  return tribe === 'nature' ? html`` : html`<img src="/static/img/tribe/${tribe}.svg" width="20" height="20" alt="${TRIBES[tribe].name}" title="${TRIBES[tribe].name}" class="helm">`;
-}
 
 interface Plaque { href: string; name: string; avatar: string; sub: SafeHtml; value: string; label: string }
 /** The top three on plaques, second–first–third. */
@@ -375,11 +378,11 @@ export function playerView(d: {
             <span class="small muted">place ${m.rank} · week of ${new Date(m.weekStart).toISOString().slice(0, 10)}</span><span class="small">${fmtNum(m.value)}</span></div>`,
         )}</div></section>`
       : ''}
-    <table class="ranks"><thead><tr><th colspan="3">Villages</th></tr><tr><td>Village</td><td>Population</td><td>Coordinates</td></tr></thead><tbody>
+    <div class="woodbody statbody pvill"><table class="ranks"><thead><tr><th colspan="3">Villages</th></tr><tr><td>Village</td><td>Population</td><td>Coordinates</td></tr></thead><tbody>
     ${villages.map(
       (v) => html`<tr><td class="pla"><a href="/map/tile?x=${v.x}&amp;y=${v.y}">${v.name}</a>${v.isCapital ? html` <span class="vcap">capital</span>` : ''}</td>
         <td class="val">${fmtNum(v.pop)}${vbar(v.pop, topPop)}</td><td class="center"><a href="/map?x=${v.x}&amp;y=${v.y}">(${v.x}|${v.y})</a></td></tr>`,
-    )}</tbody></table>`;
+    )}</tbody></table></div>`;
 }
 
 /* ---------- Account & help ---------- */
@@ -398,41 +401,38 @@ export function accountView(d: {
 }): SafeHtml {
   const t = TRIBES[d.tribe];
   const me = { id: d.userId, tribe: d.tribe, avatarAt: d.avatarAt };
-  return html`<h1>Profile</h1>
-    <div class="profile">
+  return html`<div class="vtitle"><h1>Profile</h1><span class="vmeta"><a href="/player/${d.userId}">public profile »</a></span></div>
+    <div class="spanel pcardx">
       <div class="pcard">${avatarImg(me, 128, 'avatar big')}
         <div class="pname">${d.username}</div>
-        <div class="ptribe"><img src="/static/img/units/${d.tribe}-1.svg" width="16" height="16" alt=""> ${t.name}</div></div>
+        <div class="ptribe">${tribeMark(d.tribe, 16)} ${t.name}</div></div>
       <div class="pedit">
-        <h2>Profile picture</h2>
+        <b>Profile picture</b>
         <form method="post" action="/account/avatar?_csrf=${encodeURIComponent(d.csrf)}" enctype="multipart/form-data" class="block">
-          <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp,image/gif" required>
-          <button type="submit">Upload</button>
+          <label for="avf" class="sr">Choose a picture</label><input id="avf" type="file" name="avatar" accept="image/png,image/jpeg,image/webp,image/gif" required>
+          <button type="submit" class="small">Upload</button>
           <p class="small muted">JPG, PNG, WebP or GIF up to 5 MB. It is cropped to a square and compressed automatically.</p>
         </form>
         ${d.avatarAt > 0
           ? html`<form method="post" action="/account/avatar/remove">${csrfField(d.csrf)}<button type="submit" class="small secondary">Use my tribe picture instead</button></form>`
           : html`<p class="small muted">You are using the ${t.name} picture.</p>`}
+        ${d.protectedUntil > d.now ? html`<p class="small good">Beginner’s protection ends in ${timer(d.protectedUntil, d.now, false)}.</p>` : ''}
       </div>
     </div>
-    ${d.protectedUntil > d.now ? html`<p class="note">Beginner’s protection ends in ${timer(d.protectedUntil, d.now, false)}.</p>` : ''}
-    <h2>About me</h2>
-    <form method="post" action="/account/bio" class="block">${csrfField(d.csrf)}
+    ${panel('About me', html`<form method="post" action="/account/bio" class="block">${csrfField(d.csrf)}
       <textarea name="bio" maxlength="500" rows="5" aria-label="About me">${d.bio}</textarea>
       <p><button type="submit">Save</button> <span class="small muted">Shown on your public profile (max 500 characters).</span></p>
-    </form>
-    <h2>Change your player name</h2>
-    <form method="post" action="/account/name" class="block">${csrfField(d.csrf)}
+    </form>`, { meta: 'max 500 characters' })}
+    ${panel('Player name', html`<form method="post" action="/account/name" class="block">${csrfField(d.csrf)}
       <input type="text" name="name" value="${d.username}" required minlength="3" maxlength="20" aria-label="New player name">
-      <button type="submit" class="gold" data-confirm="Change your name for ${NAME_CHANGE_PRICE} Gold?">Change for ${NAME_CHANGE_PRICE} Gold</button>
+      ${goldBtn('Change name', NAME_CHANGE_PRICE, true, html` data-confirm="Change your name for ${NAME_CHANGE_PRICE} Gold?"`)}
       <p class="small muted">Your new name shows everywhere (rankings, reports, chat). Letters, numbers, spaces, dots, dashes and underscores, 3–20 characters.</p>
-    </form>
-    <h2>Rename village</h2>
-    <form method="post" action="/account/rename" class="block">${csrfField(d.csrf)}
+    </form>`, { meta: `${NAME_CHANGE_PRICE} Gold` })}
+    ${panel('Rename this village', html`<form method="post" action="/account/rename" class="block">${csrfField(d.csrf)}
       <input id="vn" type="text" name="name" value="${d.village.name}" required minlength="2" maxlength="30" aria-label="Village name">
       <button type="submit">Save</button>
-    </form>
-    <p><a href="/player/${d.userId}">» Public profile</a> | <a href="/wallet">» Wallet &amp; token perks</a>${d.isAdmin ? html` | <a href="/admin">» Admin</a>` : ''}</p>`;
+    </form>`, { meta: d.village.name })}
+    <p class="small"><a href="/wallet">» Wallet &amp; token perks</a>${d.isAdmin ? html` · <a href="/admin">» Admin</a>` : ''}</p>`;
 }
 
 

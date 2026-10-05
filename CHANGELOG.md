@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.16.1 — unreleased
-- Messages list has numbered pages; the shop's "Change your player name" link works again.
-- Design pass in progress: shared panel/tab helpers; soldier art being redrawn (`scripts/art/`).
+## 0.16.1 — 2026-10-05
+- **All soldier pictures redrawn**: every unit of every tribe (and the animals) is now a 3/4-view figure in its own pose — lunging infantry, galloping cavalry, siege crews — with matching small icons.
+- **Every page now shares one look**: parchment panels and wooden tabs on the Rally Point (Overview / Send troops / Farm list / Simulator), Messages, Chat, Alliance, Gold market, Wallet (now a tab of Plus & Gold), Profile, map tile pages, Production, Troop guide, Artifacts & Wonders (under Statistics), the building panels, login and registration.
+- Messages list has numbered pages; "Mark all as read" everywhere is the green button, "Delete all" is grey.
+- Fixes: the "storage full" red colour updates live again; the "Change your player name" and Academy links work; the sidebar highlights Gold market, Wallet, Admin and Game guide when open.
 
 ## 0.16.0 — 2026-10-05 — audit round
 Fixes from a full review of the rules and loopholes:

@@ -8,7 +8,7 @@ import type { MapCell } from '../../game/queries.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { timer } from './layout.js';
-import { unitsTable } from './parts.js';
+import { panel, unitsTable } from './parts.js';
 
 export function cellImage(c: MapCell): string {
   if (c.village) {
@@ -204,8 +204,7 @@ export function mapView(d: {
     html`<a href="/map?x=${d.cx}&amp;y=${d.cy}&amp;size=${sz}&amp;view=${st}" class="${on ? 'on' : ''}">${text}</a>`;
   const live = d.style === 'grid';
   return html`<h1>Map <span class="lvl" id="lm-title">(${d.cx}|${d.cy})</span></h1>
-    <p class="tabs mapopts">${live ? '' : html`Size: ${MAP_SIZES.map((sz) => opt(sz, d.style, `${sz}×${sz}`, sz === n))} `}
-      <span class="sep">View:</span> ${opt(n, 'grid', 'Live map', live)}${opt(n, 'diamond', 'Classic', !live)}</p>
+    <nav class="pilltabs mapopts" aria-label="Map view">${opt(n, 'grid', 'Live map', live)}${opt(n, 'diamond', 'Classic', !live)}${live ? '' : MAP_SIZES.map((sz) => opt(sz, d.style, `${sz}×${sz}`, sz === n))}</nav>
     ${live ? liveMap(d) : ''}
     <div class="mapstatic"${live ? html` data-live` : ''}>
     <svg class="mapsvg ${d.style}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map around ${d.cx}|${d.cy}">
@@ -242,14 +241,14 @@ export function mapView(d: {
         ${d.marks?.size ? html`<p class="small muted maplegend">Your troops:<span class="mvk attack"></span>attack/raid<span class="mvk support"></span>reinforcement<span class="mvk settle"></span>settlers<span class="mvk back"></span>returning</p>` : ''}
       </div>
     </div>
-    <div class="tblwrap"><table><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
+    ${panel('Villages in view', html`<div class="tblwrap"><table class="tb"><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
     ${villages.length === 0
       ? html`<tr><td colspan="4" class="none center">none</td></tr>`
       : villages.map(
           (c) => html`<tr><td><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a></td><td>${c.village?.owner}</td>
             <td class="num">${fmtNum(c.village?.pop ?? 0)}</td><td class="center">(${c.x}|${c.y})</td></tr>`,
         )}
-    </tbody></table></div>
+    </tbody></table></div>`, { pad: false })}
     </div>
     ${live ? html`<script src="${assetUrl('livemap.js')}" defer></script>` : ''}`;
 }
@@ -314,8 +313,9 @@ export function tileView(d: TileViewData): SafeHtml {
   const title = d.village ? d.village.name : d.kind === 'oasis' ? 'Oasis' : 'Abandoned valley';
   const v = d.village;
   const prot = v && v.protectedUntil !== null && v.protectedUntil > d.now;
-  return html`<h1>${title} <span class="muted small">(${d.x}|${d.y})</span></h1>
-    <ul class="list">
+  const send = (kind: string, label: string, cls = 'btn') => html`<a class="${cls}" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=${kind}">${label}</a>`;
+  return html`<div class="vtitle"><h1>${title}</h1><span class="vmeta">(${d.x}|${d.y})</span></div>
+    ${panel('Details', html`<ul class="list">
       ${v
         ? html`<li><span class="grow">Owner <span class="sub">${v.ownerId ? html`<a href="/player/${v.ownerId}">${v.owner}</a>` : v.owner} · ${v.tribe}</span></span></li>
           <li><span class="grow">Population <span class="sub">${fmtNum(v.pop)}</span></span></li>`
@@ -325,35 +325,29 @@ export function tileView(d: TileViewData): SafeHtml {
           : html`<li><span class="grow">Fields <span class="sub">${d.layout ?? '4-4-4-6'} (wood-clay-iron-crop) · free to settle</span></span></li>`}
       <li><span class="grow">Distance <span class="sub">${d.distance.toFixed(1)} fields</span></span></li>
       ${d.travel.map((t) => html`<li><span class="grow">${t.label} <span class="sub">${fmtDuration(t.ms)} travel</span></span></li>`)}
-    </ul>
+    </ul>`, { pad: false })}
     ${d.oasisStock
-      ? html`<h2>Resources in this oasis</h2>
-        <p class="cost">${RESOURCE_KEYS.filter((k) => (d.oasisStock?.[k] ?? 0) > 0).map((k) => html`<span>${resIcon(k)}${fmtNum(Math.floor(d.oasisStock?.[k] ?? 0))}</span>`)}</p>
-        <p class="small muted">Unoccupied oases gather these over time. Win an attack or raid here and your troops carry home as much as they can.</p>`
+      ? panel('Resources in this oasis', html`<p class="cost">${RESOURCE_KEYS.filter((k) => (d.oasisStock?.[k] ?? 0) > 0).map((k) => html`<span>${resIcon(k)}${fmtNum(Math.floor(d.oasisStock?.[k] ?? 0))}</span>`)}</p>
+        <p class="small muted">Unoccupied oases gather these over time. Win an attack or raid here and your troops carry home as much as they can.</p>`)
       : ''}
-    ${d.animals && d.animals.some((n) => n > 0) ? html`<h2>Animals</h2>${unitsTable('nature', d.animals, undefined, { hideEmpty: true })}` : ''}
-    ${d.garrison.map((g) => html`<h2>Garrison of ${g.owner}</h2><p class="small muted">from ${g.village}</p>${unitsTable(g.tribe, g.units, undefined, { hideEmpty: true })}`)}
-    ${d.canReinforce ? html`<p><a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=reinforce">Reinforce this oasis</a> <span class="small muted">Troops stationed here defend it; they eat at home.</span></p>` : ''}
+    ${d.animals && d.animals.some((n) => n > 0) ? panel('Animals', unitsTable('nature', d.animals, undefined, { hideEmpty: true }), { pad: false }) : ''}
+    ${d.garrison.map((g) => panel(`Garrison of ${g.owner}`, unitsTable(g.tribe, g.units, undefined, { hideEmpty: true }), { meta: `from ${g.village}`, pad: false }))}
+    ${prot ? html`<p class="small good">${icon('ui/reinforce', '', 14)} This player is under beginner protection for ${timer(v?.protectedUntil ?? d.now, d.now, false)}.</p>` : ''}
     ${d.kind === 'oasis'
-      ? html`<div class="actions">
-          <a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=attack">⚔️ Attack</a>
-          <a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=raid">💰 Raid</a>
-          <a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=scout">🔭 Scout</a>
+      ? panel('Actions', html`<div class="actions">
+          ${send('attack', 'Attack')} ${send('raid', 'Raid')} ${send('scout', 'Scout', 'btn secondary')}
+          ${d.canReinforce ? send('reinforce', 'Reinforce', 'btn secondary') : ''}
           <a class="btn secondary" href="${simLink({ oasis: '1', mode: 'raid', d1_t: 'nature', ...Object.fromEntries((d.animals ?? []).map((n, i) => [`d1${i}`, String(n)]).filter(([, n]) => n !== '0')) })}">Simulate</a>
-        </div><p class="small muted">Clear all animals with an attack that includes your hero to capture this oasis (needs a Hero's Mansion at level 10 and the oasis within 3 fields).</p>`
+        </div><p class="small muted">Clear all animals with an attack that includes your hero to capture this oasis (needs a Hero's Mansion at level 10 and the oasis within 3 fields).${d.canReinforce ? ' Troops stationed here defend it and eat at home.' : ''}</p>`)
       : ''}
-    ${d.kind === 'field' && !v ? html`<div class="actions"><a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=settle">🧺 Found a village here</a></div>` : ''}
-    ${prot ? html`<div class="note">🛡️ This player is under beginner protection for ${timer(v?.protectedUntil ?? d.now, d.now, false)}.</div>` : ''}
+    ${d.kind === 'field' && !v ? panel('Actions', html`<div class="actions">${send('settle', 'Found a village here')}</div>`) : ''}
     ${v && !v.isMine
-      ? html`<div class="actions">
-          <a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=raid">💰 Raid</a>
-          <a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=attack">⚔️ Attack</a>
-          <a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=scout">🔭 Scout</a>
-          <a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=reinforce">🛡️ Reinforce</a>
+      ? panel('Actions', html`<div class="actions">
+          ${send('raid', 'Raid')} ${send('attack', 'Attack')} ${send('scout', 'Scout', 'btn secondary')} ${send('reinforce', 'Reinforce', 'btn secondary')}
           <a class="btn secondary" href="${simLink({ d1_t: v.tribe, dpop: String(v.pop) })}">Simulate</a>
-          ${v.ownerId ? html`<a class="btn secondary" href="/messages/new?to=${encodeURIComponent(v.owner)}">✉️ Message</a>` : ''}
-        </div>`
+          ${v.ownerId ? html`<a class="btn secondary" href="/messages/new?to=${encodeURIComponent(v.owner)}">Message</a>` : ''}
+        </div>`)
       : ''}
-    ${v?.isMine ? html`<div class="actions"><a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=reinforce">🛡️ Send reinforcements</a></div>` : ''}
-    <div class="actions"><a class="btn secondary" href="/map?x=${d.x}&amp;y=${d.y}">🗺️ Show on map</a></div>`;
+    ${v?.isMine ? panel('Actions', html`<div class="actions">${send('reinforce', 'Send reinforcements', 'btn secondary')}</div>`) : ''}
+    <p><a class="btn secondary" href="/map?x=${d.x}&amp;y=${d.y}">Show on map</a></p>`;
 }

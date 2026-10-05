@@ -27,10 +27,4 @@ export function html(strings: TemplateStringsArray, ...values: Interp[]): SafeHt
   return new SafeHtml(out);
 }
 
-export function raw(s: string): SafeHtml {
-  return new SafeHtml(s);
-}
 
-export function when(cond: unknown, content: () => SafeHtml): SafeHtml | null {
-  return cond ? content() : null;
-}

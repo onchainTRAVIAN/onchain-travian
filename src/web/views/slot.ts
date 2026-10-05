@@ -72,6 +72,7 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
   if (t.options.length === 0) return html``;
   const anyAvailable = t.options.some((o) => o.available);
   return html`<form method="post" action="/train" class="block">${csrfField(csrf)}<input type="hidden" name="building" value="${t.building}">
+    <section class="spanel tgroup"><h3 class="sp-head">Train troops<span><a href="/troops/train">all buildings »</a></span></h3>
     <table class="build_details"><thead><tr><th>Name</th><th>Quantity</th><th>Max</th></tr></thead><tbody>
     ${t.options.map(
       (o) => html`<tr id="u${o.slot}">
@@ -94,8 +95,9 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
           <span id="tt-wood">${resIcon('wood')}0</span><span id="tt-clay">${resIcon('clay')}0</span><span id="tt-iron">${resIcon('iron')}0</span><span id="tt-crop">${resIcon('crop')}0</span>
           <span id="tt-upkeep">${icon('res/cropuse', 'Crop consumption', 18, 12)}0</span><span id="tt-time">${icon('res/clock', 'Duration', 18, 12)}0:00:00</span><span id="tt-carry" class="carry" title="Resources these troops can carry"><b>can carry</b> 0</span>
         </div>
-        <p><button type="submit">train</button></p>`
+        <p class="pad"><button type="submit" class="gbtn green">Train</button></p>`
       : ''}
+    </section>
   </form>
   ${t.queue.length > 0 ? trainingQueue(t.queue, tribe, now, csrf) : ''}`;
 }
@@ -125,7 +127,7 @@ export function slotView(d: SlotViewData): SafeHtml {
         ${effectTiles(d.option, def, d.level, d.tribe)}</div>
     </div>
     ${d.option ? upgradeBox(d.option, d.have, d.csrf, d.now) : ''}
-    ${d.level > 0 && def.id === 'rally' ? html`<p><a href="/troops">» Overview</a> | <a href="/troops/send">» Send troops</a></p>` : ''}
+    ${d.level > 0 && def.id === 'rally' ? html`<p class="actions"><a class="btn" href="/troops">Rally Point overview</a> <a class="btn secondary" href="/troops/send">Send troops</a> <a class="btn secondary" href="/simulator">Simulator</a></p>` : ''}
     ${d.level > 0 ? d.panels : ''}
     ${d.training && d.level > 0 ? trainingPanel(d.training, d.tribe, d.have, d.csrf, d.now) : ''}
   </div>`;

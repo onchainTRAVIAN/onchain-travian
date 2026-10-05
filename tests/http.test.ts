@@ -177,7 +177,7 @@ describe('playing through the web', () => {
     const res = await agent.post('/build').type('form').send({ _csrf: csrfFrom(slot.text), slot: '1' });
     expect(res.status).toBe(303);
     const fields = await agent.get('/fields');
-    expect(fields.text).toContain('Building:');
+    expect(fields.text).toContain('Building');
     expect(fields.text).toMatch(/(Woodcutter|Clay Pit|Iron Mine|Cropland) \(level 1\)/);
   });
 

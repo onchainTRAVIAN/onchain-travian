@@ -4,13 +4,13 @@ import { RESOURCE_KEYS, RESOURCE_LABEL } from '../../game/rules/resources.js';
 import { TRIBES, carryOf, type TribeId } from '../../game/rules/units.js';
 import { fmtAgo, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { csrfField, resIcon } from './layout.js';
-import { unitIcon, unitsInline } from './parts.js';
+import { csrfField, icon, resIcon } from './layout.js';
+import { rallyTabs } from './troops.js';
+import { panel, unitIcon, unitsInline } from './parts.js';
 
 export function goldClubLocked(): SafeHtml {
-  return html`<div class="card"><b>Gold Club</b>
-    <p class="small">Farm lists (raid many targets with one click, optionally automatically), evasion, trade routes and the cropper finder are part of the Gold Club: ${GOLD_CLUB_PRICE} Gold, once for the whole world.</p>
-    <a class="btn" href="/shop?tab=adv#goldclub">Join the Gold Club</a></div>`;
+  return panel('Gold Club', html`<p class="small">Farm lists (raid many targets with one click, optionally automatically), evasion, trade routes and the cropper finder are part of the Gold Club: ${GOLD_CLUB_PRICE} Gold, once for the whole world.</p>
+    <a class="gbtn" href="/shop?tab=adv#goldclub">Join the Gold Club <span class="gcoin">${icon('res/gold', 'Gold', 15, 10)}${GOLD_CLUB_PRICE}</span></a>`);
 }
 
 const RESULT: Record<string, { icon: string; label: string }> = {
@@ -34,19 +34,20 @@ export function farmListView(d: {
   csrf: string;
   now: number;
 }): SafeHtml {
-  const head = html`<h1>Rally Point</h1>
-    <p class="tabs"><a href="/troops">Overview</a><a href="/troops/send">Send troops</a><a href="/troops/farmlist" class="on">Farm list</a><a href="/simulator">Combat simulator</a></p>`;
-  if (!d.member) return html`${head}${goldClubLocked()}`;
+  const head = html`<h1>Rally Point</h1>${rallyTabs('farmlist')}`;
+  if (!d.member) return html`${head}<div class="woodbody">${goldClubLocked()}</div>`;
   const units = TRIBES[d.tribe].units;
   return html`${head}
+    <div class="woodbody">
     ${d.isCapital
-      ? html`<form method="post" action="/goldclub/evade" class="block">${csrfField(d.csrf)}<input type="hidden" name="on" value="${d.evade ? '0' : '1'}">
-          <p><b>Evasion</b> in ${d.villageName}: ${d.evade ? html`<span class="c1">on</span>` : html`<span class="none">off</span>`}
+      ? html`<form method="post" action="/goldclub/evade" class="spanel evade">${csrfField(d.csrf)}<input type="hidden" name="on" value="${d.evade ? '0' : '1'}">
+          <p class="pad"><b>Evasion</b> in ${d.villageName}: ${d.evade ? html`<span class="c1">on</span>` : html`<span class="none">off</span>`}
           <button type="submit" class="small secondary">${d.evade ? 'Turn off' : 'Turn on'}</button>
           <span class="small muted">Your capital's own troops leave when an attack or raid arrives and come back afterwards.</span></p></form>`
       : ''}
     ${d.raider ?? ''}
-    ${customLists(d)}`;
+    ${customLists(d)}
+    </div>`;
 }
 
 type ListsData = Parameters<typeof farmListView>[0];
@@ -170,9 +171,9 @@ export function cropperView(d: { member: boolean; from: { x: number; y: number }
   const head = html`<h1>Cropper finder</h1>`;
   if (!d.member) return html`${head}${goldClubLocked()}`;
   return html`${head}
-    <p class="tabs">${[10, 20, 30].map((r) => html`<a href="/map/croppers?r=${r}" class="${r === d.radius ? 'on' : ''}">within ${r} fields</a>`)}</p>
+    <nav class="pilltabs" aria-label="Range">${[10, 20, 30].map((r) => html`<a href="/map/croppers?r=${r}" class="${r === d.radius ? 'on' : ''}"${r === d.radius ? html` aria-current="page"` : ''}>within ${r} fields</a>`)}</nav>
     <p class="small muted">9-crop (3-3-3-9) and 15-crop (1-1-1-15) villages around (${d.from.x}|${d.from.y}), with the best crop bonus from up to three oases within 3 fields.</p>
-    <div class="tblwrap"><table><thead><tr><th>Field</th><th>Type</th><th class="num">Distance</th><th class="num">Oasis crop</th><th>Owner</th></tr></thead><tbody>
+    <div class="tblwrap"><table class="tb"><thead><tr><th>Field</th><th>Type</th><th class="num">Distance</th><th class="num">Oasis crop</th><th>Owner</th></tr></thead><tbody>
     ${d.rows.length === 0
       ? html`<tr><td colspan="5" class="none center">No croppers in range.</td></tr>`
       : d.rows.map(

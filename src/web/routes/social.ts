@@ -487,7 +487,7 @@ socialRouter.get('/help', (req, res) => {
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
   const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 80).trim() : '';
   const c = FAQ_CATEGORIES.find((x) => x.id === req.query.c)?.id ?? null;
-  sendPage(req, res, 'Game guide', helpHome({ q, results: q ? searchFaq(q) : null, category: c }), { chrome });
+  sendPage(req, res, 'Game guide', helpHome({ q, results: q ? searchFaq(q) : null, category: c }), { nav: 'help', chrome });
 });
 
 /** Small search index for the live search box. */
@@ -503,5 +503,5 @@ socialRouter.get('/help/:id', (req, res) => {
     return;
   }
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
-  sendPage(req, res, topic.title, helpTopic(topic), { chrome });
+  sendPage(req, res, topic.title, helpTopic(topic), { nav: 'help', chrome });
 });

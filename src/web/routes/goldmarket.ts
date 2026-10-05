@@ -48,7 +48,7 @@ goldmarketRouter.get('/goldmarket', (req, r) => {
       csrf: ctx.csrf,
       now: ctx.now,
     }),
-    { chrome: page.chrome },
+    { nav: 'goldmarket', chrome: page.chrome },
   );
 });
 
@@ -125,7 +125,7 @@ goldmarketRouter.get('/goldmarket/edit', (req, r) => {
       villageName: mineV?.name ?? null,
       csrf: ctx.csrf,
     }),
-    { chrome: page.chrome },
+    { nav: 'goldmarket', chrome: page.chrome },
   );
 });
 
