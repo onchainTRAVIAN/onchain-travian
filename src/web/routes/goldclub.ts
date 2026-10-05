@@ -115,7 +115,7 @@ goldclubRouter.post(
       maxAnimals: count,
       intervalMin: z.coerce.number().int(),
       maxRaids: z.coerce.number({ message: 'Enter raids per check' }).int(),
-      sizeMode: z.enum(['auto', 'fixed']).default('auto'),
+      sizeMode: z.enum(['auto', 'max', 'fixed']).default('auto'),
       maxPerRaid: count,
     }).catchall(z.string()),
     (req, r, d) => {

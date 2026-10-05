@@ -25,7 +25,7 @@ export interface RaiderSettings {
   maxAnimals: number;
   allowed: boolean[];
   reserve: UnitCounts;
-  sizeMode: 'auto' | 'fixed';
+  sizeMode: 'auto' | 'max' | 'fixed';
   fixed: UnitCounts;
   maxPerRaid: number;
   intervalMin: number;
@@ -212,29 +212,40 @@ export function planOasisRaids(q: Q, r: RaiderRow, tribe: TribeId, now: number):
       s.fixed.forEach((n, i) => (send[i] = n));
     } else {
       const needAtt = ((t as OasisTarget & { animalDef?: number }).animalDef ?? 0) * ANIMAL_MARGIN;
-      let carry = 0;
-      let att = 0;
-      let count = 0;
-      for (const i of order) {
-        const u = units[i];
-        if (!u) continue;
-        const per = u.carry * carryMult;
-        const needCarry = Math.max(0, t.loot - carry);
-        const needA = Math.max(0, needAtt - att);
-        if (needCarry <= 0 && needA <= 0) break;
-        let n = Math.max(per > 0 ? Math.ceil(needCarry / per) : 0, u.attack > 0 ? Math.ceil(needA / u.attack) : 0);
-        n = Math.min(n, pool[i] ?? 0);
-        if (s.maxPerRaid > 0) n = Math.min(n, s.maxPerRaid - count);
-        if (n <= 0) continue;
-        send[i] = n;
-        count += n;
-        carry += n * per;
-        att += n * u.attack;
-      }
-      if (totalUnits(send) === 0 || att < needAtt) {
+      // Spread: each raid gets at most a fair share of the troops still free, so many oases
+      // are raided at once. Guarded oases may take more if their share can't win.
+      const left = Math.min(s.maxRaids - raids.length, ready.length - ready.indexOf(t));
+      const share = s.sizeMode === 'auto' ? Math.max(1, Math.ceil(pool.reduce((a, n) => a + n, 0) / Math.max(1, left))) : Infinity;
+      const size = (cap: number) => {
+        const out = emptyUnits();
+        let carry = 0;
+        let att = 0;
+        let count = 0;
+        for (const i of order) {
+          const u = units[i];
+          if (!u) continue;
+          const per = u.carry * carryMult;
+          const needCarry = Math.max(0, t.loot - carry);
+          const needA = Math.max(0, needAtt - att);
+          if (needCarry <= 0 && needA <= 0) break;
+          let n = Math.max(per > 0 ? Math.ceil(needCarry / per) : 0, u.attack > 0 ? Math.ceil(needA / u.attack) : 0);
+          n = Math.min(n, pool[i] ?? 0, cap - count);
+          if (s.maxPerRaid > 0) n = Math.min(n, s.maxPerRaid - count);
+          if (n <= 0) continue;
+          out[i] = n;
+          count += n;
+          carry += n * per;
+          att += n * u.attack;
+        }
+        return { out, att };
+      };
+      let sized = size(share);
+      if (sized.att < needAtt && share !== Infinity) sized = size(Infinity);
+      if (totalUnits(sized.out) === 0 || sized.att < needAtt) {
         t.status = 'notroops';
         continue;
       }
+      sized.out.forEach((n, i) => (send[i] = n));
     }
     send.forEach((n, i) => (pool[i] = (pool[i] ?? 0) - n));
     t.units = send;

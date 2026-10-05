@@ -83,6 +83,25 @@ describe('Oasis Raider', () => {
     expect(raiderLog(db.select().from(oasisRaiders).where(eq(oasisRaiders.villageId, p.villageId)).get()!).length).toBe(2);
   });
 
+  it('spreads troops over several rich oases by default; "richest first" puts them in one', () => {
+    db.delete(movements).where(eq(movements.fromVillageId, p.villageId)).run();
+    setTroopsAt(db, p.villageId, p.villageId, units(0, 900));
+    for (const o of near) {
+      setOasisAnimals(db, o.x, o.y, emptyUnits(), clock.now());
+      setOasisStock(db, o.x, o.y, { wood: 100000, clay: 100000, iron: 100000, crop: 100000 }, clock.now());
+    }
+    const s = settingsOf(raiderFor(db, p.userId, p.villageId, 'teutons'));
+    saveRaider(db, p.userId, p.villageId, { ...s, sizeMode: 'auto', maxRaids: 20, reserve: emptyUnits() }, clock.now());
+    const spread = plan();
+    expect(spread.raids.length).toBe(3);
+    for (const r of spread.raids) expect(r.units?.[0]).toBe(300);
+    saveRaider(db, p.userId, p.villageId, { ...s, sizeMode: 'max', maxRaids: 20, reserve: emptyUnits() }, clock.now());
+    const max = plan();
+    expect(max.raids.length).toBe(1);
+    expect(max.raids[0]?.units?.[0]).toBe(900);
+    saveRaider(db, p.userId, p.villageId, { ...s, sizeMode: 'auto' }, clock.now());
+  });
+
   it('the server tick runs enabled raiders only after their interval', () => {
     db.delete(movements).where(eq(movements.fromVillageId, p.villageId)).run();
     setRaiderEnabled(db, p.userId, p.villageId, true, 'teutons', clock.now());

@@ -64,7 +64,7 @@ export function raiderPanel(d: RaiderPanelData): SafeHtml {
         )}</tbody></table></div>`}
 
     <details class="raider-settings"${r.id === 0 ? html` open` : ''}>
-      <summary><b>Settings</b> <span class="small muted">range ${r.radius} · at least ${fmtNum(r.minRes)} loot · ${r.maxAnimals ? `up to ${r.maxAnimals} animals` : 'no animals'} · ${r.sizeMode === 'auto' ? 'auto-sized raids' : 'fixed raids'} · max ${r.maxRaids} per check</span></summary>
+      <summary><b>Settings</b> <span class="small muted">range ${r.radius} · at least ${fmtNum(r.minRes)} loot · ${r.maxAnimals ? `up to ${r.maxAnimals} animals` : 'no animals'} · ${r.sizeMode === 'auto' ? 'troops spread over many oases' : r.sizeMode === 'max' ? 'richest oasis first' : 'fixed raids'} · max ${r.maxRaids} per check</span></summary>
       <form method="post" action="/goldclub/raider" class="block">${csrfField(d.csrf)}
         <table class="plain raider-form"><tbody>
           <tr><th>Range</th><td><input type="number" name="radius" min="1" max="${FARM_RADIUS_MAX}" value="${r.radius}" class="w30" inputmode="numeric"> fields around this village (1–${FARM_RADIUS_MAX})</td></tr>
@@ -74,7 +74,8 @@ export function raiderPanel(d: RaiderPanelData): SafeHtml {
           <tr><th>Every</th><td><select name="intervalMin">${RAIDER_INTERVALS.map((m) => html`<option value="${m}"${m === r.intervalMin ? html` selected` : ''}>${m} minutes</option>`)}</select>
             · at most <input type="number" name="maxRaids" min="1" max="100" value="${r.maxRaids}" class="w30" inputmode="numeric"> raids per check</td></tr>
           <tr><th>Raid size</th><td>
-            <label class="block"><input type="radio" name="sizeMode" value="auto"${r.sizeMode === 'auto' ? html` checked` : ''}> <b>Auto</b> — just enough troops to carry everything (fastest troops first)</label>
+            <label class="block"><input type="radio" name="sizeMode" value="auto"${r.sizeMode === 'auto' ? html` checked` : ''}> <b>Spread</b> (recommended) — share your free troops over many oases at once; each raid gets a fair share, never more than its loot needs</label>
+            <label class="block"><input type="radio" name="sizeMode" value="max"${r.sizeMode === 'max' ? html` checked` : ''}> <b>Richest first</b> — the richest oasis gets all the troops its loot needs, then the next one</label>
             <label class="block"><input type="radio" name="sizeMode" value="fixed"${r.sizeMode === 'fixed' ? html` checked` : ''}> <b>Fixed</b> — the same group every raid (column "Fixed" below)</label>
             <label>Max troops per raid <input type="number" name="maxPerRaid" min="0" value="${r.maxPerRaid || ''}" placeholder="no limit" class="w60" inputmode="numeric"></label></td></tr>
         </tbody></table>

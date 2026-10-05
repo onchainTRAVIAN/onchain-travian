@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.1 — 2026-10-05
+- Oasis Raider spreads troops over many oases by default (each raid gets a fair share of the free troops, never more than its loot needs; guarded oases may take more to win). The old behaviour is the "Richest first" option.
+
 ## 0.11.0 — 2026-10-05
 - **Oasis Raider** (Gold Club, Rally Point → Farm list): one automatic oasis raider per village. Turn it on and it checks every 5–60 minutes, finds the free oases in range (1–35 fields) with enough loot, skips guarded ones (or brings enough attack for up to N animals), never sends a second raid while one is on the way, and sizes each raid to just carry the loot (fastest troops first) — or a fixed group. Settings: troop types it may use, troops to keep at home, max troops per raid, max raids per check, "never raid" per oasis. Shows what the next check would send, today's raids and loot, every oasis's status and an activity log; "Raid now" runs a check at once.
 - Custom farm lists fold away (open when short) and scroll.

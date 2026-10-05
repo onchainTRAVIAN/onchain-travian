@@ -497,8 +497,12 @@ export const oasisRaiders = sqliteTable(
     allowed: text('allowed').notNull(),
     /** JSON number[10]: troops always kept at home. */
     reserve: text('reserve').notNull(),
-    /** 'auto' = just enough to carry the loot; 'fixed' = the `fixed` group every time. */
-    sizeMode: text('size_mode', { enum: ['auto', 'fixed'] }).notNull().default('auto'),
+    /**
+     * 'auto' = spread the free troops over many oases (each gets a fair share, never more than
+     * its loot needs); 'max' = richest oasis first, as many troops as its loot needs;
+     * 'fixed' = the `fixed` group every time.
+     */
+    sizeMode: text('size_mode', { enum: ['auto', 'max', 'fixed'] }).notNull().default('auto'),
     fixed: text('fixed').notNull(),
     maxPerRaid: integer('max_per_raid').notNull().default(0),
     intervalMin: integer('interval_min').notNull().default(10),
