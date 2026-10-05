@@ -1,3 +1,4 @@
+import type { AllianceRankKind } from '../../game/actions/alliance.js';
 import { config } from '../../config.js';
 import { TRIBES, type TribeId } from '../../game/rules/units.js';
 import type { RankKind } from '../../game/queries.js';
@@ -87,10 +88,77 @@ const RANK_TABS: { key: RankKind; label: string; title: string; col: string }[] 
 ];
 
 /** Statistics navigation: folder tabs, plus the player sub-tabs underneath. */
-function statsTabs(main: 'players' | 'villages' | 'heroes' | 'week', sub?: RankKind): SafeHtml {
+function statsTabs(main: 'players' | 'alliances' | 'villages' | 'heroes' | 'week', sub?: string): SafeHtml {
   const t = (href: string, on: boolean, label: string) => html`<a href="${href}" class="${on ? 'on' : ''}"${on ? html` aria-current="page"` : ''}>${label}</a>`;
-  return html`<nav class="ftabs" aria-label="Statistics">${t('/stats', main === 'players', 'Players')}${t('/alliances', false, 'Alliances')}${t('/stats/villages', main === 'villages', 'Villages')}${t('/stats/heroes', main === 'heroes', 'Heroes')}${t('/stats/week', main === 'week', 'Top 10')}${t('/endgame', false, 'Wonders')}</nav>
-    ${main === 'players' ? html`<nav class="fsub" aria-label="Ranking">${RANK_TABS.map((r) => t(`/stats?k=${r.key}`, r.key === sub, r.label))}</nav>` : html`<div class="fsub empty"></div>`}`;
+  const subNav =
+    main === 'players'
+      ? html`<nav class="fsub" aria-label="Ranking">${RANK_TABS.map((r) => t(`/stats?k=${r.key}`, r.key === sub, r.label))}</nav>`
+      : main === 'alliances'
+        ? html`<nav class="fsub" aria-label="Ranking">${ALLY_TABS.map((r) => t(`/alliances?k=${r.key}`, r.key === sub, r.label))}</nav>`
+        : html`<div class="fsub empty"></div>`;
+  return html`<nav class="ftabs" aria-label="Statistics">${t('/stats', main === 'players', 'Players')}${t('/alliances', main === 'alliances', 'Alliances')}${t('/stats/villages', main === 'villages', 'Villages')}${t('/stats/heroes', main === 'heroes', 'Heroes')}${t('/stats/week', main === 'week', 'Top 10')}${t('/endgame', false, 'Wonders')}</nav>
+    ${subNav}`;
+}
+
+const ALLY_TABS: { key: AllianceRankKind; label: string; title: string; col: string }[] = [
+  { key: 'population', label: 'Overview', title: 'The largest alliances', col: 'Population' },
+  { key: 'attack', label: 'Attackers', title: 'The most successful attacking alliances', col: 'Points' },
+  { key: 'defense', label: 'Defenders', title: 'The most successful defending alliances', col: 'Points' },
+];
+
+/** A small shield bearing the alliance tag (drawn inline, so no image file is needed). */
+function allyShield(tag: string, rank: number, size: number): SafeHtml {
+  const fill = rank === 1 ? '#c9a227' : rank === 2 ? '#9aa1ab' : rank === 3 ? '#b07a45' : '#71a83a';
+  const t = tag.slice(0, 8);
+  const fs = t.length <= 3 ? 11.5 : t.length <= 5 ? 9 : 7;
+  return html`<svg class="ashield" width="${size}" height="${Math.round(size * 1.15)}" viewBox="0 0 40 46" aria-hidden="true">
+    <path d="M20 2 L37 8 V22 C37 34 29 41 20 44 C11 41 3 34 3 22 V8 Z" fill="${fill}" stroke="#4a3b17" stroke-width="2"></path>
+    <path d="M20 6 L33 10.5 V22 C33 31.5 27 37 20 39.6 C13 37 7 31.5 7 22 V10.5 Z" fill="#fbfaf5" opacity="0.92"></path>
+    <text x="20" y="${24 + fs / 3}" text-anchor="middle" font-family="Verdana, Arial, sans-serif" font-weight="bold" font-size="${fs}" fill="#3a3010">${t}</text></svg>`;
+}
+
+export function allianceRankingView(d: {
+  kind: AllianceRankKind;
+  rows: { id: number; name: string; tag: string; members: number; pop: number; off: number; def: number }[];
+  leaders: { id: number; name: string; tag: string; members: number; pop: number; off: number; def: number }[];
+  offset: number;
+  page: number;
+  hasMore: boolean;
+  mine: { id: number; rank: number; total: number; tag: string; value: number } | null;
+  perPage: number;
+}): SafeHtml {
+  const tab = ALLY_TABS.find((x) => x.key === d.kind) ?? ALLY_TABS[0];
+  const value = (r: (typeof d.rows)[number]) => (d.kind === 'attack' ? r.off : d.kind === 'defense' ? r.def : r.pop);
+  const unit = d.kind === 'population' ? 'inhabitants' : 'points';
+  const top = d.leaders[0] ? value(d.leaders[0]) : 0;
+  const myPage = d.mine ? Math.ceil(d.mine.rank / d.perPage) : 1;
+  const fame = d.leaders.slice(0, 3);
+  return html`<h1>Statistics</h1>${statsTabs('alliances', d.kind)}
+    ${fame.length
+      ? html`<div class="fame">${[1, 0, 2].filter((i) => fame[i]).map((i) => {
+          const r = fame[i] as (typeof d.rows)[number];
+          return html`<a class="plaque r${i + 1}" href="/alliance/${r.id}"><span class="medal">${medalImg(i + 1, i === 0 ? 30 : 24)}</span>
+            ${allyShield(r.tag, i + 1, i === 0 ? 50 : 42)}
+            <b class="nm">${r.name}</b><span class="sb"><span class="atag">${r.tag}</span> · ${r.members} member${r.members === 1 ? '' : 's'}</span>
+            <span class="vl"><b>${fmtNum(value(r))}</b> ${unit}</span></a>`;
+        })}</div>`
+      : ''}
+    ${d.mine
+      ? html`<div class="mebar spanel">${allyShield(d.mine.tag, d.mine.rank, 20)}<span>Your alliance <b>${d.mine.tag}</b> is <b>${fmtNum(d.mine.rank)}.</b> of ${fmtNum(d.mine.total)} with <b>${fmtNum(d.mine.value)}</b> ${unit}</span>
+          ${d.page !== myPage ? html`<a href="/alliances?k=${d.kind}&amp;page=${myPage}#myally">show its place</a>` : ''}</div>`
+      : ''}
+    <table class="ranks"><thead><tr><th colspan="5">${tab?.title ?? ''}</th></tr>
+      <tr><td></td><td>Alliance</td><td>Members</td><td>Ø per member</td><td>${tab?.col ?? ''}</td></tr></thead><tbody>
+      ${d.rows.length === 0
+        ? html`<tr><td colspan="5" class="none center">No alliances yet — found one at the Embassy (level 3).</td></tr>`
+        : d.rows.map(
+            (r, i) => html`<tr class="${r.id === d.mine?.id ? 'hl' : ''}"${r.id === d.mine?.id ? html` id="myally"` : ''}>${rankCell(d.offset + i + 1)}
+              <td class="pla">${allyShield(r.tag, d.offset + i + 1, 16)} <a href="/alliance/${r.id}">${r.name}</a> <span class="atag">${r.tag}</span></td>
+              <td class="num">${r.members}</td><td class="num">${fmtNum(r.members ? Math.round(value(r) / r.members) : 0)}</td>
+              <td class="val">${fmtNum(value(r))}${vbar(value(r), top)}</td></tr>`,
+          )}
+    </tbody></table>
+    ${rankFoot(html``, pager(`/alliances?k=${d.kind}`, d.page, d.hasMore))}`;
 }
 
 /** "Rank / Name" search under a ranking, like the original. */

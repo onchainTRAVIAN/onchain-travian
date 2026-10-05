@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.4 — 2026-10-05
+- Alliances ranking in the Statistics style: Overview / Attackers / Defenders (members' combined points), hall of fame with tag shields for the top 3, "Your alliance is N." bar, average per member, medals and value bars; opens at your own alliance.
+- Fix: Wallet holder-tier perks ran outside their boxes (no gap to wrap on); they're now neat wrapping chips.
+
 ## 0.12.3 — 2026-10-05
 - Statistics restyled in the game's own look: folder tabs with player sub-tabs, a hall of fame for the top 3 on beige plaques (medal, avatar, tribe, alliance, score), a "You are N. of M" bar, ranking rows with medals, avatars, tribe marks, alliance tags and a fine bar under each value; Top 10 as panels in the side-panel style with avatars and medals; last week's medals below. Still opens at your own place, with Rank/Name search.
 

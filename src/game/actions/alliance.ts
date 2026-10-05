@@ -176,8 +176,13 @@ export function allianceMembersList(q: Q, allianceId: number) {
     .all();
 }
 
-export function allianceRankings(q: Q, limit: number, offset: number) {
+export type AllianceRankKind = 'population' | 'attack' | 'defense';
+
+/** Alliances by members' total population, attack points or defence points. */
+export function allianceRankings(q: Q, limit: number, offset: number, kind: AllianceRankKind = 'population') {
   const pop = sql<number>`coalesce((select sum(v.pop) from villages v join alliance_members am on am.user_id = v.user_id where am.alliance_id = "alliances"."id"), 0)`;
+  const off = sql<number>`coalesce((select sum(u.off_points) from users u join alliance_members am on am.user_id = u.id where am.alliance_id = "alliances"."id"), 0)`;
+  const def = sql<number>`coalesce((select sum(u.def_points) from users u join alliance_members am on am.user_id = u.id where am.alliance_id = "alliances"."id"), 0)`;
   return q
     .select({
       id: alliances.id,
@@ -185,9 +190,11 @@ export function allianceRankings(q: Q, limit: number, offset: number) {
       tag: alliances.tag,
       members: sql<number>`(select count(*) from alliance_members m where m.alliance_id = "alliances"."id")`,
       pop,
+      off,
+      def,
     })
     .from(alliances)
-    .orderBy(desc(pop), alliances.id)
+    .orderBy(desc(kind === 'attack' ? off : kind === 'defense' ? def : pop), alliances.id)
     .limit(limit)
     .offset(offset)
     .all();

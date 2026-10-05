@@ -9,6 +9,7 @@ import {
   allianceCapacity,
   allianceMembersList,
   allianceRankings,
+  allianceTagOf,
   answerDiplomacy,
   createAlliance,
   declineInvite,
@@ -21,13 +22,13 @@ import {
   proposeDiplomacy,
   setRole,
   updateDescription,
+  type AllianceRankKind,
 } from '../../game/actions/alliance.js';
+import { allianceRankingView } from '../views/social.js';
 import { channelFor, chatHistory, postChat } from '../../game/actions/chat.js';
 import { authed, requireAuth, setFlash } from '../session.js';
-import { allianceTable, allianceView, chatLines, chatView, noAllianceView } from '../views/community.js';
+import { allianceView, chatLines, chatView, noAllianceView } from '../views/community.js';
 import { formAction, intParam, loadGamePage, pageParam, sendPage } from './helpers.js';
-import { html } from '../html.js';
-import { paginate } from '../views/parts.js';
 
 export const communityRouter = Router();
 
@@ -57,13 +58,33 @@ communityRouter.get('/alliance', requireAuth, (req, res) => {
 });
 
 communityRouter.get('/alliances', (req, res) => {
-  const p = pageParam(req.query.page);
-  const rows = allianceRankings(db, 21, (p - 1) * 20);
+  const kinds: AllianceRankKind[] = ['population', 'attack', 'defense'];
+  const kind = kinds.find((k) => k === req.query.k) ?? 'population';
+  const PER = 20;
+  // Like the player ranking: open at your own alliance unless a page is asked for.
+  const all = allianceRankings(db, 100_000, 0, kind);
+  const mineId = req.ctx.user ? allianceTagOf(db, req.ctx.user.id)?.id ?? null : null;
+  const myIndex = mineId !== null ? all.findIndex((a) => a.id === mineId) : -1;
+  const p = req.query.page === undefined && myIndex >= 0 ? Math.floor(myIndex / PER) + 1 : pageParam(req.query.page);
+  const value = (a: (typeof all)[number]) => (kind === 'attack' ? a.off : kind === 'defense' ? a.def : a.pop);
+  const mine = myIndex >= 0 ? all[myIndex] : undefined;
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
-  sendPage(req, res, 'Alliances', html`<h1>🏆 Alliances</h1>${allianceTable(rows.slice(0, 20), (p - 1) * 20)}${paginate('/alliances', p, rows.length > 20)}`, {
-    nav: 'stats',
-    chrome,
-  });
+  sendPage(
+    req,
+    res,
+    'Alliances',
+    allianceRankingView({
+      kind,
+      rows: all.slice((p - 1) * PER, p * PER),
+      leaders: all.slice(0, 3),
+      offset: (p - 1) * PER,
+      page: p,
+      hasMore: all.length > p * PER,
+      mine: mine ? { id: mine.id, rank: myIndex + 1, total: all.length, tag: mine.tag, value: value(mine) } : null,
+      perPage: PER,
+    }),
+    { nav: 'stats', chrome },
+  );
 });
 
 communityRouter.get('/alliance/:id', (req, res) => {

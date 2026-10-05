@@ -7,7 +7,7 @@ import { html, type SafeHtml } from '../html.js';
 import { csrfField } from './layout.js';
 
 function perkList(t: Tier): SafeHtml {
-  return html`${Object.entries(t.perks).map(([k, v]) => html`<span class="nowrap">${PERK_LABEL[k as PerkKind]} +${Math.round((v ?? 0) * 100)}%</span>`)}`;
+  return html`<ul class="perks">${Object.entries(t.perks).map(([k, v]) => html`<li>${PERK_LABEL[k as PerkKind]} <b>+${Math.round((v ?? 0) * 100)}%</b></li>`)}</ul>`;
 }
 
 function short(addr: string): string {
@@ -33,7 +33,7 @@ export function walletView(d: {
     ${!holderTiersEnabled()
       ? html`<p class="muted small">Token perks are not active on this server yet.</p>`
       : d.tier
-        ? html`<div class="card"><b>${d.tier.icon} ${d.tier.name}</b><div class="cost small">${perkList(d.tier)}</div></div>`
+        ? html`<div class="card tiercard"><b class="tiername">${d.tier.icon} ${d.tier.name}</b>${perkList(d.tier)}</div>`
         : html`<p class="muted small">${d.address ? `No tier yet. Perks start once you have held enough ${config.TOKEN_SYMBOL} for ${config.HOLDER_MIN_SNAPSHOTS} snapshots in a row (checked every ${config.HOLDER_SNAPSHOT_HOURS} h).` : 'Link a wallet to get started.'}</p>`}
     ${d.snapshots.length
       ? html`<h3>Recent balance checks</h3><ul class="list">${d.snapshots.map(
@@ -43,9 +43,9 @@ export function walletView(d: {
     <h2>Holder tiers</h2>
     <p class="small muted">Your tier uses the <b>lowest</b> balance of your last ${config.HOLDER_MIN_SNAPSHOTS} checks, so buying for a day doesn't count. Top holders among linked players also qualify by rank.</p>
     ${TIERS.map(
-      (t) => html`<div class="card"><div class="cardrow"><b>${t.icon} ${t.name}</b>
+      (t) => html`<div class="card tiercard"><div class="cardrow"><b class="tiername">${t.icon} ${t.name}</b>
         <span class="small muted">≥ ${(t.minShare * 100).toFixed(2)}% of supply${t.topRank ? ` or top ${t.topRank}` : ''}</span></div>
-        <div class="cost small">${perkList(t)}</div></div>`,
+        ${perkList(t)}</div>`,
     )}
     <script src="/static/wallet.js" defer></script>`;
 }

@@ -652,3 +652,9 @@ table.upgtb tr.base td { background: #f3f3f3; }
 table.upgtb tr:hover td { background: #f2f9e4; }
 table.upgtb td.cost { white-space: nowrap; font-size: 11px; }
 table.upgtb td.cost img { width: 14px; height: 10px; }
+/* Wallet holder tiers */
+.tiercard { padding: 6px 10px 8px; }
+.tiercard .tiername { font-size: 13px; }
+ul.perks { display: flex; flex-wrap: wrap; gap: 4px 6px; list-style: none; margin: 5px 0 0; padding: 0; }
+ul.perks li { font-size: 11px; padding: 1px 7px; border: 1px solid #dcd6c3; border-radius: 3px; background: #fbfaf5; white-space: nowrap; }
+ul.perks li b { color: #2b6a00; }
