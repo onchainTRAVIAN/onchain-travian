@@ -174,7 +174,7 @@ legend { font-weight: bold; padding: 0; margin-bottom: 4px; }
 #vmap1 .rf.busy { background: #fff3c4; border-color: #ff8000; }
 #vmap1 .rf.max { background: #ffe58a; }
 #vmap1 a.vlink { position: absolute; left: 125px; top: 100px; width: 75px; height: 70px; z-index: 31; }
-#map_details { float: right; width: 229px; margin-top: -29px; }
+#map_details { float: right; width: 229px; margin-top: 0; }
 #map_details table { margin-bottom: 14px; }
 #map_details td.ico { width: 18px; text-align: center; }
 #map_details td.val { text-align: right; font-weight: bold; }
@@ -772,3 +772,10 @@ form.spanel, details.spanel { display: block; }
 .bcard .requ { color: #a05a00; margin: 0; }
 .bsoon { margin-top: 16px; color: #8a8266; }
 @media (max-width: 600px) { .bhead { flex-direction: column; align-items: center; text-align: center; } .beff { justify-content: center; } }
+.vtitle .vname { cursor: text; border-radius: 3px; }
+.vtitle .vname:hover { background: #f6f3e8; box-shadow: 0 0 0 4px #f6f3e8; }
+.vtitle .vedit { align-self: center; opacity: 0.5; }
+.vtitle .vedit:hover { opacity: 1; }
+.vtitle .vrename { display: flex; align-items: center; gap: 6px; }
+.vtitle .vrename[hidden] { display: none !important; }
+.vtitle .vrename input { font: bold 18px Georgia, 'Times New Roman', serif; padding: 2px 6px; width: 260px; max-width: 60vw; }

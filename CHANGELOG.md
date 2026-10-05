@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.8 — 2026-10-05
+- Rename a village right from its title: click the name (or the pencil) on the village overview or centre, type, Save (Enter) or Cancel (Esc).
+- Fix: the Production box on the village overview overlapped the title row.
+
 ## 0.12.7 — 2026-10-05
 - New Gold service **Master Trainer** (10 Gold / 7 days, like Master Builder): two upgrades at once in the Blacksmith and in the Armoury, in every village. The upgrade panels list every running upgrade with its finish-now button.
 - Building pages redesigned: header card (picture with level badge, title, description, "now → next level" effect tiles), upgrade panel with costs and a real button; empty building sites list buildings as cards (available now / available later with the requirement).

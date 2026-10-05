@@ -24,7 +24,7 @@ import { heroRankings, playerProfile, playerRank, rankOf, rankings, reportList, 
 import { authed, setFlash } from '../session.js';
 import { reportListView, reportView } from '../views/reports.js';
 import { accountView, heroRankingView, helpView, inboxView, messageView, playerView, rankingView, villageRankingView, weeklyView, writeView } from '../views/social.js';
-import { formAction, intParam, loadGamePage, pageParam, sendPage } from './helpers.js';
+import { backUrl, formAction, intParam, loadGamePage, pageParam, sendPage } from './helpers.js';
 import { requireAuth } from '../session.js';
 
 export const socialRouter = Router();
@@ -352,7 +352,7 @@ socialRouter.post(
     const ctx = authed(req);
     renameVillage(db, ctx.user.id, ctx.villageId, data.name);
     setFlash(res, 'ok', 'Village renamed.');
-    res.redirect(303, '/account');
+    res.redirect(303, backUrl(req, '/account'));
   }, '/account'),
 );
 

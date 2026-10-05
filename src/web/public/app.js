@@ -59,6 +59,27 @@
     }, 6000);
   }
 
+  // Village name: click it (or the pencil) to rename in place.
+  var vRenameForm = document.querySelector('form.vrename');
+  if (vRenameForm) {
+    var vName = document.querySelector('.vtitle .vname');
+    var vEdit = document.querySelector('.vtitle .vedit');
+    var vInput = vRenameForm.querySelector('input[name=name]');
+    var vShow = function (on) {
+      vRenameForm.hidden = !on;
+      if (vName) vName.hidden = on;
+      if (vEdit) vEdit.hidden = on;
+      if (on && vInput) { vInput.focus(); vInput.select(); }
+    };
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-rename]') : null;
+      if (t) { e.preventDefault(); vShow(true); return; }
+      if (e.target.closest && e.target.closest('[data-rename-cancel]')) { e.preventDefault(); vShow(false); }
+    });
+    if (vName) vName.addEventListener('keydown', function (e) { if (e.key === 'Enter') vShow(true); });
+    vRenameForm.addEventListener('keydown', function (e) { if (e.key === 'Escape') vShow(false); });
+  }
+
   // Chat cooldown: the Send button wakes up when the wait is over.
   var chatForm = document.getElementById('chatform');
   var chatSend = document.getElementById('chatsend');

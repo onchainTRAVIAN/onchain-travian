@@ -88,7 +88,11 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
 /** Village name plaque above the village pictures: name, coordinates, population, capital. */
 function villageTitle(d: VillageViewData): SafeHtml {
   const v = d.state.village;
-  return html`<div class="vtitle"><h1>${v.name}</h1>
+  return html`<div class="vtitle"><h1 class="vname" data-rename tabindex="0" title="Click to rename this village">${v.name}</h1>
+    <a class="vedit" href="/account" data-rename title="Rename this village" aria-label="Rename this village"><img src="/static/img/ui/edit.svg" width="14" height="14" alt=""></a>
+    <form method="post" action="/account/rename" class="vrename" hidden>${csrfField(d.csrf)}
+      <label for="vrn" class="sr">Village name</label><input id="vrn" type="text" name="name" value="${v.name}" minlength="2" maxlength="30" required>
+      <button type="submit" class="small">Save</button> <button type="button" class="small secondary" data-rename-cancel>Cancel</button></form>
     <span class="vmeta"><a href="/map?x=${v.x}&amp;y=${v.y}" title="Show on the map">(${v.x}|${v.y})</a>
       <span class="vpop" title="Population">${fmtNum(v.pop)}</span>${v.isCapital ? html`<span class="vcap">capital</span>` : ''}</span></div>`;
 }
