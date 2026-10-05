@@ -7,6 +7,7 @@ import { fmtDuration, fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon } from './layout.js';
 import { unitIcon } from './parts.js';
+import { UNIT_GUIDE } from '../../game/rules/unitguide.js';
 
 const BUILDING_NAME: Record<UnitDef['building'], string> = {
   barracks: 'Barracks (and Great Barracks)',
@@ -46,7 +47,7 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
     <div class="unitinfo">
       <img class="unitbig" src="/static/img/units/big/${d.tribe}-${n}.svg" width="120" height="140" alt="${u.name}">
       <div class="unitstats">
-        <p>${u.description}</p>
+        <p><b>${UNIT_GUIDE[u.id]?.kind ?? ''}</b> — ${UNIT_GUIDE[u.id]?.use ?? u.description}</p>
         <table><tbody>
           <tr><th>Type</th><td>${TYPE_LABEL[u.type] ?? u.type}</td></tr>
           <tr><th>Attack</th><td>${icon('ui/attack', 'Attack', 16)} ${fmtNum(u.attack)}</td></tr>
@@ -88,7 +89,7 @@ export function unitsIndexView(d: { tribe: TribeId | null }): SafeHtml {
       (t) => html`<h2>${TRIBES[t].name}</h2>
         <div class="tblwrap"><table><thead><tr><th>Troop</th><th class="num">Attack</th><th class="num">Def. inf.</th><th class="num">Def. cav.</th><th class="num">Speed</th><th class="num">Carry</th><th class="num">Upkeep</th></tr></thead><tbody>
         ${TRIBES[t].units.map(
-          (u, i) => html`<tr><td>${unitIcon(t, i)} <a href="/unit/${t}/${i + 1}">${u.name}</a></td><td class="num">${u.attack}</td><td class="num">${u.defInf}</td><td class="num">${u.defCav}</td>
+          (u, i) => html`<tr><td>${unitIcon(t, i)} <a href="/unit/${t}/${i + 1}">${u.name}</a><br><span class="small muted">${UNIT_GUIDE[u.id]?.kind ?? ''}</span></td><td class="num">${u.attack}</td><td class="num">${u.defInf}</td><td class="num">${u.defCav}</td>
             <td class="num">${u.speed}</td><td class="num">${t === 'nature' ? '-' : u.carry}</td><td class="num">${u.upkeep}</td></tr>`,
         )}</tbody></table></div>`,
     )}`;

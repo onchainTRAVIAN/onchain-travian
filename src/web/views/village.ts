@@ -18,6 +18,7 @@ import { instantPrice } from '../../game/actions/credits.js';
 import { fmtClock, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { TOWN_SPOTS } from './spots.js';
+import { stagedImage, wallImage } from '../assets.js';
 import { csrfField, icon, resIcon, timer } from './layout.js';
 import { buildingImg, buildingLabel, movementList, unitIcon } from './parts.js';
 
@@ -146,7 +147,9 @@ export function townView(d: VillageViewData): SafeHtml {
     // An unbuilt rally point shows as an empty site.
     const src = s.slot === RALLY_SLOT && !built && !pending ? 'empty' : file;
     labels.set(s.slot, label);
-    return html`<span class="bld b${s.slot}"><img src="/static/img/buildings/${src}.svg" alt=""></span>`;
+    // Built buildings look grander every 5 levels (stage pictures), others show the plain picture.
+    const img = built && src === id && id ? stagedImage('buildings', id, s.level) : `/static/img/buildings/${src}.svg`;
+    return html`<span class="bld b${s.slot}"><img src="${img}" alt=""></span>`;
   });
   labels.set(WALL_SLOT, wall && wall.level > 0 ? `${TRIBES[tribe].wallName} level ${wall.level}` : `Build a ${TRIBES[tribe].wallName}`);
   if (wall && wall.level > 0) levels.push(html`<span class="lv l40 ${badgeClass(d, WALL_SLOT, wall.level, 20)}">${wall.level}</span>`);
@@ -156,7 +159,7 @@ export function townView(d: VillageViewData): SafeHtml {
     <h1>${d.state.village.name}</h1>
     <img class="bg" src="/static/img/scene/dorf2.svg" alt="">
     ${wall?.building
-      ? html`<img class="wall${wall.level > 0 ? '' : ' ghost'}" src="/static/img/walls/${wallFile}.svg" alt="">`
+      ? html`<img class="wall${wall.level > 0 ? '' : ' ghost'}" src="${wall.level > 0 ? wallImage(wallFile, wall.level) : `/static/img/walls/${wallFile}.svg`}" alt="">`
       : ''}
     ${buildings}
     ${levels}

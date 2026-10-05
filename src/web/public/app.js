@@ -125,7 +125,10 @@
       .catch(function () { masks = null; });
     var maskFor = function (img) {
       var m = /\/static\/img\/(.+\.svg)/.exec(img.getAttribute('src') || '');
-      return m && masks ? masks[m[1] + '@' + img.offsetWidth + 'x' + img.offsetHeight] : null;
+      if (!m || !masks) return null;
+      var size = '@' + img.offsetWidth + 'x' + img.offsetHeight;
+      // Stage pictures (e.g. main-3.svg) fall back to the base outline if their own mask is missing.
+      return masks[m[1] + size] || masks[m[1].replace(/-\d\.svg$/, '.svg') + size] || null;
     };
     var drawnAt = function (img, fx, fy) {
       var mk = maskFor(img);

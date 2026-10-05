@@ -1,3 +1,4 @@
+import { PUBLIC_DIR } from './web/assets.js';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -22,7 +23,6 @@ import { html } from './web/html.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Static assets live in src/web/public; the build copies them next to dist.
-const PUBLIC_DIR = resolve(here, 'web/public');
 
 export function createApp() {
   const app = express();

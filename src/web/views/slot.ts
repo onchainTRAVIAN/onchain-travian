@@ -8,6 +8,7 @@ import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon } from './layout.js';
 import { buildingImg, effectAt, unitIcon } from './parts.js';
 import { trainingQueue } from './village.js';
+import { UNIT_GUIDE } from '../../game/rules/unitguide.js';
 
 function costWithTime(o: BuildOption, have: Resources): SafeHtml {
   return costLine(
@@ -71,7 +72,7 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
     <table class="build_details"><thead><tr><th>Name</th><th>Quantity</th><th>Max</th></tr></thead><tbody>
     ${t.options.map(
       (o) => html`<tr id="u${o.slot}">
-        <td class="desc">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b>
+        <td class="desc">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b> <span class="small muted" title="${UNIT_GUIDE[o.unit.id]?.use ?? ''}">${UNIT_GUIDE[o.unit.id]?.kind ?? ''}</span>
           <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>`)}
           ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>
         <td class="val">${o.available
@@ -119,7 +120,7 @@ export function slotView(d: SlotViewData): SafeHtml {
   const def = d.def;
   return html`<div id="build" class="gid-${def.id}">
     <h1>${def.name} <span class="lvl">level ${d.level}</span></h1>
-    <p class="build_desc">${buildingImg(def.id, def.name, true)}${def.description}</p>
+    <p class="build_desc">${buildingImg(def.id, def.name, true, d.level)}${def.description}</p>
     ${d.option ? upgradeBox(d.option, d.have, d.csrf, d.tribe, d.now) : ''}
     ${d.level > 0 && def.id === 'rally' ? html`<p><a href="/troops">» Overview</a> | <a href="/troops/send">» Send troops</a></p>` : ''}
     ${d.level > 0 ? d.panels : ''}

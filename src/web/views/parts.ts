@@ -13,6 +13,7 @@ import type { MovementView } from '../../game/queries.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon, timer } from './layout.js';
+import { stagedImage } from '../assets.js';
 
 export function unitName(tribe: TribeId, slot: number): string {
   return TRIBES[tribe].units[slot]?.name ?? '?';
@@ -161,13 +162,13 @@ export function buildingLabel(id: string | null): { name: string; icon: string }
 const FIELD_ART: Record<string, string> = { woodcutter: 'wood', claypit: 'clay', ironmine: 'iron', cropland: 'crop' };
 const WALL_ART: Record<string, string> = { citywall: 'city', earthwall: 'earth', palisade: 'palisade' };
 
-/** 75×100 building picture (resource fields and walls use their own small art). */
-export function buildingImg(id: string | null, alt?: string, floated = false): SafeHtml {
+/** 75×100 building picture (resource fields and walls use their own small art); `level` picks the look stage. */
+export function buildingImg(id: string | null, alt?: string, floated = false, level = 1): SafeHtml {
   const label = alt ?? buildingLabel(id).name;
   const cls = floated ? 'building' : '';
   if (id && FIELD_ART[id]) return html`<img class="${cls} fld" src="/static/img/fields/${FIELD_ART[id]}.svg" alt="${label}">`;
   if (id && WALL_ART[id]) return html`<img class="${cls}" src="/static/img/buildings/wall-${WALL_ART[id]}.svg" alt="${label}">`;
-  return html`<img class="${cls}" src="/static/img/buildings/${id ?? 'empty'}.svg" alt="${label}">`;
+  return html`<img class="${cls}" src="${id ? stagedImage('buildings', id, level) : '/static/img/buildings/empty.svg'}" alt="${label}">`;
 }
 
 export function hasTroops(c: UnitCounts): boolean {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.4 — 2026-10-05
+- Every troop has a short guide (what kind of unit, what it's best used for) on its info page, the troop list and the training tables.
+- Buildings and walls can show a grander picture every 5 levels (stage pictures `img/buildings/<id>-2..5.svg`, `img/walls/<stem>-2..5.svg`, wooden spikes for walls at levels 1–4); missing stages fall back to the base picture.
+
 ## 0.9.3 — 2026-10-05
 - Cranny works by percentage: 3.5% of the storage per level (warehouse for wood/clay/iron, granary for crop) — 35% at level 10, never more; Gauls' cranny counts double (35% from level 5). Only one cranny per village.
 
