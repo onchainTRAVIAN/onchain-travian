@@ -71,7 +71,9 @@ export type ResearchKind = 'academy' | UpgradeKind;
 export function upgradeOptions(q: Q, state: VillageState, kind: UpgradeKind, now: number): ResearchOption[] {
   const levels = parseLevels(state.village[kind]);
   const buildingLevel = levelOf(state, kind);
-  const busy = researchOrdersOf(q, state.village.id).find((o) => o.kind === kind);
+  // One upgrade at a time per building — two with the Master Trainer.
+  const running = researchOrdersOf(q, state.village.id).filter((o) => o.kind === kind);
+  const slots = getModifiers(q, state.userId, now).smithyQueue;
   const stock = stockOf(state.village);
   const name = kind === 'blacksmith' ? 'Blacksmith' : 'Armoury';
   return TRIBES[state.tribe].units
@@ -85,7 +87,8 @@ export function upgradeOptions(q: Q, state: VillageState, kind: UpgradeKind, now
       if (!isResearched(state, slot)) reason = 'Research this unit first';
       else if (level >= SMITHY_MAX) reason = 'Fully upgraded';
       else if (level >= buildingLevel) reason = `Upgrade the ${name} to level ${next}`;
-      else if (busy) reason = busy.unitSlot === slot ? 'Upgrading now' : `The ${name} is busy`;
+      else if (running.some((o) => o.unitSlot === slot)) reason = 'Upgrading now';
+      else if (running.length >= slots) reason = slots > 1 ? `Both ${name} slots are busy` : `The ${name} is busy`;
       else if (!canAfford(stock, cost)) reason = 'Not enough resources';
       return { slot, unit, done: false, level, cost, timeMs: smithyTimeMs(unit, next, speed(q, state, now), buildingLevel), available: !reason, reason };
     });
@@ -101,8 +104,10 @@ export function startResearch(db: DB, userId: number, villageId: number, kind: R
     assertGame(o, 'Unknown unit');
     if (!o.available) throw new GameError(o.reason ?? 'Not possible right now');
     setResources(tx, villageId, subRes(stockOf(state.village), o.cost));
-    const existing = tx.select().from(researchOrders).where(and(eq(researchOrders.villageId, villageId), eq(researchOrders.kind, kind))).get();
-    assertGame(!existing, kind === 'academy' ? 'The Academy is busy' : kind === 'blacksmith' ? 'The Blacksmith is busy' : 'The Armoury is busy');
+    const existing = tx.select().from(researchOrders).where(and(eq(researchOrders.villageId, villageId), eq(researchOrders.kind, kind))).all();
+    const slots = kind === 'academy' ? 1 : getModifiers(tx, userId, now).smithyQueue;
+    assertGame(existing.length < slots, kind === 'academy' ? 'The Academy is busy' : kind === 'blacksmith' ? 'The Blacksmith is busy' : 'The Armoury is busy');
+    assertGame(!existing.some((e) => e.unitSlot === slot), 'This unit is already being upgraded');
     return tx
       .insert(researchOrders)
       .values({ villageId, kind, unitSlot: slot, toLevel: kind === 'academy' ? 1 : o.level + 1, startAt: now, finishAt: now + o.timeMs })

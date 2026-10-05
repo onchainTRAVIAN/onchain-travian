@@ -23,31 +23,33 @@ function buildAction(o: BuildOption, csrf: string, now: number, label: string, b
   if (o.canBuild) {
     return html`<form method="post" action="/build">${csrfField(csrf)}
       <input type="hidden" name="slot" value="${o.slot}">${buildingId ? html`<input type="hidden" name="building" value="${buildingId}">` : ''}
-      <button type="submit" class="linkbtn">${label}</button></form>`;
+      <button type="submit" class="btn">${label}</button></form>`;
   }
   if (o.reason === 'Not enough resources' && o.waitMs !== undefined) {
     // The countdown reloads the page when it ends, so the build link appears by itself.
-    return html`<span class="none">Enough resources in ${timer(now + o.waitMs, now)} (at ${fmtClock(now + o.waitMs).slice(0, 5)})</span>`;
+    return html`<span class="bwait">Enough resources in ${timer(now + o.waitMs, now)} (at ${fmtClock(now + o.waitMs).slice(0, 5)})</span>`;
   }
-  if (o.reason === 'Not enough resources') return html`<span class="none">Not enough resources</span>`;
+  if (o.reason === 'Not enough resources') return html`<span class="bwait">Not enough resources (storage too small or no production)</span>`;
   const text = o.reason === 'Your builders are busy' ? 'The workers are already at work.' : o.reason ?? 'Not possible right now.';
-  return html`<span class="none">${text}</span>`;
+  return html`<span class="bwait">${text}</span>`;
 }
 
-function upgradeBox(o: BuildOption, have: Resources, csrf: string, tribe: TribeId, now: number): SafeHtml {
-  const nowEffect = effectAt(o.def, o.currentLevel, tribe);
-  const nextEffect = effectAt(o.def, o.nextLevel, tribe);
-  return html`
-    ${nowEffect || nextEffect
-      ? html`<table id="build_value"><tbody>
-          ${o.currentLevel > 0 && nowEffect ? html`<tr><th>Current:</th><td>${nowEffect}</td></tr>` : ''}
-          ${!o.maxed && nextEffect ? html`<tr><th>Level ${o.nextLevel}:</th><td>${nextEffect}</td></tr>` : ''}
-        </tbody></table>`
-      : ''}
-    ${o.maxed
-      ? html`<p class="none">${o.def.name} is fully upgraded.</p>`
-      : html`<p class="contract"><b>Costs</b> for upgrading to level ${o.nextLevel}:<br>${costWithTime(o, have)}</p>
-        <p>${buildAction(o, csrf, now, `Upgrade to level ${o.nextLevel}.`)}</p>`}`;
+function upgradeBox(o: BuildOption, have: Resources, csrf: string, now: number): SafeHtml {
+  if (o.maxed) return html`<p class="bmax">${o.def.name} is fully upgraded.</p>`;
+  return html`<section class="spanel bup"><h3 class="sp-head">${o.currentLevel === 0 ? 'Construction' : `Upgrade to level ${o.nextLevel}`}<span>costs</span></h3>
+    <div class="pad">${costWithTime(o, have)}
+      <div class="bact">${buildAction(o, csrf, now, `Upgrade to level ${o.nextLevel}`)}</div></div></section>`;
+}
+
+/** "Now → next level" effect tiles. */
+function effectTiles(o: BuildOption | null, def: BuildingDef, level: number, tribe: TribeId): SafeHtml {
+  const nowEffect = level > 0 ? effectAt(def, level, tribe) : null;
+  const nextEffect = o && !o.maxed ? effectAt(def, o.nextLevel, tribe) : null;
+  if (!nowEffect && !nextEffect) return html``;
+  return html`<div class="beff">
+    ${nowEffect ? html`<div class="tile"><span class="lbl">Now (level ${level})</span><b>${nowEffect}</b></div>` : ''}
+    ${nowEffect && nextEffect ? html`<span class="arrow" aria-hidden="true">→</span>` : ''}
+    ${nextEffect ? html`<div class="tile next"><span class="lbl">Level ${o?.nextLevel}</span><b>${nextEffect}</b></div>` : ''}</div>`;
 }
 
 export interface SlotViewData {
@@ -98,32 +100,30 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
 }
 
 export function slotView(d: SlotViewData): SafeHtml {
-  // Empty building site: classic "Construct new building" list.
+  // Empty building site: every building you could put here, as cards.
   if (!d.def) {
     const ready = d.buildable.filter((o) => !o.reason?.startsWith('Requires'));
     const soon = d.buildable.filter((o) => o.reason?.startsWith('Requires'));
-    return html`<div id="build" class="gid0"><h1>Construct new building</h1>
-      ${ready.length === 0 ? html`<p class="none">No buildings available for this building site right now.</p>` : ''}
-      ${ready.map(
-        (o) => html`<h2>${o.def.name}</h2><table class="new_building"><tbody><tr>
-          <td class="desc">${o.def.description}<br><br><b>Costs</b> for construction:<br>${costWithTime(o, d.have)}<br>
-            ${buildAction(o, d.csrf, d.now, 'Construct building.', o.def.id)}</td>
-          <td class="bimg">${buildingImg(o.def.id)}</td></tr></tbody></table>`,
-      )}
-      ${soon.length
-        ? html`<h2 class="none">Soon available buildings</h2>${soon.map(
-            (o) => html`<h2>${o.def.name}</h2><table class="new_building"><tbody><tr>
-              <td class="desc">${o.def.description}<br><span class="requ none">${o.reason}</span></td>
-              <td class="bimg">${buildingImg(o.def.id)}</td></tr></tbody></table>`,
-          )}`
-        : ''}</div>`;
+    const card = (o: BuildOption, available: boolean) => html`<div class="spanel bcard${available ? '' : ' soon'}">
+      <div class="bctop"><span class="bcimg">${buildingImg(o.def.id)}</span>
+        <div><b class="bcname">${o.def.name}</b><p class="small">${o.def.description}</p></div></div>
+      ${available
+        ? html`${costWithTime(o, d.have)}<div class="bact">${buildAction(o, d.csrf, d.now, 'Construct', o.def.id)}</div>`
+        : html`<p class="small requ">${o.reason}</p>`}</div>`;
+    return html`<div id="build" class="gid0"><div class="vtitle"><h1>Construct new building</h1><span class="vmeta">building site ${d.slot}</span></div>
+      ${ready.length === 0 ? html`<p class="none">No buildings available for this building site right now.</p>` : html`<div class="bgrid">${ready.map((o) => card(o, true))}</div>`}
+      ${soon.length ? html`<h2 class="bsoon">Available later</h2><div class="bgrid">${soon.map((o) => card(o, false))}</div>` : ''}</div>`;
   }
 
   const def = d.def;
   return html`<div id="build" class="gid-${def.id}">
-    <h1>${def.name} <span class="lvl">level ${d.level}</span></h1>
-    <p class="build_desc">${buildingImg(def.id, def.name, true, d.level)}${def.description}</p>
-    ${d.option ? upgradeBox(d.option, d.have, d.csrf, d.tribe, d.now) : ''}
+    <div class="spanel bhead">
+      <div class="bpic">${buildingImg(def.id, def.name, false, d.level)}<span class="lvlbadge" title="Level">${d.level}</span></div>
+      <div class="binfo"><h1 class="btitle">${def.name} <span class="lvl">level ${d.level}</span></h1>
+        <p class="bdesc">${def.description}</p>
+        ${effectTiles(d.option, def, d.level, d.tribe)}</div>
+    </div>
+    ${d.option ? upgradeBox(d.option, d.have, d.csrf, d.now) : ''}
     ${d.level > 0 && def.id === 'rally' ? html`<p><a href="/troops">» Overview</a> | <a href="/troops/send">» Send troops</a></p>` : ''}
     ${d.level > 0 ? d.panels : ''}
     ${d.training && d.level > 0 ? trainingPanel(d.training, d.tribe, d.have, d.csrf, d.now) : ''}

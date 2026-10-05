@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.7 — 2026-10-05
+- New Gold service **Master Trainer** (10 Gold / 7 days, like Master Builder): two upgrades at once in the Blacksmith and in the Armoury, in every village. The upgrade panels list every running upgrade with its finish-now button.
+- Building pages redesigned: header card (picture with level badge, title, description, "now → next level" effect tiles), upgrade panel with costs and a real button; empty building sites list buildings as cards (available now / available later with the requirement).
+
 ## 0.12.6 — 2026-10-05
 - Hero page redesigned: portrait card with level badge, status, health and experience bars; combat stat tiles; skills as rows with point bars and free-points counter; quick actions (send, simulate, oases); help folded away.
 - Player profiles redesigned: header card (avatar, tribe, alliance, rank, medals, protection, actions), stat tiles, medal cabinet, "About" panel, villages with capital badge and population bars.

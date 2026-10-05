@@ -23,6 +23,8 @@ export interface Modifiers {
   defense: number;
   /** Buildings that can be under construction at the same time. */
   buildQueue: number;
+  /** Upgrades that can run at once in each Blacksmith and Armoury (Master Trainer). */
+  smithyQueue: number;
 }
 
 export const PERK_KINDS = [
@@ -38,6 +40,7 @@ export const PERK_KINDS = [
   'attack',
   'defense',
   'build_queue',
+  'smithy_queue',
 ] as const;
 export type PerkKind = (typeof PERK_KINDS)[number];
 
@@ -54,6 +57,7 @@ export const PERK_LABEL: Record<PerkKind, string> = {
   attack: 'Attack bonus',
   defense: 'Defence bonus',
   build_queue: 'Extra build slot',
+  smithy_queue: 'Extra Blacksmith/Armoury slot',
 };
 
 /** Hard caps so stacked perks can never break the game (fractions, e.g. 0.5 = +50%). */
@@ -70,6 +74,7 @@ export const PERK_CAPS: Record<PerkKind, number> = {
   attack: 0.2,
   defense: 0.2,
   build_queue: 2,
+  smithy_queue: 1,
 };
 
 export function defaultModifiers(): Modifiers {
@@ -82,6 +87,7 @@ export function defaultModifiers(): Modifiers {
     attack: 1,
     defense: 1,
     buildQueue: 1,
+    smithyQueue: 1,
   };
 }
 
@@ -108,6 +114,7 @@ export function foldPerks(rows: PerkRow[]): Modifiers {
   m.attack = 1 + get('attack');
   m.defense = 1 + get('defense');
   m.buildQueue = 1 + Math.floor(get('build_queue'));
+  m.smithyQueue = 1 + Math.floor(get('smithy_queue'));
   return m;
 }
 

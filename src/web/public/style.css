@@ -741,3 +741,34 @@ form.spanel, details.spanel { display: block; }
   .pcardx .pacts { flex-direction: row; width: 100%; }
   .pstats { grid-template-columns: repeat(3, 1fr); }
 }
+/* ---------- Building pages ---------- */
+.bhead { display: flex; gap: 14px; padding: 12px; align-items: flex-start; }
+.bhead .bpic { position: relative; flex: none; width: 96px; height: 116px; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(ellipse at 50% 88%, #e4edcf 0, #f4f1e4 62%, #fbfaf5 100%); border: 1px solid #dcd6c3; border-radius: 6px; }
+.bhead .bpic img { width: 75px; height: 100px; object-fit: contain; }
+.bhead .lvlbadge, .herocard .lvlbadge { position: absolute; top: -8px; left: -8px; width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 50%; background: #c9a227; color: #fff; font-weight: bold; font-size: 12px; border: 2px solid #fff; box-shadow: 0 0 0 1px #b08a1c; }
+.bhead .binfo { flex: 1; min-width: 0; }
+.bhead .btitle { margin: 0 0 4px; font: bold 22px/1.15 Georgia, 'Times New Roman', serif; color: #2f2a17; }
+.bhead .btitle .lvl { font: normal 15px Verdana, sans-serif; color: #b0a888; }
+.bhead .bdesc { margin: 0 0 8px; font-size: 12px; color: #444; }
+.beff { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.beff .tile { padding: 5px 10px; background: #fff; border: 1px solid #e3ddc8; border-radius: 5px; font-size: 12px; }
+.beff .tile .lbl { display: block; font-size: 10px; color: #8a8266; }
+.beff .tile.next { border-color: #b9d18f; background: #f6fbec; }
+.beff .arrow { color: #9ccc5a; font-size: 18px; }
+.bup .pad, .bcard .pad { padding: 8px 12px; }
+.bup .cost { font-size: 12px; }
+.bact { margin-top: 8px; }
+.bwait { color: #8a8266; font-size: 12px; }
+.bmax { color: #8a8266; font-style: italic; }
+.bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.bcard { margin: 0; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.bcard .bctop { display: flex; gap: 10px; }
+.bcard .bcimg { flex: none; width: 60px; height: 80px; display: flex; align-items: flex-end; justify-content: center; background: #f4f1e4; border-radius: 5px; }
+.bcard .bcimg img { width: 56px; height: 75px; object-fit: contain; }
+.bcard .bcname { font: bold 15px Georgia, 'Times New Roman', serif; color: #2f2a17; }
+.bcard p { margin: 3px 0 0; color: #555; }
+.bcard .bact { margin-top: auto; }
+.bcard.soon { opacity: 0.72; }
+.bcard .requ { color: #a05a00; margin: 0; }
+.bsoon { margin-top: 16px; color: #8a8266; }
+@media (max-width: 600px) { .bhead { flex-direction: column; align-items: center; text-align: center; } .beff { justify-content: center; } }

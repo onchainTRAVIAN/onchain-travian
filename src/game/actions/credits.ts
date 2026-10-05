@@ -138,6 +138,7 @@ export const PRODUCTS: Product[] = [
   { id: 'prod_iron', name: '+25% Iron', icon: '⛓️', description: 'All your villages produce 25% more iron.', price: 5, days: 7, perk: 'production_iron', value: 0.25 },
   { id: 'prod_crop', name: '+25% Crop', icon: '🌾', description: 'All your villages produce 25% more crop.', price: 5, days: 7, perk: 'production_crop', value: 0.25 },
   { id: 'build_queue', name: 'Master Builder', icon: '🏗️', description: 'Build two things at once in every village.', price: 10, days: 7, perk: 'build_queue', value: 1 },
+  { id: 'smithy_queue', name: 'Master Trainer', icon: '⚒️', description: 'Two upgrades at once in the Blacksmith and in the Armoury, in every village.', price: 10, days: 7, perk: 'smithy_queue', value: 1 },
   { id: 'train_speed', name: 'Drill Sergeant', icon: '🎯', description: 'Troops train and research 25% faster.', price: 10, days: 3, perk: 'train_speed', value: 0.25 },
   { id: 'attack', name: 'War Banner', icon: '🚩', description: '+10% attack strength for all your troops.', price: 15, days: 3, perk: 'attack', value: 0.1 },
   { id: 'defense', name: 'Stone Walls', icon: '🛡️', description: '+10% defence in all your villages.', price: 15, days: 3, perk: 'defense', value: 0.1 },

@@ -23,7 +23,7 @@ function researchTable(
   csrf: string,
   now: number,
 ): SafeHtml {
-  const running = orders.find((o) => o.kind === kind);
+  const runningAll = orders.filter((o) => o.kind === kind);
   const list = kind === 'academy' ? opts.filter((o) => !o.done) : opts;
   const done = kind === 'academy' ? opts.filter((o) => o.done) : [];
   return html`<table class="tb train"><thead><tr><th>${KIND_TITLE[kind]}</th><th>Action</th></tr></thead><tbody>
@@ -33,16 +33,18 @@ function researchTable(
         ${costLine(o.cost, have, html`<span>${icon('res/clock', 'Duration', 18, 12)}${fmtDuration(o.timeMs)}</span>`)}</td>
         <td class="center">${o.available
           ? html`<form method="post" action="/research">${csrfField(csrf)}<input type="hidden" name="kind" value="${kind}"><input type="hidden" name="unit" value="${o.slot}">
-              <button type="submit" class="linkbtn">${kind === 'academy' ? 'Research' : 'Upgrade'}</button></form>`
+              <button type="submit" class="btn small">${kind === 'academy' ? 'Research' : 'Upgrade'}</button></form>`
           : html`<span class="small none">${o.reason}</span>`}</td></tr>`,
     )}
   </tbody></table>
-  ${running
-    ? html`<table class="tb"><thead><tr><th colspan="3">In progress</th></tr></thead><tbody><tr>
+  ${runningAll.length
+    ? html`<table class="tb"><thead><tr><th colspan="3">In progress</th></tr></thead><tbody>${runningAll.map(
+        (running) => html`<tr>
         <td>${unitIcon(tribe, running.unitSlot)} ${opts.find((o) => o.slot === running.unitSlot)?.unit.name ?? ''}${kind !== 'academy' ? html` (level ${running.toLevel})` : ''}</td>
         <td class="num">${timer(running.finishAt, now)}</td>
         <td><form method="post" action="/shop/finish/research">${csrfField(csrf)}<input type="hidden" name="orderId" value="${running.id}">
-          <button type="submit" class="small gold">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(running.finishAt - now)}</button></form></td></tr></tbody></table>`
+          <button type="submit" class="small gold">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(running.finishAt - now)}</button></form></td></tr>`,
+      )}</tbody></table>`
     : ''}
   ${done.length ? html`<p class="small muted">Researched: ${done.map((o) => html`${unitIcon(tribe, o.slot)} `)}</p>` : ''}`;
 }
