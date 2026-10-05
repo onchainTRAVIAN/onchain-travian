@@ -73,14 +73,15 @@ export function marketPanel(d: {
   return html`<p class="tabs"><a href="#send">Send resources</a><a href="#offer">Offer</a><a href="#buy">Buy</a><a href="#npc">NPC trade</a><a href="#routes">Trade routes</a><a href="/goldmarket">Gold market</a></p>
     <h2 id="send">Send resources</h2>
     <p>Merchants ${d.merchants.free}/${d.merchants.total} · each merchant can carry <b>${fmtNum(d.merchants.capacity)}</b> resources.</p>
-    <form method="post" action="/market/send" id="sendform">
+    <form method="post" action="/market/send" id="sendform" data-cap="${d.merchants.capacity}" data-free="${d.merchants.free}">
       ${csrfField(d.csrf)}
       <table class="tb"><tbody>
         ${RESOURCE_KEYS.map((k) => {
           const max = Math.max(0, Math.min(Math.floor(d.stock[k]), d.merchants.free * d.merchants.capacity));
           return html`<tr><td>${resIcon(k)} ${RESOURCE_LABEL[k]}:</td><td><input id="s${k}" type="number" name="${k}" min="0" placeholder="0" inputmode="numeric">
-            <a href="#s${k}" class="fill small" data-fill="s${k}" data-value="${max}">(max ${fmtNum(max)})</a></td></tr>`;
+            <a href="#s${k}" class="fill small" data-fill="s${k}" data-value="${max}" data-stock="${Math.floor(d.stock[k])}">(max ${fmtNum(max)})</a></td></tr>`;
         })}
+        <tr><td>Merchants:</td><td><b id="merch-need">0</b> of ${d.merchants.free} free needed · <span id="merch-left">${fmtNum(d.merchants.free * d.merchants.capacity)}</span> more resources fit</td></tr>
         <tr><td>Village coordinates:</td><td>X <input type="number" name="x" value="${d.x ?? ''}" required inputmode="numeric" class="w30"> Y <input type="number" name="y" value="${d.y ?? ''}" required inputmode="numeric" class="w30"></td></tr>
         ${d.ownVillages.length || d.places.length
           ? html`<tr><td>Quick pick:</td><td class="places">${d.ownVillages.map(

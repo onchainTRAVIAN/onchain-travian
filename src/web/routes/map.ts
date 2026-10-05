@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { db } from '../../db/index.js';
-import { eq } from 'drizzle-orm';
-import { users, villages } from '../../db/schema.js';
+import { eq, inArray } from 'drizzle-orm';
+import { movements, users, villages } from '../../db/schema.js';
 import { oasisAnimals, oasisStock, type TileRow } from '../../game/engine/oasis.js';
 import { config } from '../../config.js';
 import { troopsAt } from '../../game/engine/state.js';
@@ -9,7 +9,7 @@ import { dist, mapWindow, tileInfo } from '../../game/queries.js';
 import { travelTimeMs, wrapCoord } from '../../game/rules/map.js';
 import { TRIBES } from '../../game/rules/units.js';
 import { authed } from '../session.js';
-import { MAP_SIZES, mapView, tileView, type MapSize, type MapStyle } from '../views/map.js';
+import { MAP_SIZES, mapView, tileView, type MapSize, type MapStyle, type MoveMark } from '../views/map.js';
 import { intParam, loadGamePage, sendPage } from './helpers.js';
 
 export const mapRouter = Router();
@@ -40,6 +40,30 @@ function mapPrefs(req: Request, res: Response): { size: MapSize; style: MapStyle
   return { size, style };
 }
 
+/** Tiles your own troops are heading to (by kind) or coming back from. */
+function movementMarks(myVillageIds: number[]): Map<string, Set<MoveMark>> {
+  const marks = new Map<string, Set<MoveMark>>();
+  if (myVillageIds.length === 0) return marks;
+  const add = (x: number, y: number, m: MoveMark) => {
+    const k = `${x}|${y}`;
+    const set = marks.get(k) ?? new Set<MoveMark>();
+    set.add(m);
+    marks.set(k, set);
+  };
+  const rows = db
+    .select({ kind: movements.kind, toX: movements.toX, toY: movements.toY, originX: movements.originX, originY: movements.originY })
+    .from(movements)
+    .where(inArray(movements.fromVillageId, myVillageIds))
+    .all();
+  for (const r of rows) {
+    if (r.kind === 'attack' || r.kind === 'raid' || r.kind === 'scout') add(r.toX, r.toY, 'attack');
+    else if (r.kind === 'reinforce') add(r.toX, r.toY, 'support');
+    else if (r.kind === 'settle') add(r.toX, r.toY, 'settle');
+    else if (r.kind === 'return' && (r.originX !== r.toX || r.originY !== r.toY)) add(r.originX, r.originY, 'back');
+  }
+  return marks;
+}
+
 mapRouter.get('/map', (req, res) => {
   const ctx = authed(req);
   const page = loadGamePage(req);
@@ -51,7 +75,17 @@ mapRouter.get('/map', (req, res) => {
     req,
     res,
     'Map',
-    mapView({ grid: mapWindow(db, cx, cy, (prefs.size - 1) / 2), cx, cy, myId: ctx.user.id, homeX: v.x, homeY: v.y, size: prefs.size, style: prefs.style }),
+    mapView({
+      grid: mapWindow(db, cx, cy, (prefs.size - 1) / 2),
+      cx,
+      cy,
+      myId: ctx.user.id,
+      homeX: v.x,
+      homeY: v.y,
+      size: prefs.size,
+      style: prefs.style,
+      marks: movementMarks(page.chrome.villages.map((pv) => pv.id)),
+    }),
     { nav: 'map', chrome: page.chrome },
   );
 });

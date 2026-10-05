@@ -5,7 +5,7 @@ import type { Resources } from '../../game/rules/resources.js';
 import type { TribeId } from '../../game/rules/units.js';
 import { fmtClock, fmtDuration, fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { costLine, csrfField, icon, resIcon } from './layout.js';
+import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
 import { buildingImg, effectAt, unitIcon } from './parts.js';
 import { trainingQueue } from './village.js';
 import { UNIT_GUIDE } from '../../game/rules/unitguide.js';
@@ -26,7 +26,8 @@ function buildAction(o: BuildOption, csrf: string, now: number, label: string, b
       <button type="submit" class="linkbtn">${label}</button></form>`;
   }
   if (o.reason === 'Not enough resources' && o.waitMs !== undefined) {
-    return html`<span class="none">Enough resources today at ${fmtClock(now + o.waitMs).slice(0, 5)}</span>`;
+    // The countdown reloads the page when it ends, so the build link appears by itself.
+    return html`<span class="none">Enough resources in ${timer(now + o.waitMs, now)} (at ${fmtClock(now + o.waitMs).slice(0, 5)})</span>`;
   }
   if (o.reason === 'Not enough resources') return html`<span class="none">Not enough resources</span>`;
   const text = o.reason === 'Your builders are busy' ? 'The workers are already at work.' : o.reason ?? 'Not possible right now.';

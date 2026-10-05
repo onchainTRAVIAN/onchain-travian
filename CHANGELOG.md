@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.1 — 2026-10-05
+- Fix: training countdowns could still show raw milliseconds because browsers kept the old script for a day; style and script links now carry a content version, so every deploy loads fresh copies.
+- Build pages count down to "Enough resources in …" and the build link appears by itself when resources are there (no reload while you are typing in a form).
+- Marketplace: live merchant count while you type, and every "(max)" fills only what the free merchants can still carry.
+- Map: small markers on villages and oases your troops are heading to (attack/raid red, reinforcement green, settlers blue) or returning from (brown), with a legend.
+
 ## 0.10.0 — 2026-10-05
 - **Gold Club** (500 Gold, once per world), like the classic Aukso klubas:
   - Farm lists at the Rally Point: saved raid targets, "Raid all" / "Raid selected" in one click, optional auto-repeat every 15/30/60/120 minutes, last result and loot per target, "Add all free oases" within 5/10/15 fields.

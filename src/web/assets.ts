@@ -1,4 +1,5 @@
-import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,4 +38,19 @@ export function stagedImage(dir: string, stem: string, level: number): string {
 export function wallImage(stem: string, level: number): string {
   if (level >= 1 && level < 5 && has('img/walls/spikes.svg')) return '/static/img/walls/spikes.svg';
   return stagedImage('walls', stem, level);
+}
+
+/** Content hash of a static file, appended as ?v= so browsers fetch the new copy after a deploy. */
+const versions = new Map<string, string>();
+export function assetUrl(rel: string): string {
+  let v = versions.get(rel);
+  if (v === undefined) {
+    try {
+      v = createHash('sha1').update(readFileSync(join(PUBLIC_DIR, rel))).digest('hex').slice(0, 10);
+    } catch {
+      v = '0';
+    }
+    versions.set(rel, v);
+  }
+  return `/static/${rel}?v=${v}`;
 }

@@ -212,6 +212,18 @@ legend { font-weight: bold; padding: 0; margin-bottom: 4px; }
 .mapsvg .hit { fill: transparent; }
 /* Only the diamond/square hit shape takes clicks: tile pictures overlap their neighbours. */
 .mapsvg image, .mapsvg .own, .mapsvg .other, .mapsvg .ctr, .mapsvg text { pointer-events: none; }
+.mapsvg .mvm { pointer-events: none; }
+.mapsvg .mvm circle { stroke: #fff; stroke-width: 1.5; }
+.mapsvg .mvm path { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.mapsvg .mvm.attack circle { fill: #d22; }
+.mapsvg .mvm.support circle { fill: #3a9a1a; }
+.mapsvg .mvm.settle circle { fill: #2a6fc9; }
+.mapsvg .mvm.back circle { fill: #8a6a3a; }
+.maplegend .mvk { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px 0 8px; vertical-align: -1px; }
+.maplegend .mvk.attack { background: #d22; }
+.maplegend .mvk.support { background: #3a9a1a; }
+.maplegend .mvk.settle { background: #2a6fc9; }
+.maplegend .mvk.back { background: #8a6a3a; }
 .mapsvg .hit.gl { stroke: #b9d18f; stroke-width: 1; }
 .mapsvg a.tile:hover .hit { fill: rgba(255, 255, 255, 0.3); stroke: #71d000; stroke-width: 1.5; }
 .mapsvg text.lbl { font-family: Verdana, Arial, sans-serif; fill: #777; text-anchor: middle; }

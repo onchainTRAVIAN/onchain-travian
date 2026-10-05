@@ -13,6 +13,9 @@
   var skew = serverNow - Date.now();
   var now = function () { return Date.now() + skew; };
   var reloading = false;
+  // Don't reload a page while the player is filling in a form.
+  var typed = false;
+  document.addEventListener('input', function () { typed = true; });
 
   function tick() {
     var timers = document.querySelectorAll('[data-ends]');
@@ -20,7 +23,7 @@
       var el = timers[i];
       var left = Number(el.getAttribute('data-ends')) - now();
       el.textContent = fmt(left);
-      if (left <= 0 && !reloading && el.hasAttribute('data-reload')) {
+      if (left <= 0 && !reloading && !typed && el.hasAttribute('data-reload')) {
         reloading = true;
         setTimeout(function () { location.reload(); }, 1500);
       }
@@ -119,7 +122,7 @@
     var wallImg = vm.querySelector('img.wall');
     // Outline masks of every picture (scripts/gen-masks.py): which cells of each picture are drawn.
     var masks = null;
-    fetch('/static/masks.json')
+    fetch(document.body.getAttribute('data-masks') || '/static/masks.json')
       .then(function (r) { return r.json(); })
       .then(function (j) { masks = j.masks; })
       .catch(function () { masks = null; });
@@ -311,6 +314,38 @@
     }
     ins.length && ins[0].dispatchEvent(new Event('input', { bubbles: true }));
   });
+
+  // Marketplace: count the merchants needed and keep each "(max)" within what the free merchants can still carry.
+  var sendForm = document.getElementById('sendform');
+  if (sendForm && sendForm.hasAttribute('data-cap')) {
+    var mCap = Number(sendForm.getAttribute('data-cap')) || 1;
+    var mFree = Number(sendForm.getAttribute('data-free')) || 0;
+    var mLinks = sendForm.querySelectorAll('[data-fill][data-stock]');
+    var recount = function () {
+      var vals = {}, sum = 0;
+      for (var i = 0; i < mLinks.length; i++) {
+        var id = mLinks[i].getAttribute('data-fill');
+        var inp = document.getElementById(id);
+        var v = inp ? Math.max(0, Math.floor(Number(inp.value) || 0)) : 0;
+        vals[id] = v; sum += v;
+      }
+      var need = Math.ceil(sum / mCap);
+      var needEl = document.getElementById('merch-need');
+      if (needEl) { needEl.textContent = need; needEl.className = need > mFree ? 'bad' : ''; }
+      var leftEl = document.getElementById('merch-left');
+      if (leftEl) leftEl.textContent = Math.max(0, mFree * mCap - sum).toLocaleString('en-US');
+      for (var j = 0; j < mLinks.length; j++) {
+        var a = mLinks[j], key = a.getAttribute('data-fill');
+        var room = mFree * mCap - (sum - vals[key]);
+        var max = Math.max(0, Math.min(Number(a.getAttribute('data-stock')) || 0, room));
+        a.setAttribute('data-value', max);
+        a.textContent = '(max ' + max.toLocaleString('en-US') + ')';
+      }
+    };
+    sendForm.addEventListener('input', recount);
+    sendForm.addEventListener('click', function () { setTimeout(recount, 0); });
+    recount();
+  }
 
   // "(max)" links fill unit inputs.
   document.addEventListener('click', function (e) {

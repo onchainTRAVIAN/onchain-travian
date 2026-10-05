@@ -1,3 +1,4 @@
+import { assetUrl } from '../assets.js';
 import { config } from '../../config.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, type Resources } from '../../game/rules/resources.js';
 import type { Economy, VillageRow } from '../../game/engine/state.js';
@@ -154,10 +155,10 @@ export function layout(o: PageOpts): SafeHtml {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${o.title} · ${config.WORLD_NAME}</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="${assetUrl('style.css')}">
 <link rel="icon" href="/static/img/nav/dorf2.svg">
 </head>
-<body data-now="${o.now}">
+<body data-masks="${assetUrl('masks.json')}" data-now="${o.now}">
 <div id="wrap">
   <div id="header">
     <a id="logo" href="${c ? '/fields' : '/'}">${config.WORLD_NAME}<small>${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic world'}</small></a>
@@ -176,7 +177,7 @@ export function layout(o: PageOpts): SafeHtml {
   </div>
   <div id="footer"><a href="/help">Instructions</a> | <a href="/stats">Statistics</a> | ${config.WORLD_NAME}</div>
 </div>
-<script src="/static/app.js" defer></script>
+<script src="${assetUrl('app.js')}" defer></script>
 </body>
 </html>`;
 }

@@ -46,6 +46,15 @@ function mapPad(style: MapStyle, to: { n: string; e: string; s: string; w: strin
 export const MAP_SIZES = [7, 11, 15, 21] as const;
 export type MapSize = (typeof MAP_SIZES)[number];
 export type MapStyle = 'diamond' | 'grid';
+/** Your own troops heading to a tile, or coming back from it. */
+export type MoveMark = 'attack' | 'support' | 'settle' | 'back';
+const MARK_TEXT: Record<MoveMark, string> = {
+  attack: 'your attack or raid on the way',
+  support: 'your reinforcements on the way',
+  settle: 'your settlers on the way',
+  back: 'your troops returning from here',
+};
+const MARK_ORDER: MoveMark[] = ['attack', 'support', 'settle', 'back'];
 
 interface Placed {
   c: MapCell;
@@ -69,6 +78,8 @@ export function mapView(d: {
   homeY: number;
   size: MapSize;
   style: MapStyle;
+  /** "x|y" → kinds of your own movements to/from that tile. */
+  marks?: Map<string, Set<MoveMark>>;
 }): SafeHtml {
   const n = d.size;
   const cells = d.grid.flat();
@@ -160,15 +171,32 @@ export function mapView(d: {
         : `Abandoned valley (${c.x}|${c.y})`;
     const own = c.village?.userId === d.myId;
     const ctr = c.x === d.cx && c.y === d.cy;
+    const mk = d.marks?.get(`${c.x}|${c.y}`);
+    const fullLabel = mk ? `${label} · ${MARK_ORDER.filter((m) => mk.has(m)).map((m) => MARK_TEXT[m]).join(', ')}` : label;
     const kind = c.village ? 'village' : c.kind === 'oasis' ? 'oasis' : 'valley';
     return html`<a href="/map/tile?x=${c.x}&amp;y=${c.y}" class="tile" data-x="${c.x}" data-y="${c.y}" data-k="${kind}"
-      data-n="${c.village?.name ?? ''}" data-o="${c.village?.owner ?? ''}" data-p="${c.village?.pop ?? ''}"><title>${label}</title>
+      data-n="${c.village?.name ?? ''}" data-o="${c.village?.owner ?? ''}" data-p="${c.village?.pop ?? ''}"><title>${fullLabel}</title>
       <image href="/static/img/${art}/${cellImage(c)}.svg" x="${p.x}" y="${p.y}" width="${tileSize}" height="${tileSize}"></image>
       ${c.village ? html`<polygon points="${p.shape}" class="${own ? 'own' : 'other'}"></polygon>` : ''}
       ${ctr ? html`<polygon points="${p.shape}" class="ctr"></polygon>` : ''}
       <polygon points="${p.shape}" class="${d.style === 'grid' ? 'hit gl' : 'hit'}"></polygon></a>`;
   });
 
+  // Movement markers on top of every tile: small badges with an arrow in (heading there) or out (coming back).
+  const ms = Math.max(7, Math.min(6 * k, 16));
+  const markers = placed.flatMap((p) => {
+    const mk = d.marks?.get(`${p.c.x}|${p.c.y}`);
+    if (!mk) return [];
+    const kinds = MARK_ORDER.filter((m) => mk.has(m));
+    const bx = d.style === 'diamond' ? p.x + 37 + ((kinds.length - 1) * (2 * ms + 2)) / 2 : p.x + tileSize - ms - 2;
+    const by = d.style === 'diamond' ? p.y + 14 : p.y + ms + 2;
+    return kinds.map((m, idx) => {
+      const x = bx - idx * (2 * ms + 2);
+      const a = m === 'back' ? -1 : 1;
+      return html`<g class="mvm ${m}" transform="translate(${x.toFixed(1)} ${by.toFixed(1)}) scale(${(ms / 7).toFixed(2)})"><circle r="7"></circle>
+        <path d="M${(-3.5 * a).toFixed(1)} 0 H${(3 * a).toFixed(1)} M${(0.5 * a).toFixed(1)} -2.6 L${(3.3 * a).toFixed(1)} 0 L${(0.5 * a).toFixed(1)} 2.6"></path></g>`;
+    });
+  });
   const center = cells.find((c) => c.x === d.cx && c.y === d.cy);
   const villages = cells.filter((c) => c.village);
   const opt = (sz: number, st: MapStyle, text: string, on: boolean) =>
@@ -178,6 +206,7 @@ export function mapView(d: {
       <span class="sep">View:</span> ${opt(n, 'diamond', 'Classic', d.style === 'diamond')}${opt(n, 'grid', 'Flat', d.style === 'grid')}</p>
     <svg class="mapsvg ${d.style}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map around ${d.cx}|${d.cy}">
       ${tiles}
+      ${markers}
       ${labels}
       ${sides.map(
         (a) => html`<a href="${a.href}" class="side" aria-label="Move ${a.title.toLowerCase()}"><title>${a.title}</title>
@@ -206,6 +235,7 @@ export function mapView(d: {
             : html`<tr><th>Field</th><td>${center?.kind === 'oasis' ? 'Oasis' : 'Abandoned valley'}</td></tr>`}
         </tbody></table>
         <p class="small muted">Click a field to open it. Arrow keys move the map. <a href="/map/croppers">» Find croppers</a></p>
+        ${d.marks?.size ? html`<p class="small muted maplegend">Your troops:<span class="mvk attack"></span>attack/raid<span class="mvk support"></span>reinforcement<span class="mvk settle"></span>settlers<span class="mvk back"></span>returning</p>` : ''}
       </div>
     </div>
     <div class="tblwrap"><table><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
