@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.7 — 2026-10-05
+- Every village building looks grander every 5 levels: four new stage pictures per building (levels 5, 10, 15, 20) for all 33 buildings, original art; click outlines for each.
+
 ## 0.9.6 — 2026-10-05
 - Walls grow with their level: wooden spikes at levels 1–4 for every tribe, then the tribe's own wall in four grander stages (5–9, 10–14, 15–19, 20).
 - Fix: clicking a building quickly no longer flashes the old dashed oval (mouse focus outline); keyboard focus still shows it.
