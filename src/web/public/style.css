@@ -911,3 +911,7 @@ input.tickerin { width: 100%; box-sizing: border-box; font-size: 14px; padding: 
 .fl-settings .fl-del { align-self: flex-start; margin-top: 4px; }
 @media (max-width: 600px) { .fl-ways { grid-template-columns: 1fr; } }
 .fl-open td.small .muted { white-space: nowrap; }
+/* Top buttons: grey, colourful on hover and for the open page */
+#mtop a img.c { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity 0.15s; }
+#mtop a:hover img.c, #mtop a:focus-visible img.c, #mtop a.on img.c { opacity: 1; }
+#mtop a:hover img.g { filter: none; }

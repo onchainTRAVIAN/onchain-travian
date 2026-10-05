@@ -73,18 +73,24 @@ function tickerBar(items: TickerItem[], announcement: string | null | undefined)
   </div>`;
 }
 
+/** Grey button picture plus its colour version (shown on hover and for the open page), if drawn. */
+function navImg(img: string, w: number, label: string): SafeHtml {
+  const colour = hasAsset(`img/nav/${img}-c.svg`);
+  return html`<img class="g" src="/static/img/nav/${img}.svg" width="${w}" height="67" alt="${label}">${colour ? html`<img class="c" src="/static/img/nav/${img}-c.svg" width="${w}" height="67" alt="">` : ''}`;
+}
+
 function topNav(active: NavKey | undefined, c: Chrome | null | undefined): SafeHtml {
   if (!c) return html``;
   const n = (key: NavKey, href: string, img: string, label: string) =>
-    html`<a class="n${key === active ? ' on' : ''}" href="${href}" title="${label}"${key === active ? html` aria-current="page"` : ''}><img src="/static/img/nav/${img}.svg" width="70" height="67" alt="${label}"></a>`;
+    html`<a class="n${key === active ? ' on' : ''}" href="${href}" title="${label}"${key === active ? html` aria-current="page"` : ''}>${navImg(img, 70, label)}</a>`;
   return html`<nav id="mtop" aria-label="Main">
     ${n('fields', '/fields', 'dorf1', 'Village overview')}
     ${n('village', '/village', 'dorf2', 'Village centre')}
     ${n('map', '/map', 'map', 'Map')}
     ${n('stats', '/stats', 'stats', 'Statistics')}
-    <a class="half rep${active === 'reports' ? ' on' : ''}" href="/reports" title="Reports"><img src="/static/img/nav/reports.svg" width="35" height="67" alt="Reports">${c.unread.reports ? html`<span class="badge">${c.unread.reports}</span>` : ''}</a>
-    <a class="half msg${active === 'messages' ? ' on' : ''}" href="/messages" title="Messages"><img src="/static/img/nav/messages.svg" width="35" height="67" alt="Messages">${c.unread.messages ? html`<span class="badge">${c.unread.messages}</span>` : ''}</a>
-    <a class="n plus${active === 'shop' ? ' on' : ''}" href="/shop" title="Plus &amp; Gold"><img src="/static/img/nav/plus.svg" width="70" height="67" alt="Plus"></a>
+    <a class="half rep${active === 'reports' ? ' on' : ''}" href="/reports" title="Reports">${navImg('reports', 35, 'Reports')}${c.unread.reports ? html`<span class="badge">${c.unread.reports}</span>` : ''}</a>
+    <a class="half msg${active === 'messages' ? ' on' : ''}" href="/messages" title="Messages">${navImg('messages', 35, 'Messages')}${c.unread.messages ? html`<span class="badge">${c.unread.messages}</span>` : ''}</a>
+    <a class="n plus${active === 'shop' ? ' on' : ''}" href="/shop" title="Plus &amp; Gold">${navImg('plus', 70, 'Plus')}</a>
   </nav>`;
 }
 
