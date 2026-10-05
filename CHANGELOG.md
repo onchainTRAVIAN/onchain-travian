@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.6 — 2026-10-05
+- Walls grow with their level: wooden spikes at levels 1–4 for every tribe, then the tribe's own wall in four grander stages (5–9, 10–14, 15–19, 20).
+- Fix: clicking a building quickly no longer flashes the old dashed oval (mouse focus outline); keyboard focus still shows it.
+
 ## 0.9.5 — 2026-10-05
 - Fix: training queue countdowns on Barracks/Stable/Workshop pages showed raw milliseconds (e.g. "45,569") — a helper in the training-total script shadowed the countdown formatter. The "Finished" column now shows seconds too.
 

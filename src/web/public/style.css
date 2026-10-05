@@ -473,7 +473,9 @@ ul.list li img.avatar.sm { margin-right: 8px; }
 .train-total .miss { color: #c00; font-weight: bold; }
 /* Village centre with JS: pixel-exact picking; the hovered building itself glows. */
 #vmap2.js .hitmap .hit { cursor: inherit; }
-#vmap2.js .hitmap a:hover .hl { fill: none; stroke: none; }
+#vmap2.js .hitmap a:hover .hl, #vmap2.js .hitmap a:focus .hl { fill: none; stroke: none; }
+/* Keyboard users still see which spot is focused. */
+#vmap2.js .hitmap a:focus-visible .hl { fill: rgba(255, 255, 255, 0.22); stroke: #71d000; stroke-width: 2.5; stroke-dasharray: 6 4; }
 #vmap2.js.pt { cursor: pointer; }
 #vmap2 .bld.hov img { filter: drop-shadow(0 0 1.5px #71d000) drop-shadow(0 0 3px #71d000) brightness(1.06); }
 #vmap2.wallhov .wall { filter: drop-shadow(0 0 2px #71d000) brightness(1.05); }
