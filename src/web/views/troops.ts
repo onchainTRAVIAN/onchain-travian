@@ -5,8 +5,10 @@ import type { SendInput, SendPreview } from '../../game/actions/troops.js';
 import type { MovementView, StationedView } from '../../game/queries.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { csrfField, icon, timer } from './layout.js';
-import { movementList, unitIcon, unitsInline, unitsTable } from './parts.js';
+import { csrfField, icon, resIcon, timer } from './layout.js';
+import { KIND_LABEL, movementList, unitIcon, unitsInline, unitsTable } from './parts.js';
+import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
+import { fmtClock } from '../format.js';
 
 export interface TroopsViewData {
   tribe: TribeId;
@@ -131,4 +133,54 @@ export function confirmView(d: { tribe: TribeId; input: SendInput; preview: Send
       <div class="actions"><button type="submit" class="block">✅ Send troops</button></div>
     </form>
     <div class="actions"><a class="btn secondary" href="/troops/send?x=${d.input.x}&amp;y=${d.input.y}&amp;kind=${d.input.kind}">← Change</a></div>`;
+}
+
+export interface MovementDetail {
+  id: number;
+  kind: MovementView['kind'];
+  tribe: TribeId;
+  units: UnitCounts;
+  hero: boolean;
+  merchants: number;
+  loot: Resources | null;
+  /** Carry capacity of the troops (null for merchants/settlers). */
+  capacity: number | null;
+  from: { name: string; x: number; y: number };
+  to: { name: string; x: number; y: number };
+  returning: boolean;
+  departAt: number;
+  arriveAt: number;
+}
+
+export function movementDetailView(d: MovementDetail, now: number): SafeHtml {
+  const place = (p: { name: string; x: number; y: number }) => html`<a href="/map/tile?x=${p.x}&amp;y=${p.y}">${p.name}</a>`;
+  const title = d.returning ? html`Returning from ${place(d.from)}` : html`${KIND_LABEL[d.kind]} to ${place(d.to)}`;
+  const haul = d.loot && sumRes(d.loot) > 0 ? d.loot : null;
+  const total = haul ? Math.floor(sumRes(haul)) : 0;
+  const hasUnits = d.units.some((n) => n > 0);
+  return html`<h1>${title}</h1>
+    <table class="tb movedetail"><tbody>
+      <tr><th>From</th><td>${place(d.from)}</td></tr>
+      <tr><th>To</th><td>${place(d.to)}</td></tr>
+      <tr><th>Set out</th><td>${fmtClock(d.departAt)}</td></tr>
+      <tr><th>Arrives</th><td>in ${timer(d.arriveAt, now)} at ${fmtClock(d.arriveAt)}</td></tr>
+      ${d.merchants > 0 ? html`<tr><th>Merchants</th><td>${fmtNum(d.merchants)}</td></tr>` : ''}
+    </tbody></table>
+    ${hasUnits || d.hero
+      ? html`<h2>Troops <span class="small muted">(${fmtNum(d.units.reduce((a, b) => a + b, 0))}${d.hero ? ' + hero' : ''})</span></h2>
+        ${unitsTable(d.tribe, d.units, undefined, { hideEmpty: true, hero: d.hero })}
+        <p class="small">${d.units
+          .map((n, i) => (n > 0 ? `${fmtNum(n)} ${TRIBES[d.tribe].units[i]?.name ?? ''}` : ''))
+          .filter(Boolean)
+          .join(', ')}${d.hero ? ', hero' : ''}</p>`
+      : ''}
+    ${d.returning || haul || d.capacity !== null
+      ? html`<h2>${d.merchants > 0 && !hasUnits ? 'Goods' : 'Haul'}</h2>
+        ${haul
+          ? html`<table class="tb"><tbody>${RESOURCE_KEYS.map(
+              (k) => html`<tr><td>${resIcon(k)} ${RESOURCE_LABEL[k]}</td><td class="num">${fmtNum(Math.floor(haul[k]))}</td></tr>`,
+            )}<tr><th>Total</th><th class="num">${fmtNum(total)}${d.capacity ? html` <span class="small muted">of ${fmtNum(d.capacity)} (${Math.round((total / d.capacity) * 100)}%)</span>` : ''}</th></tr></tbody></table>`
+          : html`<p class="small muted">${d.returning ? 'Coming back empty-handed.' : d.capacity !== null ? `Can carry ${fmtNum(d.capacity)} resources.` : 'No resources.'}</p>`}`
+      : ''}
+    <p><a href="/troops">« Back to the Rally Point</a></p>`;
 }

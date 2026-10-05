@@ -4,7 +4,8 @@ import { heroes, messages, movements, reports, tiles, troops, users, villages } 
 import { config } from '../config.js';
 import { distance, wrapCoord } from './rules/map.js';
 import type { TribeId, UnitCounts } from './rules/units.js';
-import { parseUnits } from './engine/state.js';
+import { parseResources, parseUnits } from './engine/state.js';
+import type { Resources } from './rules/resources.js';
 
 export function userVillages(q: Q, userId: number) {
   return q
@@ -30,6 +31,18 @@ export interface MovementView {
   otherY: number;
   otherVillageId: number | null;
   ownerName: string;
+  /** Resources carried (loot of returning troops, merchants' goods); null if hidden or empty. */
+  loot: Resources | null;
+}
+
+/** Name of whatever is at a map field: village name, oasis or abandoned valley. */
+export function tileLabel(q: Q, x: number, y: number): string {
+  const t = q.select({ kind: tiles.kind, villageId: tiles.villageId }).from(tiles).where(and(eq(tiles.x, x), eq(tiles.y, y))).get();
+  if (!t) return `(${x}|${y})`;
+  if (t.kind === 'oasis') return `Oasis (${x}|${y})`;
+  if (t.villageId === null) return `Abandoned valley (${x}|${y})`;
+  const v = q.select({ name: villages.name }).from(villages).where(eq(villages.id, t.villageId)).get();
+  return `${v?.name ?? 'Village'} (${x}|${y})`;
 }
 
 /** Movements relevant to a village: outgoing missions, returns, and anything heading here. */
@@ -64,7 +77,8 @@ export function villageMovements(q: Q, villageId: number): MovementView[] {
       out.push({
         id: r.id, kind: r.kind, hero: r.hero, merchants: r.merchants, direction: 'home', arriveAt: r.arriveAt, departAt: r.departAt,
         units: parseUnits(r.units), tribe: from?.tribe ?? 'romans',
-        otherName: `(${r.originX}|${r.originY})`, otherX: r.originX, otherY: r.originY, otherVillageId: null, ownerName: from?.owner ?? '',
+        otherName: tileLabel(q, r.originX, r.originY), otherX: r.originX, otherY: r.originY, otherVillageId: null, ownerName: from?.owner ?? '',
+        loot: r.loot ? parseResources(r.loot) : null,
       });
     } else if (r.fromVillageId === villageId) {
       const to = r.toVillageId !== null ? info.get(r.toVillageId) : undefined;
@@ -72,6 +86,7 @@ export function villageMovements(q: Q, villageId: number): MovementView[] {
         id: r.id, kind: r.kind, hero: r.hero, merchants: r.merchants, direction: 'out', arriveAt: r.arriveAt, departAt: r.departAt,
         units: parseUnits(r.units), tribe: from?.tribe ?? 'romans',
         otherName: to?.name ?? (r.kind === 'settle' ? `new land (${r.toX}|${r.toY})` : `oasis (${r.toX}|${r.toY})`), otherX: r.toX, otherY: r.toY, otherVillageId: r.toVillageId, ownerName: to?.owner ?? '',
+        loot: r.loot ? parseResources(r.loot) : null,
       });
     } else {
       // Incoming: hide hostile army composition (you only see that something is coming).
@@ -79,6 +94,7 @@ export function villageMovements(q: Q, villageId: number): MovementView[] {
         id: r.id, kind: r.kind, hero: r.hero && r.kind === 'reinforce', merchants: r.merchants, direction: 'in', arriveAt: r.arriveAt, departAt: r.departAt,
         units: r.kind === 'reinforce' || r.kind === 'trade' ? parseUnits(r.units) : null, tribe: from?.tribe ?? 'romans',
         otherName: from?.name ?? '?', otherX: r.originX, otherY: r.originY, otherVillageId: r.fromVillageId, ownerName: from?.owner ?? '',
+        loot: r.kind === 'trade' && r.loot ? parseResources(r.loot) : null,
       });
     }
   }

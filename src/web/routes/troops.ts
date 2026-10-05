@@ -3,13 +3,17 @@ import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { previewSend, sendBackReinforcements, sendTroops, withdrawTroops, type SendInput } from '../../game/actions/troops.js';
 import { levelOf, troopsAt } from '../../game/engine/state.js';
-import { reinforcementsIn, troopsAway, villageMovements } from '../../game/queries.js';
+import { reinforcementsIn, tileLabel, troopsAway, villageMovements } from '../../game/queries.js';
+import { eq } from 'drizzle-orm';
+import { movements, users, villages } from '../../db/schema.js';
+import { parseResources, parseUnits } from '../../game/engine/state.js';
+import { movementVisible } from '../views/parts.js';
 import { UNIT_SLOTS, carryOf } from '../../game/rules/units.js';
 import { getModifiers } from '../../game/modifiers.js';
 import { placesOf } from '../../game/actions/places.js';
 import { GameError } from '../../game/errors.js';
 import { authed, setFlash } from '../session.js';
-import { confirmView, sendView, troopsView } from '../views/troops.js';
+import { confirmView, movementDetailView, sendView, troopsView } from '../views/troops.js';
 import { formAction, intParam, loadGamePage, sendPage } from './helpers.js';
 import { fmtDuration } from '../format.js';
 import { heroAtHome } from '../../game/engine/hero.js';
@@ -62,6 +66,56 @@ function toInput(d: SendForm): SendInput {
   const targets = [d.catapultTarget, d.catapultTarget2].filter((t): t is string => !!t);
   return { x: d.x, y: d.y, kind: d.kind, units, catapultTarget: targets.length ? targets.join(',') : null, hero: !!d.hero };
 }
+
+troopsRouter.get('/troops/movement/:id', (req, res) => {
+  const ctx = authed(req);
+  const page = loadGamePage(req);
+  const id = intParam(req.params.id, 0);
+  const mv = db.select().from(movements).where(eq(movements.id, id)).get();
+  const vinfo = (vid: number | null) =>
+    vid === null
+      ? undefined
+      : db.select({ name: villages.name, x: villages.x, y: villages.y, userId: villages.userId, tribe: users.tribe }).from(villages).leftJoin(users, eq(users.id, villages.userId)).where(eq(villages.id, vid)).get();
+  const from = mv ? vinfo(mv.fromVillageId) : undefined;
+  const to = mv ? vinfo(mv.toVillageId) : undefined;
+  const mine = !!from && from.userId === ctx.user.id;
+  const incomingFriendly = !!to && to.userId === ctx.user.id && mv !== undefined && movementVisible({ direction: 'in', kind: mv.kind });
+  if (!mv || !from || (!mine && !incomingFriendly)) {
+    setFlash(res, 'error', 'That movement is over or not yours to see.');
+    res.redirect(303, '/troops');
+    return;
+  }
+  const returning = mv.kind === 'return' || mv.kind === 'merchant_return' || mv.kind === 'delivery';
+  const home = { name: `${from.name} (${from.x}|${from.y})`, x: from.x, y: from.y };
+  const away = { name: tileLabel(db, returning ? mv.originX : mv.toX, returning ? mv.originY : mv.toY), x: returning ? mv.originX : mv.toX, y: returning ? mv.originY : mv.toY };
+  const units = parseUnits(mv.units);
+  const tribe = from.tribe ?? page.state.tribe;
+  const troopMove = mv.kind === 'attack' || mv.kind === 'raid' || mv.kind === 'return' || mv.kind === 'reinforce';
+  sendPage(
+    req,
+    res,
+    'Troop movement',
+    movementDetailView(
+      {
+        id: mv.id,
+        kind: mv.kind,
+        tribe,
+        units,
+        hero: mv.hero,
+        merchants: mv.merchants,
+        loot: mv.loot ? parseResources(mv.loot) : null,
+        capacity: troopMove && from.userId !== null ? carryOf(tribe, units, getModifiers(db, from.userId, ctx.now).troopCarry) : null,
+        from: returning ? away : home,
+        to: returning ? home : away,
+        returning,
+        departAt: mv.departAt,
+        arriveAt: mv.arriveAt,
+      },
+      ctx.now,
+    ),
+    { nav: 'troops', chrome: page.chrome },
+  );
+});
 
 troopsRouter.get('/troops/send', (req, res) => {
   const ctx = authed(req);

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.2 — 2026-10-05
+- Troop movements are clickable: a detail page shows the exact troops (with names and hero), from/to, departure and arrival, and for returning troops the haul per resource with total and % of carry capacity. The movement list shows the haul inline and names the place troops return from. Incoming attacks stay secret.
+
 ## 0.10.1 — 2026-10-05
 - Fix: training countdowns could still show raw milliseconds because browsers kept the old script for a day; style and script links now carry a content version, so every deploy loads fresh copies.
 - Build pages count down to "Enough resources in …" and the build link appears by itself when resources are there (no reload while you are typing in a form).

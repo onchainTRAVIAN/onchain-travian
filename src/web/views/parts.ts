@@ -9,6 +9,7 @@ import {
 import { crannyShare, fieldProduction, storageCapacity, trapCapacity } from '../../game/rules/production.js';
 import { oasisSlots, expansionSlots } from '../../game/rules/expansion.js';
 import { TRIBES, emptyUnits, totalUnits, type TribeId, type UnitCounts } from '../../game/rules/units.js';
+import { RESOURCE_KEYS, sumRes, type Resources } from '../../game/rules/resources.js';
 import type { MovementView } from '../../game/queries.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
@@ -56,7 +57,7 @@ export function unitsInline(tribe: TribeId, counts: UnitCounts): SafeHtml {
   return parts.length ? html`${parts}` : html`<span class="muted">none</span>`;
 }
 
-const KIND_LABEL: Record<MovementView['kind'], string> = {
+export const KIND_LABEL: Record<MovementView['kind'], string> = {
   attack: 'Attack',
   raid: 'Raid',
   reinforce: 'Reinforcement',
@@ -69,26 +70,38 @@ const KIND_LABEL: Record<MovementView['kind'], string> = {
 };
 
 /** Classic "Troop movements" table. */
+/** Short "🪵 120 🧱 80 …" line for carried resources. */
+export function haulInline(r: Resources): SafeHtml {
+  return html`${RESOURCE_KEYS.filter((k) => r[k] > 0).map((k) => html`<span class="nowrap">${resIcon(k)}${fmtNum(Math.floor(r[k]))}</span> `)}`;
+}
+
+/** Hostile incoming movements stay secret; everything else opens a detail page. */
+export function movementVisible(m: Pick<MovementView, 'direction' | 'kind'>): boolean {
+  return !(m.direction === 'in' && (m.kind === 'attack' || m.kind === 'raid' || m.kind === 'scout'));
+}
+
 export function movementList(moves: MovementView[], now: number): SafeHtml {
   if (moves.length === 0) return html`<p class="muted small">No troop movements.</p>`;
   return html`<table class="tb"><thead><tr><th colspan="3">Troop movements</th></tr></thead><tbody>${moves.map((m) => {
     const link = html`<a href="/map/tile?x=${m.otherX}&amp;y=${m.otherY}">${m.otherName}</a>`;
+    const detail = (t: SafeHtml) => (movementVisible(m) ? html`<a href="/troops/movement/${m.id}" class="mvlink" title="Show troops and haul">${t}</a>` : t);
     let ico: SafeHtml;
     let text: SafeHtml;
     if (m.direction === 'in') {
       const hostile = m.kind === 'attack' || m.kind === 'raid' || m.kind === 'scout';
       ico = icon(hostile ? 'ui/incoming' : m.kind === 'trade' ? 'ui/merchant' : 'ui/reinforce', hostile ? 'Incoming attack' : KIND_LABEL[m.kind], 16);
-      text = hostile ? html`<b class="bad">Incoming ${m.kind === 'scout' ? 'scouts' : 'attack'}</b> from ${link}` : html`${KIND_LABEL[m.kind]} from ${link}`;
+      text = hostile ? html`<b class="bad">Incoming ${m.kind === 'scout' ? 'scouts' : 'attack'}</b> from ${link}` : html`${detail(html`${KIND_LABEL[m.kind]}`)} from ${link}`;
     } else if (m.direction === 'home') {
       ico = icon(m.kind === 'merchant_return' || (m.kind === 'delivery' && !hasTroops(m.units ?? emptyUnits())) ? 'ui/merchant' : 'ui/return', KIND_LABEL[m.kind], 16);
-      text = html`${KIND_LABEL[m.kind]} from ${m.otherName}`;
+      text = html`${detail(html`${KIND_LABEL[m.kind]}`)} from ${link}`;
     } else {
       const map: Record<string, string> = { reinforce: 'ui/reinforce', scout: 'ui/scout', trade: 'ui/merchant', raid: 'ui/raid', settle: 'ui/outgoing' };
       ico = icon(map[m.kind] ?? 'ui/attack', KIND_LABEL[m.kind], 16);
-      text = html`${KIND_LABEL[m.kind]} to ${link}`;
+      text = html`${detail(html`${KIND_LABEL[m.kind]}`)} to ${link}`;
     }
     const cargo = m.units && totalUnits(m.units) > 0 ? html`<br><span class="small">${unitsInline(m.tribe, m.units)}</span>` : '';
-    return html`<tr><td>${ico}</td><td>${text}${m.hero ? html` ${unitIcon(m.tribe, 10)}` : ''}${cargo}</td><td class="num">in ${timer(m.arriveAt, now)}</td></tr>`;
+    const haul = m.loot && sumRes(m.loot) > 0 ? html`<br><span class="small">${m.direction === 'home' && m.kind === 'return' ? 'Haul: ' : ''}${haulInline(m.loot)}</span>` : '';
+    return html`<tr><td>${ico}</td><td>${text}${m.hero ? html` ${unitIcon(m.tribe, 10)}` : ''}${cargo}${haul}</td><td class="num">in ${timer(m.arriveAt, now)}</td></tr>`;
   })}</tbody></table>`;
 }
 
