@@ -14,6 +14,8 @@ export interface TroopsViewData {
   tribe: TribeId;
   hasRally: boolean;
   home: UnitCounts;
+  /** Your hero, when it is at home in this village. */
+  hero?: { name: string; health: number } | null;
   reinforcements: StationedView[];
   away: StationedView[];
   movements: MovementView[];
@@ -26,7 +28,8 @@ export function troopsView(d: TroopsViewData): SafeHtml {
   return html`<h1>Rally Point</h1>
     ${d.hasRally ? '' : html`<div class="note">You need a <a href="/slot/39">Rally Point</a> before you can send troops anywhere.</div>`}
     <h2>Your troops at home</h2>
-    ${unitsTable(d.tribe, d.home)}
+    ${unitsTable(d.tribe, d.home, undefined, { hero: !!d.hero })}
+    ${d.hero ? html`<p class="small herorow">${unitIcon(d.tribe, 10, 16, false)} <a href="/hero"><b>${d.hero.name}</b></a> is at home · health ${d.hero.health}%</p>` : ''}
     ${d.hasRally ? html`<div class="actions"><a class="btn block" href="/troops/send">⚔️ Send troops</a> <a class="btn secondary block" href="/troops/farmlist">Farm list</a></div>` : ''}
     <h2>Troop movements</h2>
     ${movementList(d.movements, d.now, d.movementTab)}

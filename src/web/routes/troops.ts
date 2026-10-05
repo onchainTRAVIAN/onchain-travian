@@ -30,6 +30,7 @@ troopsRouter.get('/troops', (req, res) => {
   const ctx = authed(req);
   const page = loadGamePage(req);
   const v = page.state.village.id;
+  const hero = heroAtHome(db, ctx.user.id, v, ctx.now);
   sendPage(
     req,
     res,
@@ -39,6 +40,7 @@ troopsRouter.get('/troops', (req, res) => {
       tribe: page.state.tribe,
       hasRally: levelOf(page.state, 'rally') > 0,
       home: troopsAt(db, v, v),
+      hero: hero ? { name: hero.name, health: Math.round(hero.health) } : null,
       reinforcements: reinforcementsIn(db, v),
       away: troopsAway(db, v),
       movements: villageMovements(db, v),

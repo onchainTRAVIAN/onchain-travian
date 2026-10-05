@@ -8,6 +8,7 @@ import { isTrainingSite, startTraining, trainOptions, trainOrdersOf } from '../.
 import { BUILDINGS, type BuildingId } from '../../game/rules/buildings.js';
 import { TRIBES, type TrainingBuilding } from '../../game/rules/units.js';
 import { ownedTroopTotals, stockOf, troopsAt } from '../../game/engine/state.js';
+import { heroAtHome } from '../../game/engine/hero.js';
 import { villageMovements } from '../../game/queries.js';
 import { GameError } from '../../game/errors.js';
 import { authed, setActiveVillage, setFlash } from '../session.js';
@@ -53,6 +54,7 @@ function villageData(req: Request, page: GamePage, slotsToCheck: number[]): Vill
     training: trainOrdersOf(db, state.village.id),
     movements: villageMovements(db, state.village.id),
     homeTroops: troopsAt(db, state.village.id, state.village.id),
+    heroHome: heroAtHome(db, ctx.user.id, state.village.id, ctx.now)?.name ?? null,
     ready,
     protectedUntil: user?.p ?? 0,
     now: ctx.now,

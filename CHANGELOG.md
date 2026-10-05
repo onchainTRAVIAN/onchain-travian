@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.6 — 2026-10-05
+- The hero shows with your troops when it is at home: a hero column in the Rally Point's "Your troops at home" (with name and health) and a "1 Hero" line in the village overview's Troops box.
+
 ## 0.11.5 — 2026-10-05
 - Reports show the hero like the original: an extra hero column in its side's troop table (1 sent, 1 under casualties if it fell), with its health and experience gained underneath; defending heroes appear under their owner's block. Reinforcement reports show the hero too.
 

@@ -29,6 +29,8 @@ export interface VillageViewData {
   training: TrainOrderRow[];
   movements: MovementView[];
   homeTroops: UnitCounts;
+  /** Name of your hero when it is at home here. */
+  heroHome?: string | null;
   /** Slots whose next upgrade can start right now. */
   ready: Set<number>;
   protectedUntil: number;
@@ -86,12 +88,13 @@ function productionTable(eco: Economy): SafeHtml {
   </tbody></table>`;
 }
 
-function troopsTable(tribe: TribeId, units: UnitCounts): SafeHtml {
+function troopsTable(tribe: TribeId, units: UnitCounts, hero: string | null): SafeHtml {
   const rows = units.map((n, i) => ({ n, i })).filter((r) => r.n > 0);
   return html`<table id="troops"><thead><tr><th colspan="3">Troops:</th></tr></thead><tbody>
-    ${rows.length === 0
+    ${rows.length === 0 && !hero
       ? html`<tr><td colspan="3" class="none center">none</td></tr>`
       : rows.map((r) => html`<tr><td class="ico">${unitIcon(tribe, r.i)}</td><td class="val">${fmtNum(r.n)}</td><td>${TRIBES[tribe].units[r.i]?.name}</td></tr>`)}
+    ${hero ? html`<tr><td class="ico">${unitIcon(tribe, 10)}</td><td class="val">1</td><td><a href="/hero">Hero</a></td></tr>` : ''}
   </tbody></table>`;
 }
 
@@ -123,7 +126,7 @@ export function fieldsView(d: VillageViewData & { layout: string }): SafeHtml {
   <div id="map_details">
     ${movementSummary(d.movements, d.now)}
     ${productionTable(d.eco)}
-    ${troopsTable(d.state.tribe, d.homeTroops)}
+    ${troopsTable(d.state.tribe, d.homeTroops, d.heroHome ?? null)}
   </div>
   <div class="clear"></div>
   ${buildQueue(d.orders, d.now, d.csrf)}`;
