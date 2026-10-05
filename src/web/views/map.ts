@@ -1,5 +1,6 @@
 import { RESOURCE_KEYS, type Resources } from '../../game/rules/resources.js';
-import { resIcon } from './layout.js';
+import { icon, resIcon } from './layout.js';
+import { assetUrl } from '../assets.js';
 import { config } from '../../config.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
 import { TRIBES } from '../../game/rules/units.js';
@@ -9,7 +10,7 @@ import { html, type SafeHtml } from '../html.js';
 import { timer } from './layout.js';
 import { unitsTable } from './parts.js';
 
-function cellImage(c: MapCell): string {
+export function cellImage(c: MapCell): string {
   if (c.village) {
     const p = c.village.pop;
     return `village-${p >= 500 ? 4 : p >= 250 ? 3 : p >= 100 ? 2 : 1}`;
@@ -201,9 +202,12 @@ export function mapView(d: {
   const villages = cells.filter((c) => c.village);
   const opt = (sz: number, st: MapStyle, text: string, on: boolean) =>
     html`<a href="/map?x=${d.cx}&amp;y=${d.cy}&amp;size=${sz}&amp;view=${st}" class="${on ? 'on' : ''}">${text}</a>`;
-  return html`<h1>Map <span class="lvl">(${d.cx}|${d.cy})</span></h1>
-    <p class="tabs mapopts">Size: ${MAP_SIZES.map((sz) => opt(sz, d.style, `${sz}×${sz}`, sz === n))}
-      <span class="sep">View:</span> ${opt(n, 'diamond', 'Classic', d.style === 'diamond')}${opt(n, 'grid', 'Flat', d.style === 'grid')}</p>
+  const live = d.style === 'grid';
+  return html`<h1>Map <span class="lvl" id="lm-title">(${d.cx}|${d.cy})</span></h1>
+    <p class="tabs mapopts">${live ? '' : html`Size: ${MAP_SIZES.map((sz) => opt(sz, d.style, `${sz}×${sz}`, sz === n))} `}
+      <span class="sep">View:</span> ${opt(n, 'grid', 'Live map', live)}${opt(n, 'diamond', 'Classic', !live)}</p>
+    ${live ? liveMap(d) : ''}
+    <div class="mapstatic"${live ? html` data-live` : ''}>
     <svg class="mapsvg ${d.style}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map around ${d.cx}|${d.cy}">
       ${tiles}
       ${markers}
@@ -245,8 +249,41 @@ export function mapView(d: {
           (c) => html`<tr><td><a href="/map/tile?x=${c.x}&amp;y=${c.y}">${c.village?.name}</a></td><td>${c.village?.owner}</td>
             <td class="num">${fmtNum(c.village?.pop ?? 0)}</td><td class="center">(${c.x}|${c.y})</td></tr>`,
         )}
-    </tbody></table></div>`;
+    </tbody></table></div>
+    </div>
+    ${live ? html`<script src="${assetUrl('livemap.js')}" defer></script>` : ''}`;
 }
+
+/** The draggable, zoomable map (livemap.js); the server-drawn map below stays as the no-script fallback. */
+function liveMap(d: { cx: number; cy: number; homeX: number; homeY: number }): SafeHtml {
+  return html`<div id="livemap" class="livemap" hidden data-x="${d.cx}" data-y="${d.cy}" data-hx="${d.homeX}" data-hy="${d.homeY}" data-r="${config.MAP_RADIUS}">
+    <div class="lm-bar">
+      <button type="button" class="lm-btn" data-lm="out" title="Zoom out (−)" aria-label="Zoom out">−</button>
+      <span class="lm-zoom" id="lm-zoom">100%</span>
+      <button type="button" class="lm-btn" data-lm="in" title="Zoom in (+)" aria-label="Zoom in">+</button>
+      <button type="button" class="lm-btn" data-lm="home" title="Centre on my village" aria-label="Centre on my village">${icon('menu/home', '', 16)}</button>
+      <form class="lm-go" id="lm-go"><label for="lmx">x</label><input id="lmx" name="x" class="w30" inputmode="numeric" value="${d.cx}"><label for="lmy">y</label><input id="lmy" name="y" class="w30" inputmode="numeric" value="${d.cy}"><button type="submit" class="small">Go</button></form>
+      <span class="lm-sp"></span>
+      <button type="button" class="lm-btn" data-lm="mini" title="Show or hide the minimap" aria-pressed="true">${icon('menu/map', '', 16)} Minimap</button>
+      <button type="button" class="lm-btn" data-lm="full" title="Full screen (Esc to leave)" aria-label="Full screen">⛶</button>
+    </div>
+    <div class="lm-view" id="lm-view" tabindex="0" role="application" aria-label="Map: drag to move, mouse wheel or +/− to zoom, arrow keys to move, Enter to open a field">
+      <div class="lm-layer" id="lm-layer"></div>
+      <div class="lm-axis lm-ax" id="lm-ax" aria-hidden="true"></div>
+      <div class="lm-axis lm-ay" id="lm-ay" aria-hidden="true"></div>
+      <div class="lm-mini" id="lm-mini"><canvas id="lm-canvas" width="152" height="152" aria-label="Minimap: click to jump"></canvas></div>
+      <div class="lm-load" id="lm-load">Loading…</div>
+    </div>
+    <div class="lm-foot">
+      <table id="lm-info" class="lm-info"><thead><tr><th colspan="2" id="lm-ih">Point at a field</th></tr></thead><tbody id="lm-ib"><tr><td colspan="2" class="small muted">Drag the map to move, scroll to zoom. Click a field to open it.</td></tr></tbody></table>
+      <div class="lm-legend small"><span class="lmk m"></span>yours <span class="lmk a"></span>alliance &amp; pacts <span class="lmk o"></span>other players <span class="lmk n"></span>Natars <span class="lmk oa"></span>oasis
+        <br><span class="muted">Your troops:</span> <span class="mvk attack"></span>attack/raid <span class="mvk support"></span>reinforcement <span class="mvk settle"></span>settlers <span class="mvk back"></span>returning
+        <br><a href="/map/croppers">» Find croppers</a></div>
+    </div>
+  </div>`;
+}
+
+
 
 export interface TileViewData {
   x: number;

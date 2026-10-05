@@ -157,7 +157,7 @@ function specialsTab(d: {
         : d.protection.canBuyAt > d.now
           ? html`<p class="small bad">You can buy protection again in ${timer(d.protection.canBuyAt, d.now, false)}.</p>`
           : html`<form method="post" action="/shop/protection">${csrfField(d.csrf)}${goldPrice(PROTECTION_PRICE, d.balance >= PROTECTION_PRICE, 'Buy protection')}</form>`}</div></section>
-    <section class="spanel special">${head('npc', 'npc', 'NPC merchant', `${NPC_TRADE_PRICE} Gold`)}<div class="pad">${npcPanel(d.stock, d.capacity, d.balance, d.csrf)}</div></section>
+    <section class="spanel special">${head('npc-trade', 'npc', 'NPC merchant', `${NPC_TRADE_PRICE} Gold`)}<div class="pad">${npcPanel(d.stock, d.capacity, d.balance, d.csrf)}</div></section>
     <section class="spanel special">${head('gold', 'transfer', 'Send Gold to a player', 'free')}
       <form method="post" action="/shop/transfer" class="pad block">${csrfField(d.csrf)}
         <table class="tb"><tbody>

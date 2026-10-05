@@ -1114,3 +1114,51 @@ img.helm { vertical-align: middle; margin: -3px 4px -3px 0; }
 .simcost th:first-child { text-align: left; white-space: nowrap; }
 .simcost tr.att th:first-child { color: #a01d10; }
 .simcost tr.def th:first-child { color: #2b6a00; }
+/* ---------- Live map ---------- */
+.livemap { margin: 0 0 12px; }
+.lm-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px 6px; background: #5b4129 url(/static/img/ui/header-strip.svg) 0 0 / auto 100% repeat-x; border: 1px solid #3f2c1a; border-radius: 6px 6px 0 0; color: #f3dca8; }
+.lm-btn { min-width: 28px; height: 26px; padding: 0 7px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; background: linear-gradient(#f6e7c1, #dcc08a); border: 1px solid #7a5a2c; border-radius: 4px; color: #3a2a12; font: bold 14px Verdana, sans-serif; cursor: pointer; }
+.lm-btn:hover { background: linear-gradient(#fff3d6, #e8cf9c); }
+.lm-btn[aria-pressed='false'] { opacity: 0.6; }
+.lm-btn img { width: 16px; height: 16px; }
+.lm-zoom { min-width: 42px; text-align: center; font-weight: bold; font-size: 12px; }
+.lm-go { display: inline-flex; align-items: center; gap: 3px; margin: 0 0 0 6px; font-size: 12px; font-weight: bold; }
+.lm-go input { width: 38px; height: 22px; padding: 1px 3px; }
+.lm-sp { flex: 1; }
+.lm-view { position: relative; height: 470px; overflow: hidden; background: #cfe3a6; border: 1px solid #3f2c1a; border-top: 0; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; }
+.lm-view:focus-visible { box-shadow: inset 0 0 0 2px #ff8000; }
+.lm-view.drag { cursor: grabbing; }
+.lm-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.lt { position: absolute; display: block; width: 60px; height: 60px; }
+.lt img { display: block; width: 60px; height: 60px; pointer-events: none; }
+.lt::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+.lt.rel-m::after { box-shadow: inset 0 0 0 2px #ff8000; border-radius: 6px; }
+.lt.rel-a::after { box-shadow: inset 0 0 0 2px #286edc; border-radius: 6px; }
+.lt.rel-n::after { box-shadow: inset 0 0 0 2px #8032a0; border-radius: 6px; }
+.lt.rel-o::after { box-shadow: inset 0 0 0 1.5px rgba(200, 40, 30, 0.8); border-radius: 6px; }
+.lt.hov::before { content: ''; position: absolute; inset: 0; background: rgba(255, 255, 255, 0.3); box-shadow: inset 0 0 0 2px #fff; z-index: 1; pointer-events: none; }
+.lt-m { position: absolute; right: 2px; top: 2px; display: flex; gap: 2px; z-index: 2; }
+.lt-m .mvk { margin: 0; }
+.lm-axis { position: absolute; pointer-events: none; font: bold 10px Verdana, sans-serif; color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.lm-ax { left: 0; right: 0; bottom: 2px; height: 14px; }
+.lm-ax span { position: absolute; transform: translateX(-50%); }
+.lm-ay { top: 0; bottom: 0; left: 3px; width: 26px; }
+.lm-ay span { position: absolute; transform: translateY(-50%); }
+.lm-mini { position: absolute; right: 8px; top: 8px; padding: 3px; background: rgba(40, 28, 14, 0.85); border: 1px solid #c49a4e; border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); cursor: crosshair; z-index: 3; }
+.lm-mini canvas { display: block; width: 152px; height: 152px; image-rendering: pixelated; }
+.lm-load { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); padding: 2px 10px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 11px; border-radius: 10px; pointer-events: none; }
+.lm-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; padding: 8px; background: #fbf8ef; border: 1px solid #c9b88f; border-top: 0; border-radius: 0 0 6px 6px; }
+.lm-info { flex: 1 1 260px; min-width: 0; }
+.lm-info th { text-align: left; white-space: nowrap; }
+.lm-legend { flex: 1 1 200px; line-height: 1.9; }
+.lmk { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin: 0 2px 0 6px; }
+.lmk.m { background: #ff8000; }
+.lmk.a { background: #286edc; }
+.lmk.o { background: #c8281e; }
+.lmk.n { background: #8032a0; }
+.lmk.oa { background: #3e8034; }
+.livemap.full { position: fixed; inset: 0; z-index: 1000; margin: 0; display: flex; flex-direction: column; background: rgba(20, 14, 6, 0.85); padding: 12px; padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+.livemap.full .lm-view { flex: 1; height: auto; }
+.livemap.full .lm-foot { max-height: 30vh; overflow: auto; }
+body.lm-noscroll { overflow: hidden; }
+@media (max-width: 760px) { .lm-view { height: 380px; } .lm-mini canvas { width: 110px; height: 110px; } }

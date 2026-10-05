@@ -262,6 +262,24 @@ export function diplomacyOf(q: Q, allianceId: number) {
  * Why `userId` may not attack `targetUserId` (same alliance, or a confederacy or non-aggression
  * pact between their alliances), or null when the attack is allowed.
  */
+/** Players on your side: your alliance plus alliances in a confederacy or non-aggression pact with it. */
+export function friendlyUserIds(q: Q, userId: number): Set<number> {
+  const mine = membership(q, userId)?.a.id;
+  if (mine === undefined) return new Set();
+  const ids = new Set<number>([mine]);
+  for (const d of q
+    .select({ fromId: allianceDiplomacy.fromId, toId: allianceDiplomacy.toId, kind: allianceDiplomacy.kind })
+    .from(allianceDiplomacy)
+    .where(and(eq(allianceDiplomacy.status, 'active'), or(eq(allianceDiplomacy.fromId, mine), eq(allianceDiplomacy.toId, mine))))
+    .all()) {
+    if (d.kind === 'confed' || d.kind === 'nap') ids.add(d.fromId === mine ? d.toId : d.fromId);
+  }
+  const out = new Set<number>();
+  for (const m of q.select({ userId: allianceMembers.userId, a: allianceMembers.allianceId }).from(allianceMembers).all()) if (ids.has(m.a)) out.add(m.userId);
+  out.delete(userId);
+  return out;
+}
+
 export function attackBlockedBy(q: Q, userId: number, targetUserId: number | null): string | null {
   if (targetUserId === null || targetUserId === userId) return null;
   const mine = membership(q, userId)?.a.id;

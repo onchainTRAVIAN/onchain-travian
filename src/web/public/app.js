@@ -189,7 +189,7 @@
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       var dir = { ArrowUp: 'n', ArrowRight: 'e', ArrowDown: 's', ArrowLeft: 'w' }[e.key];
       var a = dir && document.getElementById('mp-' + dir);
-      if (a) {
+      if (a && a.offsetParent !== null) {
         e.preventDefault();
         window.location.href = a.getAttribute('href');
       }

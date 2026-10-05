@@ -1,7 +1,8 @@
 import { Router, type Request, type Response } from 'express';
 import { db } from '../../db/index.js';
 import { eq, inArray } from 'drizzle-orm';
-import { movements, users, villages } from '../../db/schema.js';
+import { movements, tiles, users, villages } from '../../db/schema.js';
+import { friendlyUserIds } from '../../game/actions/alliance.js';
 import { oasisAnimals, oasisStock, type TileRow } from '../../game/engine/oasis.js';
 import { config } from '../../config.js';
 import { troopsAt } from '../../game/engine/state.js';
@@ -9,7 +10,7 @@ import { dist, mapWindow, tileInfo } from '../../game/queries.js';
 import { travelTimeMs, wrapCoord } from '../../game/rules/map.js';
 import { TRIBES } from '../../game/rules/units.js';
 import { authed } from '../session.js';
-import { MAP_SIZES, mapView, tileView, type MapSize, type MapStyle, type MoveMark } from '../views/map.js';
+import { MAP_SIZES, cellImage, mapView, tileView, type MapSize, type MapStyle, type MoveMark } from '../views/map.js';
 import { intParam, loadGamePage, sendPage } from './helpers.js';
 
 export const mapRouter = Router();
@@ -89,6 +90,54 @@ mapRouter.get('/map', (req, res) => {
     }),
     { nav: 'map', chrome: page.chrome },
   );
+});
+
+/** Relation of a village owner to you, for the live map's outlines and the minimap. */
+function relation(ownerId: number | null, tribe: string, me: number, friends: Set<number>): 'm' | 'a' | 'n' | 'o' {
+  if (ownerId === me) return 'm';
+  if (tribe === 'natars') return 'n';
+  if (ownerId !== null && friends.has(ownerId)) return 'a';
+  return 'o';
+}
+
+const CHUNK_R = 10;
+
+/** One 21×21 block of the live map around (x|y), as JSON. */
+mapRouter.get('/map/chunk', (req, res) => {
+  const ctx = authed(req);
+  const R = config.MAP_RADIUS;
+  const cx = wrapCoord(intParam(req.query.x, 0), R);
+  const cy = wrapCoord(intParam(req.query.y, 0), R);
+  const friends = friendlyUserIds(db, ctx.user.id);
+  const myIds = db.select({ id: villages.id }).from(villages).where(eq(villages.userId, ctx.user.id)).all().map((v) => v.id);
+  const marks = movementMarks(myIds);
+  const tiles = mapWindow(db, cx, cy, CHUNK_R)
+    .flat()
+    .map((c) => ({
+      x: c.x,
+      y: c.y,
+      i: cellImage(c),
+      k: c.village ? 'v' : c.kind === 'oasis' ? 'o' : 'f',
+      ...(c.village ? { n: c.village.name, o: c.village.owner, p: c.village.pop, r: relation(c.village.userId, c.village.tribe, ctx.user.id, friends) } : {}),
+      ...(marks.has(`${c.x}|${c.y}`) ? { m: [...(marks.get(`${c.x}|${c.y}`) ?? [])] } : {}),
+    }));
+  res.set('Cache-Control', 'no-store').json({ r: CHUNK_R, tiles });
+});
+
+/** The whole world for the minimap: one character per tile ('.' empty, '~' oasis, m/a/n/o villages), rows north to south. */
+mapRouter.get('/map/mini', (req, res) => {
+  const ctx = authed(req);
+  const R = config.MAP_RADIUS;
+  const n = 2 * R + 1;
+  const grid = Array.from({ length: n }, () => Array<string>(n).fill('.'));
+  const friends = friendlyUserIds(db, ctx.user.id);
+  for (const t of db.select({ x: tiles.x, y: tiles.y, kind: tiles.kind }).from(tiles).where(eq(tiles.kind, 'oasis')).all()) {
+    grid[R - t.y]![t.x + R] = '~';
+  }
+  for (const v of db.select({ x: villages.x, y: villages.y, userId: villages.userId, tribe: users.tribe }).from(villages).leftJoin(users, eq(users.id, villages.userId)).all()) {
+    grid[R - v.y]![v.x + R] = relation(v.userId, v.tribe ?? 'romans', ctx.user.id, friends);
+  }
+  res.set('Cache-Control', 'private, max-age=60').json({ radius: R, rows: grid.map((r) => r.join('')) });
 });
 
 mapRouter.get('/map/tile', (req, res) => {

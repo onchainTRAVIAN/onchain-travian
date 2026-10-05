@@ -72,7 +72,7 @@ export function marketPanel(d: {
 }): SafeHtml {
   const resOptions = (sel: string) => RESOURCE_KEYS.map((k) => html`<option value="${k}"${k === sel ? html` selected` : ''}>${RESOURCE_LABEL[k]}</option>`);
   const ri = (k: string) => resIcon(k as ResourceKey);
-  return html`<p class="tabs"><a href="#send">Send resources</a><a href="#offer">Offer</a><a href="#buy">Buy</a><a href="#npc">NPC trade</a><a href="#routes">Trade routes</a><a href="/goldmarket">Gold market</a></p>
+  return html`<p class="tabs"><a href="#send">Send resources</a><a href="#offer">Offer</a><a href="#buy">Buy</a><a href="#npc-trade">NPC trade</a><a href="#routes">Trade routes</a><a href="/goldmarket">Gold market</a></p>
     <h2 id="send">Send resources</h2>
     <p>Merchants ${d.merchants.free}/${d.merchants.total} · each merchant can carry <b>${fmtNum(d.merchants.capacity)}</b> resources.</p>
     <form method="post" action="/market/send" id="sendform" data-cap="${d.merchants.capacity}" data-free="${d.merchants.free}">
@@ -126,7 +126,7 @@ export function marketPanel(d: {
             <td><form method="post" action="/market/accept">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="linkbtn">Accept offer</button></form></td></tr>`,
         )}
     </tbody></table>
-    ${d.npc ? html`<h2 id="npc">NPC trade</h2>${d.npc}` : ''}
+    ${d.npc ? html`<h2 id="npc-trade">NPC trade</h2>${d.npc}` : ''}
     ${d.routes ?? ''}`;
 }
 

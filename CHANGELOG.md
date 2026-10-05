@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.1 — 2026-10-05
+- **Live map:**
+  - Drag to move (mouse or touch), with smooth movement and a world that wraps around.
+  - Zoom from 35% to 200% with the mouse wheel, a pinch, the +/− buttons or keys.
+  - A **minimap** of the whole world: your villages orange, alliance and pacts blue, other players red, Natars purple, oases dark green. Click or drag on it to jump; it can be hidden.
+  - Coordinate rulers, a "centre on my village" button, X/Y go-to, full screen (Esc to leave) and arrow keys.
+  - Hover a field to see its details with Open and Send troops links; click to open it.
+  - The classic diamond map is still under "Classic".
+- Fix: "Distribute remaining" in the NPC trade works again.
+
 ## 0.15.0 — 2026-10-05
 - **Natars attack players** with 300+ population, at most once a day, at a random time.
   - Their army is 50–90% of your strength (troops, wall, residence and population), so stronger players face stronger Natars and small players aren't harassed.

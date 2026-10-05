@@ -106,6 +106,25 @@ describe('account flow', () => {
     expect(after.text).not.toContain('<script>x</script>');
   });
 
+  it('live map: chunks, wrapping, minimap and the new pages render', async () => {
+    const agent = await newPlayer('Cartographer');
+    const map = await agent.get('/map');
+    expect(map.status).toBe(200);
+    expect(map.text).toContain('id="livemap"');
+    const chunk = await agent.get('/map/chunk?x=0&y=0');
+    expect(chunk.status).toBe(200);
+    expect(chunk.body.tiles).toHaveLength(21 * 21);
+    // Coordinates past the edge wrap around.
+    const far = await agent.get('/map/chunk?x=1000&y=-1000');
+    expect(far.body.tiles.every((t: { x: number; y: number }) => Math.abs(t.x) <= 50 && Math.abs(t.y) <= 50)).toBe(true);
+    const mini = await agent.get('/map/mini');
+    expect(mini.body.rows).toHaveLength(2 * mini.body.radius + 1);
+    expect(mini.body.rows.join('')).toContain('m');
+    for (const path of ['/shop', '/shop?tab=buy', '/shop?tab=specials', '/shop?tab=history', '/reports', '/reports?sort=old', '/stats', '/simulator', '/tasks']) {
+      expect((await agent.get(path)).status, path).toBe(200);
+    }
+  });
+
   it('logs in and out', async () => {
     await newPlayer('Boudicca', 'romans');
     const agent = request.agent(app);
