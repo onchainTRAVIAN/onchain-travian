@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.5 — 2026-10-05
+- Reports show the hero like the original: an extra hero column in its side's troop table (1 sent, 1 under casualties if it fell), with its health and experience gained underneath; defending heroes appear under their owner's block. Reinforcement reports show the hero too.
+
 ## 0.11.4 — 2026-10-05
 - Fix: a giant picture flashed for a moment on page loads/refresh — the top menu icons (and some building/village pictures) had no size of their own, so they rendered at full page width until the stylesheet applied. Every image now carries its width and height.
 

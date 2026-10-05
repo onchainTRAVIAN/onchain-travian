@@ -5,7 +5,7 @@ import type { ReportFilter } from '../../game/queries.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, icon, resIcon } from './layout.js';
-import { paginate, unitsTable } from './parts.js';
+import { paginate, unitIcon, unitsTable } from './parts.js';
 
 const KIND_ICON: Record<string, [string, string]> = {
   attack_won: ['ui/win', 'Won as attacker'],
@@ -62,15 +62,25 @@ export function reportListView(d: {
     ${paginate(`/reports?f=${d.filter}`, d.page, d.hasMore)}`;
 }
 
-function sideBlock(title: string, s: ReportSide, hideUnits = false, extra?: SafeHtml): SafeHtml {
+type HeroLine = NonNullable<BattleReportData['heroes']>[number];
+
+function sideBlock(title: string, s: ReportSide, hideUnits = false, extra?: SafeHtml, hero?: HeroLine): SafeHtml {
   return html`<table class="report"><thead><tr><th class="side ${title === 'Attacker' ? 'att' : 'def'}">${title}</th>
       <th><a href="/stats">${s.username}</a> from the village <a href="/map/tile?x=${s.x}&amp;y=${s.y}">${s.villageName}</a> <span class="small muted">(${TRIBES[s.tribe].name})</span></th></tr></thead>
-    <tbody><tr><td colspan="2">${hideUnits ? html`<p class="muted small">No information was gathered — none of your soldiers survived.</p>` : unitsTable(s.tribe, s.units, s.losses)}</td></tr>
+    <tbody><tr><td colspan="2">${hideUnits
+      ? html`<p class="muted small">No information was gathered — none of your soldiers survived.</p>`
+      : html`${unitsTable(s.tribe, s.units, s.losses, { hero: !!hero, heroLost: hero?.died })}
+        ${hero ? html`<p class="small herorow">${unitIcon(s.tribe, 10, 16, false)} <b>${hero.name}</b>: ${hero.died ? html`<b class="bad">fell in battle</b>` : html`health ${hero.health}%`} · +${fmtNum(hero.xp)} experience</p>` : ''}`}</td></tr>
     ${extra ?? ''}</tbody></table>`;
 }
 
 function battleView(r: BattleReportData, viewerId: number): SafeHtml {
   const isAttacker = r.attacker.userId === viewerId;
+  // Heroes go into their side's troop table (older reports have no owner: first defender block).
+  const attackerHero = r.heroes?.find((h) => h.side === 'attacker');
+  const defHeroes = r.heroes?.filter((h) => h.side === 'defender') ?? [];
+  const defenderHero = (s: ReportSide, i: number) =>
+    defHeroes.find((h) => h.userId !== undefined && h.userId === s.userId) ?? (i === 0 ? defHeroes.find((h) => h.userId === undefined) : undefined);
   const won = isAttacker ? r.attackerWon : !r.attackerWon;
   const headline =
     r.mode === 'scout'
@@ -88,11 +98,11 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
     ${sideBlock('Attacker', r.attacker, false, r.mode !== 'scout' && sumRes(r.loot) > 0
       ? html`<tr><th>Bounty</th><td><div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.loot[k])}</span>`)}</div>
           <span class="small muted">${fmtNum(sumRes(r.loot))}/${fmtNum(r.capacity)} carried</span></td></tr>`
-      : undefined)}
+      : undefined, attackerHero)}
     ${r.mode !== 'scout'
       ? r.defenders.length === 0
         ? html`<h3>Defender</h3><p class="muted small">The village was undefended.</p>`
-        : r.defenders.map((s, i) => sideBlock(i === 0 ? 'Defender' : 'Reinforcement', s, r.defendersHidden && isAttacker))
+        : r.defenders.map((s, i) => sideBlock(i === 0 ? 'Defender' : 'Reinforcement', s, r.defendersHidden && isAttacker, undefined, defenderHero(s, i)))
       : ''}
 
     ${r.wall ? html`<p>🧱 City Wall: level ${r.wall.from} → <b>${r.wall.to}</b></p>` : ''}
@@ -105,7 +115,6 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
           : html`${fmtNum((r.scout.crannyHides as number | undefined) ?? 0)} of each`}</p>
         ${(r.scout.troops ?? []).length === 0 ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units))}`
       : ''}
-    ${r.heroes?.map((h) => html`<p>🦸 ${h.name} (${h.side}): ${h.died ? html`<b class="bad">fell in battle</b>` : html`health ${h.health}%`} · +${fmtNum(h.xp)} XP</p>`)}
     ${r.loyalty ? html`<p>🎖️ Loyalty: ${r.loyalty.from}% → <b>${r.loyalty.to}%</b></p>` : ''}
     ${r.conquered ? html`<p class="good"><b>👑 The village was conquered!</b></p>` : ''}
     ${r.oasis?.captured ? html`<p class="good"><b>🌴 Oasis captured!</b></p>` : ''}
@@ -120,7 +129,7 @@ export function reportView(d: { id: number; title: string; createdAt: number; da
   else if (r.type === 'battle') body = battleView(r, d.viewerId);
   else if (r.type === 'reinforce')
     body = html`<p><a href="/map/tile?x=${r.from.x}&amp;y=${r.from.y}">${r.from.villageName}</a> (${r.from.username}) reinforced
-      <a href="/map/tile?x=${r.to.x}&amp;y=${r.to.y}">${r.to.villageName}</a> (${r.to.username}).</p>${unitsTable(r.from.tribe, r.units, undefined, { hideEmpty: true })}`;
+      <a href="/map/tile?x=${r.to.x}&amp;y=${r.to.y}">${r.to.villageName}</a> (${r.to.username}).</p>${unitsTable(r.from.tribe, r.units, undefined, { hideEmpty: true, hero: !!r.hero })}`;
   else if (r.type === 'trade')
     body = html`<p><a href="/map/tile?x=${r.fromX}&amp;y=${r.fromY}">${r.fromName}</a> → <a href="/map/tile?x=${r.toX}&amp;y=${r.toY}">${r.toName}</a></p>
       <div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.goods[k])}</span>`)}</div>`;

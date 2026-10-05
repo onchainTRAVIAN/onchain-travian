@@ -33,7 +33,7 @@ export function unitsTable(
   tribe: TribeId,
   counts: UnitCounts | null,
   losses?: UnitCounts,
-  opts: { hideEmpty?: boolean; label?: string; hero?: boolean } = {},
+  opts: { hideEmpty?: boolean; label?: string; hero?: boolean; heroLost?: boolean } = {},
 ): SafeHtml {
   const units = TRIBES[tribe].units;
   const show = units.map((_, i) => !opts.hideEmpty || (counts?.[i] ?? 0) > 0 || (losses?.[i] ?? 0) > 0);
@@ -43,7 +43,7 @@ export function unitsTable(
     <tr><td class="lbl"></td>${units.map((_, i) => (show[i] ? html`<td>${unitIcon(tribe, i)}</td>` : ''))}${opts.hero ? html`<td>${unitIcon(tribe, 10)}</td>` : ''}</tr>
     <tr><th class="lbl">${opts.label ?? 'Troops'}</th>${units.map((_, i) => (show[i] ? cell(counts?.[i]) : ''))}${opts.hero ? html`<td>1</td>` : ''}</tr>
     ${losses
-      ? html`<tr class="loss"><th class="lbl">Casualties</th>${units.map((_, i) => (show[i] ? html`<td class="${(losses[i] ?? 0) === 0 ? 'none' : ''}">${fmtNum(losses[i] ?? 0)}</td>` : ''))}${opts.hero ? html`<td>-</td>` : ''}</tr>`
+      ? html`<tr class="loss"><th class="lbl">Casualties</th>${units.map((_, i) => (show[i] ? html`<td class="${(losses[i] ?? 0) === 0 ? 'none' : ''}">${fmtNum(losses[i] ?? 0)}</td>` : ''))}${opts.hero ? html`<td class="${opts.heroLost ? '' : 'none'}">${opts.heroLost ? 1 : 0}</td>` : ''}</tr>`
       : ''}
   </table></div>`;
 }

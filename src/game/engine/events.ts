@@ -355,12 +355,12 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     const xp = defenderLossValue + defHeroesDie * HERO_XP_VALUE;
     const after = damageHero(q, aHero, result.attackerLossRatio, xp, t);
     attackerHeroAlive = after.status !== 'dead';
-    heroReports.push({ name: after.name, side: 'attacker', health: Math.round(after.health), died: !attackerHeroAlive, xp });
+    heroReports.push({ name: after.name, side: 'attacker', health: Math.round(after.health), died: !attackerHeroAlive, xp, userId: aHero.userId });
   }
   for (const h of defHeroes) {
     const xp = Math.round((attackerLossValue + (attackerHeroDies ? HERO_XP_VALUE : 0)) / defHeroes.length);
     const after = damageHero(q, h, result.defenderLossRatio, xp, t);
-    heroReports.push({ name: after.name, side: 'defender', health: Math.round(after.health), died: after.status === 'dead', xp });
+    heroReports.push({ name: after.name, side: 'defender', health: Math.round(after.health), died: after.status === 'dead', xp, userId: h.userId });
   }
 
   let wallChange: BattleReportData['wall'];
@@ -586,7 +586,7 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
     // Animals give experience like soldiers: their upkeep.
     const after = damageHero(q, aHero, result.attackerLossRatio, killedValue, t);
     heroAlive = after.status !== 'dead';
-    heroReports.push({ name: after.name, side: 'attacker', health: Math.round(after.health), died: !heroAlive, xp: killedValue });
+    heroReports.push({ name: after.name, side: 'attacker', health: Math.round(after.health), died: !heroAlive, xp: killedValue, userId: home.userId });
   }
 
   const notes: string[] = [];
@@ -658,6 +658,7 @@ function handleReinforce(q: Q, mv: MovementRow, t: number): void {
     from: { userId: home.userId, username: home.username, villageId: home.id, villageName: home.name, x: home.x, y: home.y, tribe: home.tribe, units },
     to: { userId: target.userId, username: target.username, villageId: target.id, villageName: target.name, x: target.x, y: target.y },
     units,
+    hero: !!hero,
   };
   const title = `${home.name} reinforces ${target.name}${hero ? ' (with hero)' : ''}`;
   addReport(q, home.userId, 'reinforce', title, data, t);

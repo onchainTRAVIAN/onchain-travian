@@ -30,7 +30,7 @@ export interface BattleReportData {
   wall?: { from: number; to: number };
   building?: { name: string; from: number; to: number };
   /** Heroes that took part. */
-  heroes?: { name: string; side: 'attacker' | 'defender'; health: number; died: boolean; xp: number }[];
+  heroes?: { name: string; side: 'attacker' | 'defender'; health: number; died: boolean; xp: number; userId?: number | null }[];
   loyalty?: { from: number; to: number };
   conquered?: boolean;
   oasis?: { x: number; y: number; captured: boolean };
@@ -50,6 +50,8 @@ export interface ReinforceReportData {
   from: Omit<ReportSide, 'losses'>;
   to: { userId: number | null; username: string; villageId: number; villageName: string; x: number; y: number };
   units: UnitCounts;
+  /** The hero went along. */
+  hero?: boolean;
 }
 
 export interface ReturnReportData {
