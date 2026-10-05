@@ -37,7 +37,6 @@ import {
   buyProtection,
   instantPrice,
   removeTicker,
-  tickerAvailability,
 } from '../src/game/actions/credits.js';
 import { startBuild } from '../src/game/actions/build.js';
 import { getModifiers } from '../src/game/modifiers.js';
@@ -491,28 +490,22 @@ describe('credits shop & news ticker', () => {
     expect(instantPrice(10 * HOUR, 1)).toBe(6);
   });
 
-  it('players book ticker slots that show for everyone and can be removed with a refund', () => {
-    const start = clock.now() + 2 * HOUR;
+  it('players post ticker messages that show for everyone at once and can be removed with a refund', () => {
+    grantCredits(db, a.userId, 1000, 'test', 'test-grant-ticker', clock.now());
     const balance = creditBalance(db, a.userId);
-    const m = bookTicker(db, a.userId, 'Round Table is recruiting!', start, 2, clock.now());
+    const m = bookTicker(db, a.userId, 'Round Table is recruiting!', 2, clock.now());
     expect(creditBalance(db, a.userId)).toBe(balance - 2 * config.TICKER_PRICE_PER_HOUR);
-    expect(() => bookTicker(db, a.userId, 'visit www.scam.com', start, 1, clock.now())).toThrow(/Links/);
-    expect(activeTicker(db, clock.now())).toHaveLength(0);
-    clock.advance(2 * HOUR + 60_000);
+    expect(() => bookTicker(db, a.userId, 'visit www.scam.com', 1, clock.now())).toThrow(/Links/);
     expect(activeTicker(db, clock.now()).map((x) => x.body)).toContain('Round Table is recruiting!');
-    const slot = tickerAvailability(db, clock.now())[0];
-    expect(slot?.used).toBe(1);
+    // No limit on how many run at once.
+    for (let i = 0; i < 6; i++) bookTicker(db, a.userId, `Message number ${i}`, 1, clock.now());
+    expect(activeTicker(db, clock.now()).length).toBeGreaterThanOrEqual(7);
     removeTicker(db, m.id, clock.now());
+    expect(activeTicker(db, clock.now()).map((x) => x.body)).not.toContain('Round Table is recruiting!');
+    clock.advance(2 * HOUR);
     expect(activeTicker(db, clock.now())).toHaveLength(0);
-    expect(creditBalance(db, a.userId)).toBeGreaterThan(balance - 2 * config.TICKER_PRICE_PER_HOUR);
   });
 
-  it('fills up when an hour is fully booked', () => {
-    grantCredits(db, a.userId, 1000, 'test', 'test-grant-2', clock.now());
-    const start = clock.now() + 10 * HOUR;
-    for (let i = 0; i < config.TICKER_MAX_PER_HOUR; i++) bookTicker(db, a.userId, `Message ${i}`, start, 1, clock.now());
-    expect(() => bookTicker(db, a.userId, 'One too many', start, 1, clock.now())).toThrow(/fully booked/);
-  });
 });
 
 describe('starvation', () => {

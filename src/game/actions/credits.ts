@@ -314,29 +314,11 @@ export function transferGold(
 /* ---------- News ticker ---------- */
 
 export const TICKER_MAX_LENGTH = 140;
-export const TICKER_MAX_HOURS = 6;
-export const TICKER_BOOK_AHEAD_HOURS = 72;
+export const TICKER_MAX_HOURS = 24;
 const HOUR = 3_600_000;
 
 export function hourStart(t: number): number {
   return Math.floor(t / HOUR) * HOUR;
-}
-
-/** Messages per hour slot for the next few days (for the booking calendar). */
-export function tickerAvailability(q: Q, now: number, hours = TICKER_BOOK_AHEAD_HOURS): { start: number; used: number; free: number }[] {
-  const from = hourStart(now);
-  const rows = q
-    .select({ startsAt: tickerMessages.startsAt, endsAt: tickerMessages.endsAt })
-    .from(tickerMessages)
-    .where(and(eq(tickerMessages.status, 'scheduled'), gt(tickerMessages.endsAt, from)))
-    .all();
-  const out: { start: number; used: number; free: number }[] = [];
-  for (let i = 0; i < hours; i++) {
-    const start = from + i * HOUR;
-    const used = rows.filter((r) => r.startsAt < start + HOUR && r.endsAt > start).length;
-    out.push({ start, used, free: Math.max(0, config.TICKER_MAX_PER_HOUR - used) });
-  }
-  return out;
 }
 
 export function cleanTickerText(text: string): string {
@@ -347,23 +329,17 @@ export function cleanTickerText(text: string): string {
   return t;
 }
 
-export function bookTicker(db: DB, userId: number, text: string, startsAt: number, hours: number, now: number) {
+/**
+ * Post a message to the news ticker: it starts now and runs for the hours paid for. Any number of
+ * messages can run at once — they take turns on the ticker.
+ */
+export function bookTicker(db: DB, userId: number, text: string, hours: number, now: number) {
   const body = cleanTickerText(text);
   assertGame(Number.isInteger(hours) && hours >= 1 && hours <= TICKER_MAX_HOURS, `Choose 1 to ${TICKER_MAX_HOURS} hours`);
-  const start = hourStart(startsAt);
-  assertGame(start >= hourStart(now), 'That time has already passed');
-  assertGame(start < hourStart(now) + TICKER_BOOK_AHEAD_HOURS * HOUR, `You can book up to ${TICKER_BOOK_AHEAD_HOURS} hours ahead`);
   const price = config.TICKER_PRICE_PER_HOUR * hours;
   return db.transaction((tx) => {
-    const slots = tickerAvailability(tx, now).filter((s) => s.start >= start && s.start < start + hours * HOUR);
-    assertGame(slots.length === hours && slots.every((s) => s.free > 0), 'Some of those hours are fully booked, pick another time');
     spend(tx, userId, price, `News ticker (${hours} h)`, now);
-    // A slot that has already started only shows for the rest of the hour, so it begins now.
-    return tx
-      .insert(tickerMessages)
-      .values({ userId, body, startsAt: Math.max(start, now), endsAt: start + hours * HOUR, price, createdAt: now })
-      .returning()
-      .get();
+    return tx.insert(tickerMessages).values({ userId, body, startsAt: now, endsAt: now + hours * HOUR, price, createdAt: now }).returning().get();
   });
 }
 

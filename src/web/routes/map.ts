@@ -25,15 +25,16 @@ function oasisOwnerInfo(tile: TileRow): { name: string; userId: number | null; v
   return row ? { name: row.uname ?? 'Nature', userId: row.uid, villageName: row.vname } : null;
 }
 
-const MAP_COOKIE = 'mapview';
+const MAP_COOKIE = 'mapview2';
 
-/** View size/style from the query (and remember it), else from the cookie, else classic 7×7. */
+/** View size/style from the query (and remember it), else from the cookie, else flat 7×7. */
 function mapPrefs(req: Request, res: Response): { size: MapSize; style: MapStyle } {
   const fromCookie = typeof req.cookies?.[MAP_COOKIE] === 'string' ? String(req.cookies[MAP_COOKIE]).split(',') : [];
   const qSize = Number(req.query.size);
   const qView = req.query.view;
   const size = (MAP_SIZES as readonly number[]).includes(qSize) ? (qSize as MapSize) : (MAP_SIZES as readonly number[]).includes(Number(fromCookie[0])) ? (Number(fromCookie[0]) as MapSize) : 7;
-  const style: MapStyle = qView === 'grid' || qView === 'diamond' ? qView : fromCookie[1] === 'grid' ? 'grid' : 'diamond';
+  // Flat view by default; the classic diamond only when chosen.
+  const style: MapStyle = qView === 'grid' || qView === 'diamond' ? qView : fromCookie[1] === 'diamond' ? 'diamond' : 'grid';
   if (req.query.size !== undefined || req.query.view !== undefined) {
     res.cookie(MAP_COOKIE, `${size},${style}`, { httpOnly: true, sameSite: 'lax', maxAge: 365 * 86_400_000, path: '/' });
   }

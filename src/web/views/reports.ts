@@ -25,6 +25,16 @@ function kindIcon(kind: string): SafeHtml {
   return icon(path, alt, 16);
 }
 
+const OUTCOME: Record<'none' | 'some' | 'all', [string, string]> = {
+  none: ['ui/rep-g', 'No losses'],
+  some: ['ui/rep-y', 'Some troops lost'],
+  all: ['ui/rep-r', 'All troops lost'],
+};
+function outcomeIcon(o: 'none' | 'some' | 'all'): SafeHtml {
+  const [path, alt] = OUTCOME[o];
+  return icon(path, alt, 16);
+}
+
 const FILTERS: { key: ReportFilter; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'attacks', label: 'Attacks' },
@@ -35,7 +45,7 @@ const FILTERS: { key: ReportFilter; label: string }[] = [
 ];
 
 export function reportListView(d: {
-  rows: { id: number; kind: string; title: string; isRead: boolean; createdAt: number }[];
+  rows: { id: number; kind: string; title: string; isRead: boolean; createdAt: number; outcome?: 'none' | 'some' | 'all' | null }[];
   filter: ReportFilter;
   page: number;
   hasMore: boolean;
@@ -50,7 +60,7 @@ export function reportListView(d: {
       ? html`<p class="muted">No reports yet. Battles, scouting and reinforcements show up here.</p>`
       : html`<form method="post" action="/reports/bulk" class="bulk">${csrfField(d.csrf)}<input type="hidden" name="f" value="${d.filter}">
         <table class="tb"><thead><tr><th class="chk"><label class="sr" for="chkall">Select all</label><input type="checkbox" id="chkall" data-checkall title="Select all"></th><th></th><th>Subject:</th><th>Sent:</th></tr></thead><tbody>${d.rows.map(
-          (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td class="chk"><label class="sr" for="r${r.id}">Select</label><input type="checkbox" id="r${r.id}" name="ids" value="${r.id}"></td><td>${kindIcon(r.kind)}</td>
+          (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td class="chk"><label class="sr" for="r${r.id}">Select</label><input type="checkbox" id="r${r.id}" name="ids" value="${r.id}"></td><td>${r.outcome ? outcomeIcon(r.outcome) : kindIcon(r.kind)}</td>
             <td><a href="/reports/${r.id}">${r.title}</a>${r.isRead ? '' : html` <span class="small bad">(new)</span>`}</td><td class="nowrap">${fmtAgo(r.createdAt, d.now)}</td></tr>`,
         )}</tbody></table>
         <p class="bulkbar"><button type="submit" name="act" value="delete" class="small">Delete selected</button>

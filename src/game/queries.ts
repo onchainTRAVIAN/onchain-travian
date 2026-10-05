@@ -280,7 +280,7 @@ export function reportList(q: Q, userId: number, filter: ReportFilter, limit: nu
   const kinds = REPORT_FILTERS[filter];
   const cond = kinds.length > 0 ? and(eq(reports.userId, userId), inArray(reports.kind, [...kinds])) : eq(reports.userId, userId);
   return q
-    .select({ id: reports.id, kind: reports.kind, title: reports.title, isRead: reports.isRead, createdAt: reports.createdAt })
+    .select({ id: reports.id, kind: reports.kind, title: reports.title, isRead: reports.isRead, createdAt: reports.createdAt, data: reports.data })
     .from(reports)
     .where(cond)
     .orderBy(desc(reports.createdAt), desc(reports.id))

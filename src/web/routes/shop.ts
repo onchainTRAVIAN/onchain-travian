@@ -6,6 +6,7 @@ import { db } from '../../db/index.js';
 import { buildOrders } from '../../db/schema.js';
 import {
   activeBoosts,
+  activeTicker,
   bookTicker,
   buyBoost,
   creditBalance,
@@ -18,7 +19,6 @@ import {
   transferGold,
   buyProtection,
   protectionStatus,
-  tickerAvailability,
 } from '../../game/actions/credits.js';
 import { capacityFor, stockOf } from '../../game/engine/state.js';
 import { res } from '../../game/rules/resources.js';
@@ -138,7 +138,7 @@ shopRouter.get('/shop/ticker', (req, r) => {
     req,
     r,
     'News ticker',
-    tickerView({ balance: creditBalance(db, ctx.user.id), slots: tickerAvailability(db, ctx.now), mine: myTickerBookings(db, ctx.user.id, ctx.now), csrf: ctx.csrf, now: ctx.now }),
+    tickerView({ balance: creditBalance(db, ctx.user.id), live: activeTicker(db, ctx.now).length, mine: myTickerBookings(db, ctx.user.id, ctx.now), csrf: ctx.csrf, now: ctx.now }),
     { nav: 'shop', chrome: page.chrome },
   );
 });
@@ -148,13 +148,12 @@ shopRouter.post(
   formAction(
     z.object({
       body: z.string().max(500),
-      start: z.coerce.number({ message: 'Pick a start time' }).int().positive(),
       hours: z.coerce.number().int().min(1).max(24),
     }),
     (req, r, d) => {
       const ctx = authed(req);
-      bookTicker(db, ctx.user.id, d.body, d.start, d.hours, ctx.now);
-      setFlash(r, 'ok', 'Booked! Your message will appear on the news ticker at that time.');
+      bookTicker(db, ctx.user.id, d.body, d.hours, ctx.now);
+      setFlash(r, 'ok', `Posted! Your message is on the news ticker for ${d.hours} hour${d.hours === 1 ? '' : 's'}.`);
       r.redirect(303, '/shop/ticker');
     },
     '/shop/ticker',

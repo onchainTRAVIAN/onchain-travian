@@ -111,3 +111,24 @@ export function parseReport(json: string): ReportData | null {
   }
   return null;
 }
+
+/**
+ * How a battle went for the viewer's own troops: 'none' lost, 'some' lost, or 'all' lost
+ * (null when the report isn't a battle or the viewer had no troops in it).
+ */
+export function battleOutcome(json: string, viewerId: number): 'none' | 'some' | 'all' | null {
+  let d: ReportData | null = null;
+  try {
+    d = JSON.parse(json) as ReportData;
+  } catch {
+    return null;
+  }
+  if (!d || d.type !== 'battle') return null;
+  const sides = d.attacker.userId === viewerId ? [d.attacker] : d.defenders.filter((s) => s.userId === viewerId);
+  const sent = sides.reduce((a, s) => a + s.units.reduce((x, y) => x + y, 0), 0);
+  const lost = sides.reduce((a, s) => a + s.losses.reduce((x, y) => x + y, 0), 0);
+  const heroDied = (d.heroes ?? []).some((h) => h.userId === viewerId && h.died);
+  if (sent === 0) return heroDied ? 'all' : null;
+  if (lost <= 0 && !heroDied) return 'none';
+  return lost >= sent ? 'all' : 'some';
+}

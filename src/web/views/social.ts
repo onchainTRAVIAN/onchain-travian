@@ -434,40 +434,4 @@ export function accountView(d: {
     <p><a href="/player/${d.userId}">» Public profile</a> | <a href="/wallet">» Wallet &amp; token perks</a>${d.isAdmin ? html` | <a href="/admin">» Admin</a>` : ''}</p>`;
 }
 
-export function helpView(): SafeHtml {
-  return html`<h1>📖 Game guide</h1>
-    <h2>The basics</h2>
-    <p>Your village has <b>18 resource fields</b> (🪵 wood, 🧱 clay, ⛓️ iron, 🌾 crop) and a <b>village center</b> with room for buildings.
-      Everything produces around the clock, even while you're logged out.</p>
-    <h2>Good first steps</h2>
-    <ul class="list">
-      <li><span class="grow">1. Upgrade all resource fields to level 1–2, croplands too.</span></li>
-      <li><span class="grow">2. Build a <b>Warehouse</b> and <b>Granary</b> so production doesn't stop when storage is full.</span></li>
-      <li><span class="grow">3. Upgrade the <b>Main Building</b>; every level builds faster.</span></li>
-      <li><span class="grow">4. Build a <b>Cranny</b> to hide resources from raiders before your protection ends.</span></li>
-      <li><span class="grow">5. Build a <b>Rally Point</b> and <b>Barracks</b>, then train troops.</span></li>
-    </ul>
-    <h2>Crop and your army</h2>
-    <p>Every citizen and every soldier eats crop each hour. If your crop production goes below zero, your granary slowly empties. Keep upgrading croplands as your army grows.</p>
-    <h2>Fighting</h2>
-    <ul class="list">
-      <li><span class="grow"><b>Raid</b>: grab resources and retreat. Both sides lose fewer troops.</span></li>
-      <li><span class="grow"><b>Attack</b>: fight to the end. Rams knock down walls, catapults damage buildings.</span></li>
-      <li><span class="grow"><b>Scout</b>: send scouts to see resources and troops. Defending scouts can catch them.</span></li>
-      <li><span class="grow"><b>Reinforce</b>: station your troops in a friend's village to defend it.</span></li>
-    </ul>
-    <p>Infantry and cavalry are defended against differently. Check each unit's 🛡️ numbers (vs infantry / vs cavalry) when choosing defenders.</p>
-    <h2>Growing your empire</h2>
-    <ul class="list">
-      <li><span class="grow">🦸 <b>Hero</b>: joins your attacks, gains experience and skill points. Put points into strength, bonuses or resources.</span></li>
-      <li><span class="grow">📜 <b>Academy &amp; Smithy</b>: research new units, then upgrade them for +1.5% per level.</span></li>
-      <li><span class="grow">🌴 <b>Oases</b>: clear the animals with your hero to capture an oasis (Hero's Mansion level 10+) for bonus production.</span></li>
-      <li><span class="grow">🧺 <b>New villages</b>: collect culture points, build a Residence to level 10, train 3 settlers and send them to an empty valley. Chiefs can take over enemy villages.</span></li>
-      <li><span class="grow">🐫 <b>Marketplace</b>: send resources to friends or trade on the market.</span></li>
-      <li><span class="grow">🤝 <b>Alliances</b>: join with an Embassy, found one at Embassy level 3, chat privately and sign treaties.</span></li>
-      <li><span class="grow">💰 <b>Plus &amp; Gold</b>: Gold buys boosts, instant finishing and news-ticker messages. Holding the game token gives permanent perks.</span></li>
-    </ul>
-    <h2>This world</h2>
-    <p>Speed x${config.WORLD_SPEED}. New players are protected for ${config.PROTECTION_HOURS} hours. The map wraps around at the edges.</p>`;
-}
 

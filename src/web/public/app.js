@@ -80,6 +80,62 @@
     vRenameForm.addEventListener('keydown', function (e) { if (e.key === 'Escape') vShow(false); });
   }
 
+  // Game guide: live results under the search box while typing (Enter still runs the full search).
+  var faqInput = document.querySelector('[data-faq-index]');
+  var faqLive = document.getElementById('faqlive');
+  if (faqInput && faqLive && window.fetch) {
+    var faqIndex = null;
+    var faqLoad = function () {
+      if (faqIndex) return Promise.resolve(faqIndex);
+      return fetch(faqInput.getAttribute('data-faq-index'), { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { faqIndex = j; return j; });
+    };
+    var faqNorm = function (x) { return String(x).toLowerCase().replace(/[^a-z0-9%+]+/g, ' '); };
+    var faqStop = { how: 1, to: 1, do: 1, i: 1, a: 1, the: 1, is: 1, what: 1, my: 1, can: 1, of: 1, in: 1, and: 1, it: 1, me: 1 };
+    var faqRun = function () {
+      var words = faqNorm(faqInput.value).split(' ').filter(function (w) { return w && !faqStop[w]; });
+      if (words.length === 0) { faqLive.hidden = true; return; }
+      faqLoad().then(function (idx) {
+        var scored = idx.map(function (t) {
+          var title = ' ' + faqNorm(t.t), keys = ' ' + faqNorm(t.k), sum = ' ' + faqNorm(t.s), score = 0, hits = 0;
+          words.forEach(function (w) {
+            var s = 0, needle = ' ' + w;
+            if (title.indexOf(needle) >= 0) s += 10;
+            if (keys.indexOf(needle) >= 0) s += 8;
+            if (sum.indexOf(needle) >= 0) s += 3;
+            if (s) hits++;
+            score += s;
+          });
+          return { t: t, score: hits === words.length ? score + 20 : score };
+        }).filter(function (x) { return x.score > 0; }).sort(function (a, b) { return b.score - a.score; }).slice(0, 8);
+        while (faqLive.firstChild) faqLive.removeChild(faqLive.firstChild);
+        if (scored.length === 0) {
+          var none = document.createElement('p');
+          none.className = 'none small';
+          none.textContent = 'No topic yet — press Enter to search all text.';
+          faqLive.appendChild(none);
+        }
+        scored.forEach(function (x) {
+          var a = document.createElement('a');
+          a.href = '/help/' + x.t.id;
+          var b = document.createElement('b');
+          b.textContent = x.t.t;
+          var sp = document.createElement('span');
+          sp.textContent = x.t.s;
+          a.appendChild(b);
+          a.appendChild(sp);
+          faqLive.appendChild(a);
+        });
+        faqLive.hidden = false;
+      }).catch(function () { faqLive.hidden = true; });
+    };
+    var faqTimer = null;
+    faqInput.addEventListener('input', function () { clearTimeout(faqTimer); faqTimer = setTimeout(faqRun, 120); });
+    faqInput.addEventListener('focus', faqLoad);
+    document.addEventListener('click', function (e) { if (!e.target.closest || (!e.target.closest('.fsearch') && !e.target.closest('#faqlive'))) faqLive.hidden = true; });
+  }
+
   // Chat cooldown: the Send button wakes up when the wait is over.
   var chatForm = document.getElementById('chatform');
   var chatSend = document.getElementById('chatsend');

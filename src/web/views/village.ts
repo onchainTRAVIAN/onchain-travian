@@ -18,7 +18,7 @@ import { instantPrice, workLeft } from '../../game/actions/credits.js';
 import { fmtClock, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { TOWN_SPOTS } from './spots.js';
-import { stagedImage, wallImage } from '../assets.js';
+import { levelStage, stagedImage, wallImage } from '../assets.js';
 import { csrfField, icon, resIcon, timer } from './layout.js';
 import { buildingImg, buildingLabel, movementSummary, unitIcon } from './parts.js';
 
@@ -85,6 +85,8 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
   </tbody></table>`;
 }
 
+const FIELD_KIND: Record<string, string> = { woodcutter: 'wood', claypit: 'clay', ironmine: 'iron', cropland: 'crop' };
+
 /** Village name plaque above the village pictures: name, coordinates, population, capital. */
 function villageTitle(d: VillageViewData): SafeHtml {
   const v = d.state.village;
@@ -137,7 +139,11 @@ export function fieldsView(d: VillageViewData & { layout: string }): SafeHtml {
       const def = BUILDINGS[s.building as BuildingId];
       const pending = d.orders.find((o) => o.slot === s.slot);
       const label = `${def?.name ?? '?'} level ${s.level}${pending ? ` (upgrading to ${pending.toLevel})` : ''}`;
-      return html`<a class="ra ra${s.slot}" href="/slot/${s.slot}" title="${label}" aria-label="${label}"></a><span class="rf rf${s.slot} ${badgeClass(d, s.slot, s.level, cap)}">${s.level}</span>`;
+      // Fields look busier every 5 levels: a stage picture over the field (levels 5, 10, 15, 20).
+      const stage = levelStage(s.level);
+      const kind = FIELD_KIND[s.building ?? ''];
+      const deco = stage >= 2 && kind ? html`<img class="fo ra${s.slot}" src="/static/img/fields/stage/${kind}-${stage}.svg" width="46" height="40" alt="">` : '';
+      return html`${deco}<a class="ra ra${s.slot}" href="/slot/${s.slot}" title="${label}" aria-label="${label}"></a><span class="rf rf${s.slot} ${badgeClass(d, s.slot, s.level, cap)}">${s.level}</span>`;
     })}
     <a class="vlink" href="/village" title="Village centre" aria-label="Village centre"></a>
   </div>

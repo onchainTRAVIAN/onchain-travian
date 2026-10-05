@@ -91,7 +91,7 @@ export function npcPanel(stock: Resources, capacity: Resources, balance: number,
 
 export function tickerView(d: {
   balance: number;
-  slots: { start: number; used: number; free: number }[];
+  live: number;
   mine: { id: number; body: string; startsAt: number; endsAt: number; status: string; price: number }[];
   csrf: string;
   now: number;
@@ -100,32 +100,22 @@ export function tickerView(d: {
     const iso = new Date(t).toISOString();
     return `${iso.slice(5, 10)} ${iso.slice(11, 16)} UTC`;
   };
-  return html`<h1>📯 News ticker</h1>
-    <p>Your message scrolls across the top of the game for <b>every player</b> during the hours you book.
-      ${config.TICKER_MAX_PER_HOUR} messages can share an hour. ${config.TICKER_PRICE_PER_HOUR} credits per hour. No links.</p>
-    <p class="small">Balance: ${fmtNum(d.balance)} Gold · <a href="/shop/topup">buy Gold</a></p>
-    <form method="post" action="/shop/ticker">${csrfField(d.csrf)}
-      <label for="tb">Message</label>
-      <input id="tb" type="text" name="body" required minlength="3" maxlength="${TICKER_MAX_LENGTH}" placeholder="e.g. [RT] Round Table is recruiting!">
-      <div class="row">
-        <div><label for="th">Hours</label><select id="th" name="hours">${Array.from({ length: TICKER_MAX_HOURS }, (_, i) => i + 1).map(
-          (h) => html`<option value="${h}">${h} h — ${h * config.TICKER_PRICE_PER_HOUR} Gold</option>`,
-        )}</select></div>
-      </div>
-      <fieldset class="plain"><legend><b>Start time</b> <span class="small muted">(free places shown)</span></legend>
-        <div class="slotgrid">${d.slots.map(
-          (s, i) => html`<label class="${s.free === 0 ? 'full' : ''}"><input type="radio" name="start" value="${s.start}"${i === 0 && s.free > 0 ? html` checked` : ''}${s.free === 0 ? html` disabled` : ''}>
-            ${i === 0 ? 'Now' : fmtSlot(s.start)}<br><span class="muted">${s.free} free</span></label>`,
-        )}</div>
-      </fieldset>
-      <div class="actions"><button type="submit" class="gold">📯 Book and pay</button></div>
-    </form>
-    <h2>Your bookings</h2>
+  return html`<div class="vtitle"><h1>News ticker</h1><span class="vmeta">${d.live} message${d.live === 1 ? '' : 's'} running now</span></div>
+    <section class="spanel"><h3 class="sp-head">Post a message<span>${config.TICKER_PRICE_PER_HOUR} Gold per hour</span></h3>
+      <form method="post" action="/shop/ticker" class="pad block">${csrfField(d.csrf)}
+        <p class="small">Your message scrolls across the top of the game for <b>every player</b>, starting now. Post as many as you like — they take turns. No links. Balance: <b>${fmtNum(d.balance)} Gold</b> · <a href="/wallet">get Gold</a></p>
+        <label for="tb" class="sr">Message</label>
+        <input id="tb" type="text" name="body" required minlength="3" maxlength="${TICKER_MAX_LENGTH}" placeholder="e.g. [RT] Round Table is recruiting!" class="tickerin">
+        <p><label for="th">Show it for</label> <select id="th" name="hours">${Array.from({ length: TICKER_MAX_HOURS }, (_, i) => i + 1).map(
+          (h) => html`<option value="${h}">${h} hour${h === 1 ? '' : 's'} — ${h * config.TICKER_PRICE_PER_HOUR} Gold</option>`,
+        )}</select> <button type="submit" class="gold">Post and pay</button></p>
+      </form></section>
+    <section class="spanel"><h3 class="sp-head">Your messages<span>${d.mine.length}</span></h3>
     ${d.mine.length === 0
-      ? html`<p class="muted small">None yet.</p>`
-      : html`<ul class="list">${d.mine.map(
-          (m) => html`<li><span class="grow">“${m.body}”<span class="sub">${fmtSlot(m.startsAt)} → ${fmtSlot(m.endsAt)} · ${m.price} Gold
-            ${m.status === 'removed' ? ' · removed by a moderator' : m.startsAt <= d.now && m.endsAt > d.now ? ' · 🔴 live now' : ''}</span></span></li>`,
-        )}</ul>`}`;
+      ? html`<p class="pad muted small">None yet.</p>`
+      : html`<ul class="flist">${d.mine.map(
+          (m) => html`<li>“${m.body}”<span class="fsum">${fmtSlot(m.startsAt)} → ${fmtSlot(m.endsAt)} · ${m.price} Gold
+            ${m.status === 'removed' ? ' · removed by a moderator' : m.startsAt <= d.now && m.endsAt > d.now ? ' · live now' : m.endsAt <= d.now ? ' · ended' : ''}</span></li>`,
+        )}</ul>`}</section>`;
 }
 

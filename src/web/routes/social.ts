@@ -19,11 +19,13 @@ import { endgameOverview } from '../../game/actions/endgame.js';
 import { endgameView } from '../views/endgame.js';
 import { WEEKLY_CATEGORIES, lastWinners, medalsOf, weekStart, weeklyStandings } from '../../game/actions/weekly.js';
 import { deleteMessage, deleteMessages, inbox, markMessagesRead, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
-import { parseReport } from '../../game/engine/reports.js';
+import { battleOutcome, parseReport } from '../../game/engine/reports.js';
 import { heroRankings, playerProfile, playerRank, rankOf, rankings, reportList, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
 import { authed, setFlash } from '../session.js';
 import { reportListView, reportView } from '../views/reports.js';
-import { accountView, heroRankingView, helpView, inboxView, messageView, playerView, rankingView, villageRankingView, weeklyView, writeView } from '../views/social.js';
+import { FAQ, FAQ_CATEGORIES, faqTopic, searchFaq } from '../../game/rules/faq.js';
+import { helpHome, helpTopic } from '../views/help.js';
+import { accountView, heroRankingView, inboxView, messageView, playerView, rankingView, villageRankingView, weeklyView, writeView } from '../views/social.js';
 import { backUrl, formAction, intParam, loadGamePage, pageParam, sendPage } from './helpers.js';
 import { requireAuth } from '../session.js';
 
@@ -38,7 +40,8 @@ socialRouter.get('/reports', requireAuth, (req, res) => {
   const f = typeof req.query.f === 'string' && req.query.f in REPORT_FILTERS ? (req.query.f as ReportFilter) : 'all';
   const p = pageParam(req.query.page);
   const rows = reportList(db, ctx.user.id, f, PAGE + 1, (p - 1) * PAGE);
-  sendPage(req, res, 'Reports', reportListView({ rows: rows.slice(0, PAGE), filter: f, page: p, hasMore: rows.length > PAGE, now: ctx.now, csrf: ctx.csrf }), {
+  const listed = rows.slice(0, PAGE).map(({ data, ...r }) => ({ ...r, outcome: battleOutcome(data, ctx.user.id) }));
+  sendPage(req, res, 'Reports', reportListView({ rows: listed, filter: f, page: p, hasMore: rows.length > PAGE, now: ctx.now, csrf: ctx.csrf }), {
     nav: 'reports',
     chrome: page.chrome,
   });
@@ -465,5 +468,23 @@ socialRouter.get('/units', (req, res) => {
 
 socialRouter.get('/help', (req, res) => {
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
-  sendPage(req, res, 'Game guide', helpView(), { chrome });
+  const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 80).trim() : '';
+  const c = FAQ_CATEGORIES.find((x) => x.id === req.query.c)?.id ?? null;
+  sendPage(req, res, 'Game guide', helpHome({ q, results: q ? searchFaq(q) : null, category: c }), { chrome });
+});
+
+/** Small search index for the live search box. */
+socialRouter.get('/help/index.json', (_req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(FAQ.map((t) => ({ id: t.id, t: t.title, k: t.keywords.join(' '), s: t.summary })));
+});
+
+socialRouter.get('/help/:id', (req, res) => {
+  const topic = faqTopic(String(req.params.id));
+  if (!topic) {
+    res.redirect(303, `/help?q=${encodeURIComponent(String(req.params.id).replace(/-/g, ' '))}`);
+    return;
+  }
+  const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
+  sendPage(req, res, topic.title, helpTopic(topic), { chrome });
 });
