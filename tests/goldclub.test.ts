@@ -151,6 +151,8 @@ describe('Gold Club farm targets', () => {
     const n = addNearbyOases(db, r.userId, list, 15, units(2, 3));
     expect(n).toBeGreaterThan(0);
     expect(addNearbyOases(db, r.userId, list, 15, units(2, 3))).toBe(0);
+    expect(addNearbyOases(db, r.userId, list, 35, units(2, 3))).toBeGreaterThanOrEqual(0);
+    expect(() => addNearbyOases(db, r.userId, list, 36, units(2, 3))).toThrow(/1 to 35/);
     const empty = db.select().from(tiles).where(and(eq(tiles.kind, 'field'), isNull(tiles.villageId))).get()!;
     expect(() => addFarmEntry(db, r.userId, list, empty.x, empty.y, units(2, 3))).toThrow(/village or oasis/);
   });

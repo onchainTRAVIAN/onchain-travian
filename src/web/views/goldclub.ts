@@ -1,4 +1,4 @@
-import { AUTO_MINUTES, GOLD_CLUB_PRICE, type Cropper, type FarmEntry, type FarmList, type TradeRoute } from '../../game/actions/goldclub.js';
+import { AUTO_MINUTES, FARM_RADIUS_MAX, GOLD_CLUB_PRICE, type Cropper, type FarmEntry, type FarmList, type TradeRoute } from '../../game/actions/goldclub.js';
 import { parseResources, parseUnits } from '../../game/engine/state.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL } from '../../game/rules/resources.js';
 import { TRIBES, carryOf, type TribeId } from '../../game/rules/units.js';
@@ -96,7 +96,7 @@ export function farmListView(d: {
             (u, i) => html`<label class="nowrap">${unitIcon(d.tribe, i, 16, false)}<input type="number" name="t${i}" min="0" class="w30 su-in" inputmode="numeric" aria-label="${u.name}" title="${u.name}: carries ${Math.floor(u.carry * d.carryMult)} each" data-carry="${Math.floor(u.carry * d.carryMult * 100) / 100}"></label> `,
           )} <span class="small">Can carry: <b data-carrytotal>0</b></span> <button type="submit" class="small">Add</button>
           <button type="submit" formaction="/goldclub/oases" class="small secondary">Add all free oases</button>
-          <label>within <select name="radius">${[5, 10, 15].map((r) => html`<option value="${r}">${r}</option>`)}</select> fields</label></p>
+          <label>within <input type="number" name="radius" min="1" max="${FARM_RADIUS_MAX}" value="10" class="w30" inputmode="numeric"> fields (up to ${FARM_RADIUS_MAX})</label></p>
           <p class="small muted">Leave x and y empty for "Add all free oases": the troops above go to each of them.</p>
         </form>
         <form method="post" action="/goldclub/list/delete" class="inline">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}"><button type="submit" class="small secondary">Delete this list</button></form>`,

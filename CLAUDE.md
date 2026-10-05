@@ -30,4 +30,4 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Production breakdown: `src/game/engine/breakdown.ts` (`/production`) must mirror `grossProduction`/`economyOf` — update both together.
 - `app.js` is one IIFE: never reuse a `var` name across feature blocks (hoisting made blocks clobber each other twice).
 - Map movement markers: `movementMarks()` in `src/web/routes/map.ts` → `marks` in `mapView`.
-- Gold Club: `src/game/actions/goldclub.ts` (farm lists + auto-raids, evasion hooked in `handleCombat`, trade routes, cropper finder); automation runs in the `src/server.ts` tick.
+- Gold Club: `src/game/actions/goldclub.ts` (farm lists + auto-raids, oasis auto-add radius ≤ `FARM_RADIUS_MAX`=35, max 100 targets/list, evasion hooked in `handleCombat`, trade routes, cropper finder); automation runs in the `src/server.ts` tick.

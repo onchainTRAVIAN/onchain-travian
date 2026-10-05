@@ -19,6 +19,7 @@ import {
   setEvasion,
   setFarmAuto,
   GOLD_CLUB_PRICE,
+  FARM_RADIUS_MAX,
 } from '../../game/actions/goldclub.js';
 import { placesOf } from '../../game/actions/places.js';
 import { getModifiers } from '../../game/modifiers.js';
@@ -133,7 +134,7 @@ goldclubRouter.post(
 goldclubRouter.post(
   '/goldclub/oases',
   formAction(
-    z.object({ listId: id, radius: z.coerce.number().int().refine((n) => [5, 10, 15].includes(n)), t0: count, t1: count, t2: count, t3: count, t4: count, t5: count, t6: count, t7: count }),
+    z.object({ listId: id, radius: z.coerce.number({ message: 'Enter a distance' }).int().min(1, 'Distance must be at least 1 field').max(FARM_RADIUS_MAX, `At most ${FARM_RADIUS_MAX} fields`), t0: count, t1: count, t2: count, t3: count, t4: count, t5: count, t6: count, t7: count }),
     (req, r, d) => {
       const units = emptyUnits();
       [d.t0, d.t1, d.t2, d.t3, d.t4, d.t5, d.t6, d.t7].forEach((n, i) => (units[i] = n));

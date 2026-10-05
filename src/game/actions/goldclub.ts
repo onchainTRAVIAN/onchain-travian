@@ -16,6 +16,8 @@ import { sendTroops } from './troops.js';
 export const GOLD_CLUB_PRICE = 500;
 export const FARM_LISTS_MAX = 10;
 export const FARM_ENTRIES_MAX = 100;
+/** Furthest distance for "Add all free oases". */
+export const FARM_RADIUS_MAX = 35;
 export const AUTO_MINUTES = [15, 30, 60, 120] as const;
 export const TRADE_ROUTES_MAX = 20;
 
@@ -90,6 +92,7 @@ export function addNearbyOases(db: DB, userId: number, listId: number, radius: n
     const list = ownList(tx, userId, listId);
     const home = tx.select({ x: villages.x, y: villages.y }).from(villages).where(eq(villages.id, list.villageId)).get();
     assertGame(home, 'Village not found');
+    assertGame(Number.isInteger(radius) && radius >= 1 && radius <= FARM_RADIUS_MAX, `Choose a distance from 1 to ${FARM_RADIUS_MAX} fields`);
     const clean = units.map((n) => Math.max(0, Math.floor(Number.isFinite(n) ? n : 0)));
     assertGame(totalUnits(clean) > 0, 'Choose the troops for each oasis');
     const have = new Set(tx.select({ x: farmEntries.x, y: farmEntries.y }).from(farmEntries).where(eq(farmEntries.listId, listId)).all().map((e) => `${e.x}|${e.y}`));

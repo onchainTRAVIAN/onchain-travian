@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.5 — 2026-10-05
+- Farm list: "Add all free oases" takes any distance from 1 to 35 fields (was 5/10/15).
+
 ## 0.10.4 — 2026-10-05
 - Troop movements: the village overview shows a compact classic summary (e.g. "23 Outgoing — first in 0:20:37"); the Rally Point lists every movement on one line each in a scrollable box with All / Incoming / Outgoing / Returning tabs.
 
