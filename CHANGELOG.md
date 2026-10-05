@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0 — 2026-10-05
+- **Train troops** page (left menu): every unit of all the village's training buildings in one form with a live total, plus each building's queue.
+- Side panels: player card (avatar, tribe, population, Gold), softer section titles, Village centre and Train troops entries; Links panel as icon tiles (send, train, farm list, simulator, Gold market, troop guide, news ticker, game guide).
+- News ticker: a tidy strip inside the page (label, fading scroll, "+ Post"); fixed the double zoom that made it stick out on wide screens. Posting is now simple: starts immediately, any number of messages at once, 1–24 hours.
+- Battle reports redesigned: header with colour-coded result icon, result banner with attack-vs-defence bar, attacker/defender panels with losses summary, bounty with carry bar, "Aftermath" and "Intelligence" panels. The report list colours attack reports green (no losses), yellow (some) or red (all troops lost).
+- Resource fields look busier every 5 levels (log piles → lodges, kilns, mines, windmills).
+- Troop pictures redrawn where they looked odd (horses, animals, clipped icons).
+- Map opens in the flat view by default.
+- Server time is labelled UTC.
+- Game guide pages with search (content arriving).
+
 ## 0.12.8 — 2026-10-05
 - Rename a village right from its title: click the name (or the pencil) on the village overview or centre, type, Save (Enter) or Cancel (Esc).
 - Fix: the Production box on the village overview overlapped the title row.

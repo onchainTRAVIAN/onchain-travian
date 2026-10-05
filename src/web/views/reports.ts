@@ -1,6 +1,6 @@
 import { RESOURCE_KEYS, sumRes, type Resources } from '../../game/rules/resources.js';
 import { TRIBES } from '../../game/rules/units.js';
-import type { BattleReportData, ReportData, ReportSide } from '../../game/engine/reports.js';
+import { battleOutcome, type BattleReportData, type ReportData, type ReportSide } from '../../game/engine/reports.js';
 import type { ReportFilter } from '../../game/queries.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
@@ -23,6 +23,11 @@ const KIND_ICON: Record<string, [string, string]> = {
 function kindIcon(kind: string): SafeHtml {
   const [path, alt] = KIND_ICON[kind] ?? ['ui/report', 'Report'];
   return icon(path, alt, 16);
+}
+
+/** Same rule as the report list colours: own losses none / some / all. */
+function battleOutcomeOf(r: BattleReportData, viewerId: number): 'none' | 'some' | 'all' | null {
+  return battleOutcome(JSON.stringify(r), viewerId);
 }
 
 const OUTCOME: Record<'none' | 'some' | 'all', [string, string]> = {
@@ -94,14 +99,25 @@ function simParams(p: Record<string, string>): string {
   return new URLSearchParams(p).toString();
 }
 
-function sideBlock(title: string, s: ReportSide, hideUnits = false, extra?: SafeHtml, hero?: HeroLine): SafeHtml {
-  return html`<table class="report"><thead><tr><th class="side ${title === 'Attacker' ? 'att' : 'def'}">${title}</th>
-      <th><a href="/stats">${s.username}</a> from the village <a href="/map/tile?x=${s.x}&amp;y=${s.y}">${s.villageName}</a> <span class="small muted">(${TRIBES[s.tribe].name})</span></th></tr></thead>
-    <tbody><tr><td colspan="2">${hideUnits
+/** Bar comparing two strengths (or carried vs capacity); SVG so it works under the CSP. */
+function splitBar(a: number, b: number, clsA: string, clsB: string): SafeHtml {
+  const total = a + b;
+  const w = total > 0 ? Math.max(1, Math.min(99, Math.round((a / total) * 100))) : 50;
+  return html`<svg class="rbar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="8" class="${clsB}"></rect><rect width="${w}" height="8" class="${clsA}"></rect></svg>`;
+}
+
+function sideBlock(title: string, role: 'att' | 'def', s: ReportSide, hideUnits = false, extra?: SafeHtml, hero?: HeroLine): SafeHtml {
+  const sent = s.units.reduce((x, y) => x + y, 0);
+  const lost = s.losses.reduce((x, y) => x + y, 0);
+  return html`<section class="spanel rside ${role}">
+    <h3 class="sp-head"><span class="rrole">${title}</span>
+      <span class="rwho"><img src="/static/img/units/${s.tribe}-1.svg" width="14" height="14" alt="${TRIBES[s.tribe].name}" class="tmark"> <a href="/player/${s.userId ?? 0}">${s.username}</a> · <a href="/map/tile?x=${s.x}&amp;y=${s.y}">${s.villageName}</a> <span class="co">(${s.x}|${s.y})</span></span></h3>
+    <div class="pad">${hideUnits
       ? html`<p class="muted small">No information was gathered — none of your soldiers survived.</p>`
       : html`${unitsTable(s.tribe, s.units, s.losses, { hero: !!hero, heroLost: hero?.died })}
-        ${hero ? html`<p class="small herorow">${unitIcon(s.tribe, 10, 16, false)} <b>${hero.name}</b>: ${hero.died ? html`<b class="bad">fell in battle</b>` : html`health ${hero.health}%`} · +${fmtNum(hero.xp)} experience</p>` : ''}`}</td></tr>
-    ${extra ?? ''}</tbody></table>`;
+        <p class="rloss small">${sent > 0 ? html`Lost <b>${fmtNum(lost)}</b> of ${fmtNum(sent)} soldiers${lost === 0 ? ' — no losses' : lost >= sent ? ' — all troops lost' : ''}` : 'No soldiers'}</p>
+        ${hero ? html`<p class="small herorow">${unitIcon(s.tribe, 10, 16, false)} <b>${hero.name}</b>: ${hero.died ? html`<b class="bad">fell in battle</b>` : html`health ${hero.health}%`} · +${fmtNum(hero.xp)} experience</p>` : ''}`}
+      ${extra ?? ''}</div></section>`;
 }
 
 function battleView(r: BattleReportData, viewerId: number): SafeHtml {
@@ -119,38 +135,46 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
         : 'Scouts were caught'
       : won
         ? isAttacker
-          ? 'Victory!'
-          : 'Your defence held!'
+          ? 'Victory'
+          : 'Your defence held'
         : isAttacker
           ? 'Defeat'
           : 'The village was overrun';
-  return html`<p class="${won ? 'good' : 'bad'}"><b>${headline}</b></p>
-    ${sideBlock('Attacker', r.attacker, false, r.mode !== 'scout' && sumRes(r.loot) > 0
-      ? html`<tr><th>Bounty</th><td><div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.loot[k])}</span>`)}</div>
-          <span class="small muted">${fmtNum(sumRes(r.loot))}/${fmtNum(r.capacity)} carried</span></td></tr>`
-      : undefined, attackerHero)}
+  const looted = sumRes(r.loot);
+  const bounty =
+    r.mode !== 'scout' && (looted > 0 || r.capacity > 0)
+      ? html`<div class="rbounty"><b>Bounty</b><span class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.loot[k])}</span>`)}</span>
+          <span class="rcarry">${splitBar(looted, Math.max(0, r.capacity - looted), 'fg', 'bg')}<span class="small muted">${fmtNum(looted)} of ${fmtNum(r.capacity)} carried${r.capacity > 0 ? ` (${Math.round((looted / r.capacity) * 100)}%)` : ''}</span></span></div>`
+      : undefined;
+  const events: SafeHtml[] = [];
+  if (r.wall) events.push(html`<li><b>Wall</b> level ${r.wall.from} → <b>${r.wall.to}</b></li>`);
+  if (r.building) events.push(html`<li><b>${r.building.name}</b> level ${r.building.from} → <b>${r.building.to}</b></li>`);
+  if (r.loyalty) events.push(html`<li><b>Loyalty</b> ${r.loyalty.from}% → <b>${r.loyalty.to}%</b></li>`);
+  if (r.conquered) events.push(html`<li class="good"><b>The village was conquered!</b></li>`);
+  if (r.oasis?.captured) events.push(html`<li class="good"><b>Oasis captured!</b></li>`);
+  for (const n of r.notes ?? []) events.push(html`<li class="small">${n}</li>`);
+  return html`<div class="rbanner ${r.mode === 'scout' ? 'scout' : ''} ${won ? 'win' : 'loss'}">
+      <b>${headline}</b>
+      ${r.mode !== 'scout'
+        ? html`<span class="rpow">${splitBar(r.attackPower, r.defensePower, 'att', 'def')}<span class="small"><span class="ca">attack ${fmtNum(r.attackPower)}</span> vs <span class="cd">defence ${fmtNum(r.defensePower)}</span></span></span>`
+        : ''}
+    </div>
+    ${sideBlock('Attacker', 'att', r.attacker, false, bounty, attackerHero)}
     ${r.mode !== 'scout'
       ? r.defenders.length === 0
-        ? html`<h3>Defender</h3><p class="muted small">The village was undefended.</p>`
-        : r.defenders.map((s, i) => sideBlock(i === 0 ? 'Defender' : 'Reinforcement', s, r.defendersHidden && isAttacker, undefined, defenderHero(s, i)))
+        ? html`<section class="spanel rside def"><h3 class="sp-head"><span class="rrole">Defender</span></h3><p class="pad muted small">The village was undefended.</p></section>`
+        : r.defenders.map((s, i) => sideBlock(i === 0 ? 'Defender' : 'Reinforcement', 'def', s, r.defendersHidden && isAttacker, undefined, defenderHero(s, i)))
       : ''}
-
-    ${r.wall ? html`<p>🧱 City Wall: level ${r.wall.from} → <b>${r.wall.to}</b></p>` : ''}
-    ${r.building ? html`<p>☄️ ${r.building.name}: level ${r.building.from} → <b>${r.building.to}</b></p>` : ''}
+    ${events.length ? html`<section class="spanel"><h3 class="sp-head">Aftermath</h3><ul class="revents">${events}</ul></section>` : ''}
     ${r.scout?.success && isAttacker
-      ? html`<h3>🔭 Intelligence</h3>
-        ${r.scout.resources ? html`<div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.scout?.resources?.[k] ?? 0)}</span>`)}</div>` : ''}
-        <p class="small">City Wall level ${r.scout.wallLevel ?? 0} · Cranny hides ${typeof r.scout.crannyHides === 'object'
+      ? html`<section class="spanel"><h3 class="sp-head">Intelligence<span><a href="${scoutSimLink(r)}">simulate an attack »</a></span></h3><div class="pad">
+        ${r.scout.resources ? html`<p><b>Resources</b> <span class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.scout?.resources?.[k] ?? 0)}</span>`)}</span></p>` : ''}
+        <p class="small"><b>Wall</b> level ${r.scout.wallLevel ?? 0} · <b>Cranny hides</b> ${typeof r.scout.crannyHides === 'object'
           ? RESOURCE_KEYS.map((k) => html`${resIcon(k)}${fmtNum((r.scout?.crannyHides as Resources)[k])} `)
           : html`${fmtNum((r.scout.crannyHides as number | undefined) ?? 0)} of each`}</p>
-        ${isAttacker ? html`<p><a class="btn small secondary" href="${scoutSimLink(r)}">Simulate an attack on this</a></p>` : ''}
-        ${(r.scout.troops ?? []).every((t) => !t.hero && t.units.every((n) => n === 0)) ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units, undefined, { hero: !!t.hero, label: t.owner ?? 'Troops' }))}`
-      : ''}
-    ${r.loyalty ? html`<p>🎖️ Loyalty: ${r.loyalty.from}% → <b>${r.loyalty.to}%</b></p>` : ''}
-    ${r.conquered ? html`<p class="good"><b>👑 The village was conquered!</b></p>` : ''}
-    ${r.oasis?.captured ? html`<p class="good"><b>🌴 Oasis captured!</b></p>` : ''}
-    ${r.notes?.map((n) => html`<p class="small">ℹ️ ${n}</p>`)}
-    ${r.mode !== 'scout' ? html`<p class="small muted">Attack strength ${fmtNum(r.attackPower)} vs defence ${fmtNum(r.defensePower)}</p>` : ''}`;
+        ${(r.scout.troops ?? []).every((t) => !t.hero && t.units.every((n) => n === 0)) ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units, undefined, { hero: !!t.hero, label: t.owner ?? 'Troops' }))}
+        </div></section>`
+      : ''}`;
 }
 
 export function reportView(d: { id: number; title: string; createdAt: number; data: ReportData | null; viewerId: number; csrf: string }): SafeHtml {
@@ -172,11 +196,12 @@ export function reportView(d: { id: number; title: string; createdAt: number; da
     body = d.title.startsWith('Troops starved')
       ? html`<p class="bad">Your granary ran empty and these troops deserted from ${r.villageName}:</p>${unitsTable(r.tribe, r.units, undefined, { hideEmpty: true })}`
       : html`<p>Troops returned to ${r.villageName}.</p>${unitsTable(r.tribe, r.units, undefined, { hideEmpty: true })}`;
-  return html`<h1>${d.title}</h1>
-    <p class="muted small">${fmtDateTime(d.createdAt)} UTC</p>
-    ${body}
-    <div class="actions">
-      <a class="btn secondary" href="/reports">← All reports</a>
-      <form method="post" action="/reports/${d.id}/delete">${csrfField(d.csrf)}<button type="submit" class="secondary">🗑 Delete</button></form>
-    </div>`;
+  const outcome = r && r.type === 'battle' ? battleOutcomeOf(r, d.viewerId) : null;
+  return html`<div class="spanel rephead">
+      <span class="ricon">${outcome ? icon(`ui/rep-${outcome === 'none' ? 'g' : outcome === 'some' ? 'y' : 'r'}`, '', 28) : icon('ui/report', '', 28)}</span>
+      <div class="rtitle"><h1>${d.title}</h1><span class="small muted">${fmtDateTime(d.createdAt)} UTC</span></div>
+      <div class="racts"><a class="btn small secondary" href="/reports">All reports</a>
+        <form method="post" action="/reports/${d.id}/delete" class="inline">${csrfField(d.csrf)}<button type="submit" class="small secondary">Delete</button></form></div>
+    </div>
+    ${body}`;
 }

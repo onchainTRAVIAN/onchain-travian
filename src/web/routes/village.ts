@@ -14,6 +14,7 @@ import { GameError } from '../../game/errors.js';
 import { authed, setActiveVillage, setFlash } from '../session.js';
 import { fieldsView, townView, type VillageViewData } from '../views/village.js';
 import { slotView } from '../views/slot.js';
+import { trainAllView } from '../views/train.js';
 import { backUrl, formAction, intParam, loadGamePage, sendPage, type GamePage } from './helpers.js';
 import type { SafeHtml } from '../html.js';
 import { academyOptions, researchOrdersOf, upgradeOptions } from '../../game/actions/research.js';
@@ -254,6 +255,60 @@ villageRouter.post(
 );
 
 const qty = z.preprocess((v) => (v === '' || v === undefined ? 0 : v), z.coerce.number().int().min(0).max(100_000));
+/** Train troops: every training building of the village in one page. */
+villageRouter.get('/troops/train', (req, res) => {
+  const ctx = authed(req);
+  const page = loadGamePage(req);
+  const state = page.state;
+  const groups = state.slots
+    .filter((s) => s.building && s.level > 0 && isTrainingSite(s.building))
+    .map((s) => ({
+      building: s.building as BuildingId,
+      slot: s.slot,
+      level: s.level,
+      options: trainOptions(db, state, s.building as BuildingId, ctx.now),
+      queue: trainOrdersOf(db, state.village.id).filter((o) => o.building === s.building),
+    }))
+    .sort((a, b) => TRAIN_ORDER.indexOf(a.building) - TRAIN_ORDER.indexOf(b.building));
+  sendPage(
+    req,
+    res,
+    'Train troops',
+    trainAllView({ tribe: state.tribe, groups, have: stockOf(state.village), home: troopsAt(db, state.village.id, state.village.id), csrf: ctx.csrf, now: ctx.now }),
+    { nav: 'train', chrome: page.chrome },
+  );
+});
+
+const TRAIN_ORDER: BuildingId[] = ['barracks', 'greatbarracks', 'stable', 'greatstable', 'workshop', 'residence', 'palace'];
+
+villageRouter.post('/train/all', (req, res, next) =>
+  formAction(z.object({}).catchall(z.string()), (rq, rs, d) => {
+    const ctx = authed(rq);
+    const trained: string[] = [];
+    const failed: string[] = [];
+    for (const [key, raw] of Object.entries(d as Record<string, string>)) {
+      const m = /^t_([a-z]+)_(\d)$/.exec(key);
+      if (!m) continue;
+      const n = Math.floor(Number(raw));
+      if (!Number.isFinite(n) || n <= 0) continue;
+      const building = m[1] ?? '';
+      const slot = Number(m[2]);
+      if (!isTrainingSite(building)) continue;
+      const name = TRIBES[ctx.user.tribe].units[slot]?.name ?? '';
+      try {
+        const order = startTraining(db, ctx.user.id, ctx.villageId, building, slot, n, ctx.now);
+        trained.push(`${order.total} ${name}`);
+      } catch (err) {
+        if (!(err instanceof GameError)) throw err;
+        failed.push(`${name}: ${err.message}`);
+      }
+    }
+    if (trained.length === 0 && failed.length === 0) throw new GameError('Enter how many units to train');
+    setFlash(rs, trained.length ? 'ok' : 'error', [trained.length ? `Training: ${trained.join(', ')}.` : '', failed.length ? `Not trained — ${failed.join('; ')}.` : ''].filter(Boolean).join(' '));
+    rs.redirect(303, '/troops/train');
+  }, '/troops/train')(req, res, next),
+);
+
 villageRouter.post(
   '/train',
   formAction(

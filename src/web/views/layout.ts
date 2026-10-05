@@ -1,4 +1,4 @@
-import { assetUrl } from '../assets.js';
+import { assetUrl, hasAsset } from '../assets.js';
 import { config } from '../../config.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, type Resources } from '../../game/rules/resources.js';
 import type { Economy, VillageRow } from '../../game/engine/state.js';
@@ -29,6 +29,7 @@ export type NavKey =
   | 'village'
   | 'map'
   | 'troops'
+  | 'train'
   | 'hero'
   | 'reports'
   | 'messages'
@@ -66,8 +67,9 @@ function tickerBar(items: TickerItem[], announcement: string | null | undefined)
   for (const t of items) all.push(html`<span class="tk-item"><b>${t.username ?? 'Herald'}:</b> ${t.body}</span>`);
   if (all.length === 0) return html``;
   return html`<div class="ticker" role="marquee" aria-label="News">
-    <div class="tk-track"><span class="tk-set">${all}</span><span class="tk-set tk-dup" aria-hidden="true">${all}</span></div>
-    <a class="tk-buy" href="/shop/ticker" title="Post your own message">+</a>
+    <span class="tk-label">${icon('menu/news', '', 14)} News</span>
+    <div class="tk-view"><div class="tk-track"><span class="tk-set">${all}</span><span class="tk-set tk-dup" aria-hidden="true">${all}</span></div></div>
+    <a class="tk-buy" href="/shop/ticker" title="Post your own message on the news ticker">+ Post</a>
   </div>`;
 }
 
@@ -102,6 +104,15 @@ function mi(href: string, ico: string, label: SafeHtml | string, on = false): Sa
   return html`<a href="${href}" class="${on ? 'on' : ''}"${on ? html` aria-current="page"` : ''}><img src="/static/img/menu/${ico}.svg" width="16" height="16" alt="">${label}</a>`;
 }
 
+/** Menu icon if its picture exists, else a fallback (new icons can be added without breaking pages). */
+function menuIcon(name: string, fallback: string): string {
+  return hasAsset(`img/menu/${name}.svg`) ? name : fallback;
+}
+
+function tile(href: string, ico: string, label: string): SafeHtml {
+  return html`<a href="${href}" class="sp-tile"><img src="/static/img/menu/${ico}.svg" width="20" height="20" alt=""><span>${label}</span></a>`;
+}
+
 function sideNavi(c: Chrome | null | undefined, csrf: string, nav: NavKey | undefined): SafeHtml {
   if (!c) {
     return html`<nav id="side_navi" class="sp" aria-label="Menu"><div class="sp-body">
@@ -110,11 +121,14 @@ function sideNavi(c: Chrome | null | undefined, csrf: string, nav: NavKey | unde
   }
   const u = c.user;
   return html`<nav id="side_navi" class="sp" aria-label="Menu">
-    <a class="sp-user" href="/account" title="Your profile"><img class="avatar" src="${avatarUrl(u)}" width="30" height="30" alt="">
-      <span><b>${u.username}</b><small>${TRIBES[u.tribe as TribeId]?.name ?? ''}</small></span></a>
+    <a class="sp-user sp-card" href="/player/${u.id}" title="Your profile"><img class="avatar" src="${avatarUrl(u)}" width="44" height="44" alt="">
+      <b>${u.username}</b><small>${TRIBES[u.tribe as TribeId]?.name ?? ''}</small>
+      <span class="sp-chips"><span title="Population">${icon('res/pop', 'Population', 12, 12)} ${fmtNum(c.villages.reduce((a, v) => a + v.pop, 0))}</span><span title="Gold">${icon('res/gold', 'Gold', 14, 10)} ${fmtNum(c.credits)}</span></span></a>
     <div class="sp-body">
       <div class="sp-label">Village</div>
-      ${mi('/fields', 'home', 'Home', nav === 'fields' || nav === 'village')}
+      ${mi('/fields', 'home', 'Overview', nav === 'fields')}
+      ${mi('/village', menuIcon('village', 'home'), 'Village centre', nav === 'village')}
+      ${mi('/troops/train', menuIcon('train', 'rally'), 'Train troops', nav === 'train')}
       ${mi('/troops', 'rally', 'Rally point', nav === 'troops')}
       ${mi('/hero', 'hero', html`Hero${c.heroAlert ? html` <span class="sp-badge">!</span>` : ''}`, nav === 'hero')}
       ${mi('/goldmarket', 'market', 'Gold market')}
@@ -127,7 +141,7 @@ function sideNavi(c: Chrome | null | undefined, csrf: string, nav: NavKey | unde
       ${mi('/wallet', 'wallet', 'Wallet')}
       ${mi('/account', 'profile', 'Profile', nav === 'account')}
       ${u.role === 'admin' ? mi('/admin', 'admin', 'Admin') : ''}
-      ${mi('/help', 'help', 'Instructions')}
+      ${mi('/help', menuIcon('guide', 'help'), 'Game guide')}
       <form method="post" action="/logout"><input type="hidden" name="_csrf" value="${csrf}"><button type="submit" class="lnk"><img src="/static/img/menu/logout.svg" width="16" height="16" alt="">Log out</button></form>
     </div>
   </nav>`;
@@ -144,7 +158,12 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
       )}</ul>
       ${c.villages.length > 1 ? html`<p class="sp-total small">Total population: <b>${fmtNum(c.villages.reduce((a, v) => a + v.pop, 0))}</b></p>` : ''}</section>
     <section class="sp"><h3 class="sp-head">Links</h3>
-      <div class="sp-body">${mi('/troops/send', 'send', 'Send troops')}${mi('/simulator', 'send', 'Combat simulator')}${mi('/goldmarket', 'market', 'Gold market')}${mi('/units', 'hero', 'Troop guide')}${mi('/shop/ticker', 'news', 'News ticker')}</div></section>
+      <div class="sp-tiles">
+        ${tile('/troops/send', 'send', 'Send troops')}${tile('/troops/train', menuIcon('train', 'rally'), 'Train troops')}
+        ${tile('/troops/farmlist', menuIcon('farm', 'rally'), 'Farm list')}${tile('/simulator', menuIcon('simulator', 'send'), 'Simulator')}
+        ${tile('/goldmarket', 'market', 'Gold market')}${tile('/units', menuIcon('units', 'hero'), 'Troop guide')}
+        ${tile('/shop/ticker', 'news', 'News ticker')}${tile('/help', menuIcon('guide', 'help'), 'Game guide')}
+      </div></section>
   </div>`;
 }
 
@@ -164,7 +183,7 @@ export function layout(o: PageOpts): SafeHtml {
   <div id="header">
     <a id="logo" href="${c ? '/fields' : '/'}">${config.WORLD_NAME}<small>${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic world'}</small></a>
     ${topNav(o.nav, c)}
-    <div id="ltime">Server time: <b>${fmtClock(o.now)}</b></div>
+    <div id="ltime">Server time: <b>${fmtClock(o.now)}</b> UTC</div>
   </div>
   ${c ? resourceBar(c.village, c.eco, o.now, c.credits) : ''}
   ${tickerBar(o.ticker ?? [], o.announcement)}
@@ -176,7 +195,7 @@ export function layout(o: PageOpts): SafeHtml {
     </div>
     ${sideInfo(c, o.csrf)}
   </div>
-  <div id="footer"><a href="/help">Instructions</a> | <a href="/stats">Statistics</a> | ${config.WORLD_NAME}</div>
+  <div id="footer"><a href="/help">Game guide</a> | <a href="/stats">Statistics</a> | ${config.WORLD_NAME}</div>
 </div>
 <script src="${assetUrl('app.js')}" defer></script>
 </body>

@@ -16,7 +16,7 @@ describe('battle report heroes', () => {
       ],
     };
     const out = String(reportView({ id: 1, title: 't', createdAt: 0, data, viewerId: 1, csrf: 'x' }));
-    const blocks = out.split('<table class="report">');
+    const blocks = out.split('class="spanel rside');
     expect(blocks[1]).toContain('Brutus');
     expect(blocks[1]).toContain('health 80%');
     expect(blocks[2]).not.toContain('Ajax');

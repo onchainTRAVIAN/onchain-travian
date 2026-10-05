@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url';
 export const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), 'public');
 
 const exists = new Map<string, boolean>();
+export function hasAsset(rel: string): boolean {
+  return has(rel);
+}
 function has(rel: string): boolean {
   let e = exists.get(rel);
   if (e === undefined) {
