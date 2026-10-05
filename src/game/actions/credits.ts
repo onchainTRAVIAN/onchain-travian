@@ -70,6 +70,10 @@ export function finishConstructionNow(db: DB, userId: number, orderId: number, n
   });
 }
 
+/**
+ * Finish a training batch now — and every batch queued before it in the same building, since the
+ * queue trains in order. The price is the time until this batch would be done (its Duration).
+ */
 export function finishTrainingNow(db: DB, userId: number, orderId: number, now: number): number {
   return db.transaction((tx) => {
     const o = tx.select().from(trainOrders).where(eq(trainOrders.id, orderId)).get();
@@ -79,20 +83,25 @@ export function finishTrainingNow(db: DB, userId: number, orderId: number, now: 
     const fresh = tx.select().from(trainOrders).where(eq(trainOrders.id, orderId)).get();
     assertGame(fresh, 'Already finished');
     const end = fresh.startAt + fresh.total * fresh.perUnitMs;
-    const left = workLeft(fresh.startAt, end, now);
-    const price = instantPrice(left);
+    const price = instantPrice(end - now);
     spend(tx, userId, price, 'Instant training', now);
-    // Pretend training started long enough ago that every unit is done; batches queued after it
-    // move up by the work that was skipped.
-    tx.update(trainOrders).set({ startAt: now - fresh.total * fresh.perUnitMs }).where(eq(trainOrders.id, orderId)).run();
-    const shift = left;
-    const later = tx
+    const queue = tx
       .select()
       .from(trainOrders)
-      .where(and(eq(trainOrders.villageId, fresh.villageId), eq(trainOrders.building, fresh.building), gt(trainOrders.startAt, fresh.startAt)))
+      .where(and(eq(trainOrders.villageId, fresh.villageId), eq(trainOrders.building, fresh.building)))
       .orderBy(asc(trainOrders.startAt))
       .all();
-    for (const l of later) tx.update(trainOrders).set({ startAt: Math.max(now, l.startAt - shift) }).where(eq(trainOrders.id, l.id)).run();
+    // This batch and everything ahead of it: pretend they started long enough ago to be done.
+    for (const q of queue) {
+      if (q.startAt > fresh.startAt) continue;
+      tx.update(trainOrders).set({ startAt: now - q.total * q.perUnitMs }).where(eq(trainOrders.id, q.id)).run();
+    }
+    // Batches behind it move up by the time that was skipped.
+    const shift = Math.max(0, end - now);
+    for (const q of queue) {
+      if (q.startAt <= fresh.startAt) continue;
+      tx.update(trainOrders).set({ startAt: Math.max(now, q.startAt - shift) }).where(eq(trainOrders.id, q.id)).run();
+    }
     catchUp(tx, o.villageId, now);
     return price;
   });

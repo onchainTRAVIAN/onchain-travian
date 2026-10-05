@@ -19,7 +19,7 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Map is an inline SVG built in `src/web/views/map.ts` (positions as SVG attributes, so no CSS position classes); flat tiles in `img/map/flat/`.
 - Avatars: `src/game/actions/avatar.ts` stores WebP next to the DB (`<dir of DATABASE_PATH>/avatars`); multipart forms pass `_csrf` in the query string.
 - Gold economy: all Gold lives in `credits_ledger` (sum per user); transfers/market write paired rows with unique idem keys. Gold market: `src/game/actions/goldmarket.ts` (escrow on listing, `delivery` movement handled like `return`).
-- Cranny: one per village, hides 3.5%/level of storage, max 35% (`crannyShare`; Gauls ×2 up to the cap) — user's rule 2026-10-05. Training times are exact ms (`trainTimeMs`).
+- Cranny: one per village, hides 3.5%/level of storage, max 35% (`crannyShare`; Gauls ×2 up to the cap) — user's rule 2026-10-05. Training times are exact ms (`trainTimeMs`). Finish-now on a training row finishes it and all batches ahead (price = its Duration, user's choice 2026-10-05); construction is priced by own work (`workLeft`).
 - World speed scales production, build/train/research/travel times, culture points, loyalty and hero regen — NOT crop consumption (`cropUpkeep`).
 - Live endgame: artifacts and World Wonders released manually on 2026-10-05 at the user's request (ARTIFACT_DAY/WONDER_DAY vars now have no effect — releases happen once).
 - Live ops: change world speed with Railway vars `WORLD_SPEED`/`TROOP_SPEED`; one-off DB fixes via SSH (script in /app, `node script.mjs`, uses `DATABASE_PATH`).

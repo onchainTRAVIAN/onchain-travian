@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.12.5 — 2026-10-05
+- Training "finish now" works like the queue reads: a row's button finishes that batch and every batch above it, for the time shown in its Duration column (prices grow down the list); a "Finish all" button finishes the whole queue. Batches behind move up.
+
 ## 0.12.4 — 2026-10-05
 - Alliances ranking in the Statistics style: Overview / Attackers / Defenders (members' combined points), hall of fame with tag shields for the top 3, "Your alliance is N." bar, average per member, medals and value bars; opens at your own alliance.
 - Fix: Wallet holder-tier perks ran outside their boxes (no gap to wrap on); they're now neat wrapping chips.

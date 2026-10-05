@@ -69,14 +69,20 @@ export function buildQueue(orders: BuildOrderRow[], now: number, csrf: string): 
 
 export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: number, csrf?: string): SafeHtml {
   if (orders.length === 0) return html``;
-  return html`<table class="tb"><thead><tr><th>Training</th><th>Duration</th><th>Finished</th>${csrf ? html`<th></th>` : ''}</tr></thead><tbody>${orders.map((o) => {
+  const endOf = (o: TrainOrderRow) => o.startAt + o.total * o.perUnitMs;
+  const finish = (o: TrainOrderRow, label: SafeHtml | string, title: string) =>
+    html`<form method="post" action="/shop/finish/train">${csrfField(csrf ?? '')}<input type="hidden" name="orderId" value="${o.id}">
+      <button type="submit" class="small gold" title="${title}">${label}${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(endOf(o) - now)}</button></form>`;
+  const last = orders[orders.length - 1] as TrainOrderRow;
+  return html`<table class="tb"><thead><tr><th>Training</th><th>Duration</th><th>Finished</th>${csrf ? html`<th></th>` : ''}</tr></thead><tbody>${orders.map((o, i) => {
     const u = TRIBES[tribe].units[o.unitSlot];
-    const end = o.startAt + o.total * o.perUnitMs;
+    const end = endOf(o);
     return html`<tr><td>${unitIcon(tribe, o.unitSlot)} ${fmtNum(o.total - o.done)} ${u?.name ?? '?'}</td>
       <td class="num">${timer(end, now)}</td><td class="num">${fmtClock(end)}</td>
-      ${csrf ? html`<td><form method="post" action="/shop/finish/train">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
-        <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(workLeft(o.startAt, end, now))}</button></form></td>` : ''}</tr>`;
-  })}</tbody></table>`;
+      ${csrf ? html`<td>${finish(o, '', i === 0 ? 'Finish this batch now' : 'Finish this batch and all batches above it now')}</td>` : ''}</tr>`;
+  })}
+  ${csrf && orders.length > 1 ? html`<tr class="finishall"><td colspan="3" class="small muted">Finishing a row also finishes every batch above it.</td><td>${finish(last, 'All ', 'Finish the whole queue now')}</td></tr>` : ''}
+  </tbody></table>`;
 }
 
 function productionTable(eco: Economy): SafeHtml {
