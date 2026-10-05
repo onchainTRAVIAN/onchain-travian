@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.4 — 2026-10-05
+- Fix: a giant picture flashed for a moment on page loads/refresh — the top menu icons (and some building/village pictures) had no size of their own, so they rendered at full page width until the stylesheet applied. Every image now carries its width and height.
+
 ## 0.11.3 — 2026-10-05
 - Statistics back to the classic Travian look: text tabs (Players / Alliances / Villages / Heroes / Top 10 / Wonders) with player sub-tabs, grey-grid tables with a title bar and alliance column, your own row highlighted, opens at your own position, "Rank / Name" search and « back | forward » under the table. "This week" is now the Top 10 page: one small table per weekly category, plus last week's medals.
 

@@ -111,7 +111,7 @@ export function fieldsView(d: VillageViewData & { layout: string }): SafeHtml {
   ${protectionNote(d.protectedUntil, d.now)}
   <h1>${d.state.village.name}</h1>
   <div id="vmap1">
-    <img class="bg" src="/static/img/scene/dorf1-${d.layout}.svg" alt="">
+    <img class="bg" src="/static/img/scene/dorf1-${d.layout}.svg" width="300" height="264" alt="">
     ${fields.map((s) => {
       const def = BUILDINGS[s.building as BuildingId];
       const pending = d.orders.find((o) => o.slot === s.slot);
@@ -150,7 +150,7 @@ export function townView(d: VillageViewData): SafeHtml {
     labels.set(s.slot, label);
     // Built buildings look grander every 5 levels (stage pictures), others show the plain picture.
     const img = built && src === id && id ? stagedImage('buildings', id, s.level) : `/static/img/buildings/${src}.svg`;
-    return html`<span class="bld b${s.slot}"><img src="${img}" alt=""></span>`;
+    return html`<span class="bld b${s.slot}"><img src="${img}" width="75" height="100" alt=""></span>`;
   });
   labels.set(WALL_SLOT, wall && wall.level > 0 ? `${TRIBES[tribe].wallName} level ${wall.level}` : `Build a ${TRIBES[tribe].wallName}`);
   if (wall && wall.level > 0) levels.push(html`<span class="lv l40 ${badgeClass(d, WALL_SLOT, wall.level, 20)}">${wall.level}</span>`);
@@ -158,9 +158,9 @@ export function townView(d: VillageViewData): SafeHtml {
   ${incomingAlert(d.movements, d.now)}
   <div id="vmap2">
     <h1>${d.state.village.name}</h1>
-    <img class="bg" src="/static/img/scene/dorf2.svg" alt="">
+    <img class="bg" src="/static/img/scene/dorf2.svg" width="540" height="448" alt="">
     ${wall?.building
-      ? html`<img class="wall${wall.level > 0 ? '' : ' ghost'}" src="${wall.level > 0 ? wallImage(wallFile, wall.level) : `/static/img/walls/${wallFile}.svg`}" alt="">`
+      ? html`<img class="wall${wall.level > 0 ? '' : ' ghost'}" width="540" height="448" src="${wall.level > 0 ? wallImage(wallFile, wall.level) : `/static/img/walls/${wallFile}.svg`}" alt="">`
       : ''}
     ${buildings}
     ${levels}

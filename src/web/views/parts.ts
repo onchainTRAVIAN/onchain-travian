@@ -219,9 +219,9 @@ const WALL_ART: Record<string, string> = { citywall: 'city', earthwall: 'earth',
 export function buildingImg(id: string | null, alt?: string, floated = false, level = 1): SafeHtml {
   const label = alt ?? buildingLabel(id).name;
   const cls = floated ? 'building' : '';
-  if (id && FIELD_ART[id]) return html`<img class="${cls} fld" src="/static/img/fields/${FIELD_ART[id]}.svg" alt="${label}">`;
-  if (id && WALL_ART[id]) return html`<img class="${cls}" src="/static/img/buildings/wall-${WALL_ART[id]}.svg" alt="${label}">`;
-  return html`<img class="${cls}" src="${id ? stagedImage('buildings', id, level) : '/static/img/buildings/empty.svg'}" alt="${label}">`;
+  if (id && FIELD_ART[id]) return html`<img class="${cls} fld" src="/static/img/fields/${FIELD_ART[id]}.svg" width="75" height="100" alt="${label}">`;
+  if (id && WALL_ART[id]) return html`<img class="${cls}" src="/static/img/buildings/wall-${WALL_ART[id]}.svg" width="75" height="100" alt="${label}">`;
+  return html`<img class="${cls}" src="${id ? stagedImage('buildings', id, level) : '/static/img/buildings/empty.svg'}" width="75" height="100" alt="${label}">`;
 }
 
 export function hasTroops(c: UnitCounts): boolean {

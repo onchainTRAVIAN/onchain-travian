@@ -63,7 +63,7 @@ export function registerView(csrf: string, values: { username?: string; tribe?: 
       <legend><b>Choose your tribe</b> <span class="muted small">(this cannot be changed later)</span></legend>
       ${TRIBE_IDS.map((id) => {
         const t = TRIBES[id];
-        return html`<label class="choice tribepick"><img src="/static/img/units/${id}-1.svg" alt=""><input type="radio" name="tribe" value="${id}"${id === selected ? html` checked` : ''}>
+        return html`<label class="choice tribepick"><img src="/static/img/units/${id}-1.svg" width="16" height="16" alt=""><input type="radio" name="tribe" value="${id}"${id === selected ? html` checked` : ''}>
           <strong>${t.name}</strong> <span class="muted small">— ${t.tagline}</span>
           <div class="small">${t.description}</div>
           <ul>${t.strengths.map((s) => html`<li>${s}</li>`)}</ul>

@@ -6,7 +6,7 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Every bonus goes through `perks` table → `getModifiers()` (`src/game/modifiers.ts`). Token-holder perks and premium plug in there.
 - State changes: inside `db.transaction`, call `catchUp(tx, villageId, now)` first. Training completes lazily in `catchUp`.
 - Player-facing rule violations: throw `GameError`; `formAction` turns them into flash messages.
-- Views use the escape-by-default `html``` tag (`src/web/html.ts`). No inline styles/scripts (CSP is `'self'`).
+- Views use the escape-by-default `html``` tag (`src/web/html.ts`). No inline styles/scripts (CSP is `'self'`). Every `<img>` gets `width`/`height` attributes (else it flashes full-size before CSS applies).
 - Schema change → edit `src/db/schema.ts` then `npm run db:generate`.
 - Verify with `npm run typecheck && npm test` (machine busy → hook timeouts in `ensureWorld`: rerun with `npx vitest run --no-file-parallelism`).
 - Crypto: `src/crypto/` (SIWE wallet, holder tiers, deposit indexer, workers). Contract in `contracts/` (Foundry, `~/.foundry/bin`). ABIs copied to `src/crypto/*.ts` — re-copy after contract changes.
