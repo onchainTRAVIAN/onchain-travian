@@ -19,6 +19,7 @@ import { goldmarketRouter } from './web/routes/goldmarket.js';
 import { goldclubRouter } from './web/routes/goldclub.js';
 import { productionRouter } from './web/routes/production.js';
 import { simulatorRouter } from './web/routes/simulator.js';
+import { tasksRouter } from './web/routes/tasks.js';
 import { adminRouter } from './web/routes/admin.js';
 import { walletRouter } from './web/routes/wallet.js';
 import { sendPage } from './web/routes/helpers.js';
@@ -66,7 +67,7 @@ export function createApp() {
   app.use(communityRouter);
   app.use(adminRouter);
   app.use(walletRouter);
-  app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map', '/research', '/market', '/hero', '/shop', '/celebrate', '/goldmarket', '/traps', '/oasis', '/places', '/goldclub', '/production', '/simulator'], requireAuth);
+  app.use(['/fields', '/village', '/slot', '/build', '/train', '/troops', '/map', '/research', '/market', '/hero', '/shop', '/celebrate', '/goldmarket', '/traps', '/oasis', '/places', '/goldclub', '/production', '/simulator', '/tasks'], requireAuth);
   app.use(villageRouter);
   app.use(troopsRouter);
   app.use(mapRouter);
@@ -77,6 +78,7 @@ export function createApp() {
   app.use(goldclubRouter);
   app.use(productionRouter);
   app.use(simulatorRouter);
+  app.use(tasksRouter);
 
   app.use((req: Request, res: Response) => {
     sendPage(req, res, 'Not found', html`<h1>Lost in the wilderness</h1><p>This page does not exist.</p><div class="actions"><a class="btn" href="/">Back to safety</a></div>`, {

@@ -1,5 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { z } from 'zod';
+import { taskStatus } from '../../game/actions/tasks.js';
+import { PRODUCTS, activeBoosts } from '../../game/actions/credits.js';
+import { villageMovements } from '../../game/queries.js';
+import { html } from '../html.js';
+import { timer } from '../views/layout.js';
 import { db } from '../../db/index.js';
 import { users } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
@@ -40,6 +45,30 @@ export function loadGamePage(req: Request): GamePage {
     unread: unreadCounts(db, ctx.user.id),
     credits: creditBalance(db, ctx.user.id),
     heroAlert,
+    notices: (() => {
+      const out: NonNullable<Chrome['notices']> = [];
+      if (user.protectedUntil > ctx.now) out.push({ kind: 'good', text: html`Beginner protection: ${timer(user.protectedUntil, ctx.now, false)} left`, href: '/help/beginner-protection' });
+      const incoming = userVillages(db, ctx.user.id).reduce(
+        (s, v) => s + villageMovements(db, v.id).filter((m) => m.direction === 'in' && (m.kind === 'attack' || m.kind === 'raid')).length,
+        0,
+      );
+      if (incoming > 0) out.push({ kind: 'bad', text: `${incoming} incoming attack${incoming === 1 ? '' : 's'}!`, href: '/troops?tab=in#movements' });
+      if (hero && hero.status === 'dead') out.push({ kind: 'warn', text: 'Your hero has fallen — revive it', href: '/hero' });
+      else if (hero && heroPoints(hero.level) - pointsUsed(hero) > 0) out.push({ kind: 'info', text: `Your hero has ${heroPoints(hero.level) - pointsUsed(hero)} free skill points`, href: '/hero' });
+      for (const b of activeBoosts(db, ctx.user.id, ctx.now)) {
+        if ((b.expiresAt ?? 0) - ctx.now < 24 * 3_600_000) {
+          const p = PRODUCTS.find((x) => `shop:${x.id}` === b.source);
+          out.push({ kind: 'warn', text: html`${p?.name ?? 'A boost'} ends in ${timer(b.expiresAt ?? ctx.now, ctx.now, false)}`, href: '/shop' });
+        }
+      }
+      const unread = unreadCounts(db, ctx.user.id);
+      if (unread.reports > 0) out.push({ kind: 'info', text: `${unread.reports} new report${unread.reports === 1 ? '' : 's'}`, href: '/reports' });
+      return out;
+    })(),
+    tasks: (() => {
+      const t = taskStatus(db, ctx.user.id);
+      return t.hidden ? null : { current: t.current, claimable: t.claimable, total: t.list.length, done: t.list.filter((x) => x.claimed).length };
+    })(),
   };
   return { chrome, state };
 }

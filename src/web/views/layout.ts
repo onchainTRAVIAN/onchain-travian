@@ -1,3 +1,5 @@
+import type { TaskStatus } from '../../game/actions/tasks.js';
+import { taskPanel } from './tasks.js';
 import { assetUrl, hasAsset } from '../assets.js';
 import { config } from '../../config.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, type Resources } from '../../game/rules/resources.js';
@@ -17,6 +19,10 @@ export interface Chrome {
   unread: { reports: number; messages: number };
   credits: number;
   heroAlert: boolean;
+  /** Short notices for the Info box (protection, incoming attacks, hero, boosts…). */
+  notices?: { kind: 'good' | 'warn' | 'bad' | 'info'; text: SafeHtml | string; href?: string }[];
+  /** Beginner tasks: the current one and how many rewards wait (null when hidden). */
+  tasks?: { current: TaskStatus | null; claimable: number; total: number; done: number } | null;
 }
 
 export interface TickerItem {
@@ -119,6 +125,15 @@ function tile(href: string, ico: string, label: string): SafeHtml {
   return html`<a href="${href}" class="sp-tile"><img src="/static/img/menu/${ico}.svg" width="20" height="20" alt=""><span>${label}</span></a>`;
 }
 
+/** Info box under the menu: what needs your attention right now. */
+function infoBox(c: Chrome): SafeHtml {
+  const n = c.notices ?? [];
+  if (n.length === 0) return html``;
+  return html`<section class="sp infobox"><h3 class="sp-head">Info box<span>${n.length}</span></h3><ul>${n.map(
+    (x) => html`<li class="${x.kind}">${x.href ? html`<a href="${x.href}">${x.text}</a>` : x.text}</li>`,
+  )}</ul></section>`;
+}
+
 function sideNavi(c: Chrome | null | undefined, csrf: string, nav: NavKey | undefined): SafeHtml {
   if (!c) {
     return html`<nav id="side_navi" class="sp" aria-label="Menu"><div class="sp-body">
@@ -163,6 +178,7 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
           <button type="submit" class="lnk"${v.id === c.village.id ? html` aria-current="true"` : ''}><span class="vn">${v.name}</span><span class="vp" title="Population">${fmtNum(v.pop)}</span><span class="vc">(${v.x}|${v.y})</span></button></form></li>`,
       )}</ul>
       ${c.villages.length > 1 ? html`<p class="sp-total small">Total population: <b>${fmtNum(c.villages.reduce((a, v) => a + v.pop, 0))}</b></p>` : ''}</section>
+    ${c.tasks ? taskPanel({ tribe: c.user.tribe as TribeId, current: c.tasks.current, claimable: c.tasks.claimable, total: c.tasks.total, done: c.tasks.done, csrf }) : ''}
     <section class="sp"><h3 class="sp-head">Links</h3>
       <div class="sp-tiles">
         ${tile('/troops/send', 'send', 'Send troops')}${tile('/troops/farmlist', menuIcon('farm', 'rally'), 'Farm list')}
@@ -193,7 +209,7 @@ export function layout(o: PageOpts): SafeHtml {
   ${c ? resourceBar(c.village, c.eco, o.now, c.credits) : ''}
   ${tickerBar(o.ticker ?? [], o.announcement)}
   <div id="mid">
-    ${sideNavi(c, o.csrf, o.nav)}
+    <div id="side_left">${sideNavi(c, o.csrf, o.nav)}${c ? infoBox(c) : ''}</div>
     <div id="content">
       ${o.flash ? html`<div class="flash ${o.flash.type}" role="${o.flash.type === 'error' ? 'alert' : 'status'}">${o.flash.text}</div>` : ''}
       ${o.body}

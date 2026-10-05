@@ -19,6 +19,8 @@ export const users = sqliteTable(
     createdAt: integer('created_at').notNull(),
     lastSeenAt: integer('last_seen_at').notNull(),
     protectedUntil: integer('protected_until').notNull(),
+    /** The player hid the beginner tasks panel. */
+    tasksHidden: integer('tasks_hidden', { mode: 'boolean' }).notNull().default(false),
     /** Gold Club member (bought once per world): farm lists, evasion, trade routes, cropper finder. */
     goldClub: integer('gold_club', { mode: 'boolean' }).notNull().default(false),
     /** End of the last protection bought with Gold (another can be bought 8 h after it ends). */
@@ -450,6 +452,17 @@ export const savedPlaces = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [uniqueIndex('saved_places_user_xy').on(t.userId, t.x, t.y)],
+);
+
+/** Beginner task rewards a player has collected. */
+export const taskClaims = sqliteTable(
+  'task_claims',
+  {
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    taskId: text('task_id').notNull(),
+    claimedAt: integer('claimed_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.taskId] })],
 );
 
 /** Gold Club farm lists: saved raid targets sent from one village with one click (or automatically). */

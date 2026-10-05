@@ -58,6 +58,11 @@ function villageData(req: Request, page: GamePage, slotsToCheck: number[]): Vill
     heroHome: heroAtHome(db, ctx.user.id, state.village.id, ctx.now)?.name ?? null,
     ready,
     protectedUntil: user?.p ?? 0,
+    // The current beginner task points at a field or building: it glows with a hint bubble.
+    hint: (() => {
+      const cur = page.chrome.tasks?.current;
+      return cur && !cur.done && cur.hint !== null ? { slot: cur.hint, text: cur.task.title } : null;
+    })(),
     now: ctx.now,
     csrf: ctx.csrf,
   };
