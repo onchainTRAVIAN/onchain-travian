@@ -108,7 +108,7 @@ function advTab(d: { balance: number; boosts: { source: string; expiresAt: numbe
     return html`<div class="spanel advcard${wide ? ' wide' : ''}${a ? ' active' : ''}">
       ${art(PRODUCT_ART[p.id] ?? 'gold', p.name)}
       <div class="advtxt"><b>${p.name}</b><span class="small">${p.description}</span></div>
-      <div class="advfoot"><span class="advdur small">${a?.expiresAt ? html`<span class="good">Active · ${timer(a.expiresAt, d.now, false)} left</span>` : html`for <b>${p.days} days</b>`}</span>
+      <div class="advfoot"><span class="advdur small">${a?.expiresAt ? html`<span class="good advleft"><b>Active</b> ${timer(a.expiresAt, d.now, false)} left</span>` : html`for <b>${p.days} days</b>`}</span>
         <form method="post" action="/shop/boost">${csrfField(d.csrf)}<input type="hidden" name="product" value="${p.id}">${goldPrice(p.price, d.balance >= p.price, a ? 'Extend' : 'Activate')}</form></div>
     </div>`;
   };
