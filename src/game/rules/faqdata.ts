@@ -78,7 +78,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
           rows: [
             ['[Village overview](/fields)', 'Your 18 resource fields, production per hour, troops at home, troop movements and the building queue.'],
             ['[Village centre](/village)', 'Your buildings. Click a building or an empty place to build.'],
-            ['[Map](/map)', 'Villages, oases and free land. Click a tile for details, actions and your reports there. Villages look bigger at 300, 600, 1,000, 1,400 and 1,700 population.'],
+            ['[Map](/map)', 'Villages, oases and free land. Click a tile for details, actions and your reports there. Villages look bigger at 250, 500, 1,000 and 1,500 population.'],
             ['[Statistics](/stats)', 'Rankings of players, alliances, villages and heroes, and the weekly Top 10.'],
             ['[Reports](/reports)', 'Results of battles, scouting, trade and reinforcements.'],
             ['[Messages](/messages)', 'Mail from and to other players.'],

@@ -11,14 +11,16 @@ import { html, type SafeHtml } from '../html.js';
 import { timer } from './layout.js';
 import { panel, unitIcon, unitsTable } from './parts.js';
 
-/** Village population steps where the map picture grows (a single village tops out near 1,800). */
-export const VILLAGE_TIERS = [300, 600, 1000, 1400, 1700] as const;
+/** Village population steps where the map picture changes (a capital tops out near 1,800, other villages near 1,300). */
+export const VILLAGE_TIERS = [250, 500, 1000, 1500] as const;
+/** Picture for each step: hamlet, village, palisade village, walled town, grand city (village-4 is not used). */
+const TIER_ART = [1, 2, 3, 5, 6] as const;
 
-/** Map picture tier 1–6 for a village's population (falls back to the biggest picture that exists). */
+/** Map picture number (village-N.svg) for a village's population; falls back to a smaller picture if one is missing. */
 export function villageTier(pop: number): number {
-  let tier = 1 + VILLAGE_TIERS.filter((t) => pop >= t).length;
-  while (tier > 1 && !hasAsset(`img/map/flat/village-${tier}.svg`)) tier--;
-  return tier;
+  let i = VILLAGE_TIERS.filter((t) => pop >= t).length;
+  while (i > 0 && !hasAsset(`img/map/flat/village-${TIER_ART[i]}.svg`)) i--;
+  return TIER_ART[i] ?? 1;
 }
 
 export function cellImage(c: MapCell): string {

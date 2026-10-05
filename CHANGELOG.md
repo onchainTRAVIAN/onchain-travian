@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.16.3 — 2026-10-05
-- **Map villages grow** with population: new pictures at 300, 600, 1,000, 1,400 and 1,700 (a walled town and a grand city with a golden-domed palace for the biggest).
+- **Map villages grow** with population: the picture changes at 250, 500, 1,000 (walled town) and 1,500 (grand city with a golden-domed palace).
 - **Attack again:** your attack, raid and scout reports (on village/oasis pages and on the report itself) have an "Attack again" / "Scout again" button that opens Send troops with the same target, mission, troops and hero.
 - Plus & Gold: the "Active … left" timers fit inside the boost cards again.
 - **Demolitions** can be finished with Gold, and the running demolition (cancel / finish now) is shown in the Main Building.
