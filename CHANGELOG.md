@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.6 — 2026-10-05
+- Reports and Messages: checkbox per row with "select all", Delete selected, Mark selected as read, Mark all as read; Reports also "Delete all" (per tab, asks first).
+
 ## 0.10.5 — 2026-10-05
 - Farm list: "Add all free oases" takes any distance from 1 to 35 fields (was 5/10/15).
 

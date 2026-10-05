@@ -16,6 +16,7 @@ export function inboxView(d: {
   page: number;
   hasMore: boolean;
   now: number;
+  csrf: string;
 }): SafeHtml {
   return html`<h1>✉️ Messages</h1>
     <nav class="tabs" aria-label="Mailbox">
@@ -25,10 +26,17 @@ export function inboxView(d: {
     </nav>
     ${d.rows.length === 0
       ? html`<p class="muted">${d.box === 'in' ? 'Your inbox is empty.' : 'You have not sent any messages.'}</p>`
-      : html`<ul class="list">${d.rows.map(
-          (m) => html`<li class="${d.box === 'in' && !m.isRead ? 'unread' : ''}"><span class="grow"><a href="/messages/${m.id}">${m.subject}</a>
-            <span class="sub">${d.box === 'in' ? 'from' : 'to'} ${m.other} · ${fmtAgo(m.createdAt, d.now)}</span></span></li>`,
-        )}</ul>`}
+      : html`<form method="post" action="/messages/bulk" class="bulk">${csrfField(d.csrf)}<input type="hidden" name="box" value="${d.box}">
+        <table class="tb"><thead><tr><th class="chk"><label class="sr" for="chkall">Select all</label><input type="checkbox" id="chkall" data-checkall title="Select all"></th><th>Subject</th><th>${d.box === 'in' ? 'From' : 'To'}</th><th>Sent</th></tr></thead><tbody>${d.rows.map(
+          (m) => html`<tr class="${d.box === 'in' && !m.isRead ? 'unread' : ''}"><td class="chk"><label class="sr" for="m${m.id}">Select</label><input type="checkbox" id="m${m.id}" name="ids" value="${m.id}"></td>
+            <td><a href="/messages/${m.id}">${m.subject}</a>${d.box === 'in' && !m.isRead ? html` <span class="small bad">(new)</span>` : ''}</td><td>${m.other}</td><td class="nowrap">${fmtAgo(m.createdAt, d.now)}</td></tr>`,
+        )}</tbody></table>
+        <p class="bulkbar"><button type="submit" name="act" value="delete" class="small">Delete selected</button>
+          ${d.box === 'in'
+            ? html`<button type="submit" name="act" value="read" class="small secondary">Mark selected as read</button>
+              <span class="sep"></span><button type="submit" name="act" value="readall" class="small secondary">Mark all as read</button>`
+            : ''}</p>
+        </form>`}
     ${paginate(d.box === 'out' ? '/messages?box=out' : '/messages', d.page, d.hasMore)}`;
 }
 

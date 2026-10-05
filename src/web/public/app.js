@@ -366,6 +366,19 @@
     });
   }
 
+  // Lists (reports, messages): "select all" box ticks every row checkbox in its form.
+  document.addEventListener('change', function (e) {
+    var all = e.target;
+    if (!all.hasAttribute || !all.hasAttribute('data-checkall')) return;
+    var boxes = all.form ? all.form.querySelectorAll('input[type=checkbox][name=ids]') : [];
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = all.checked;
+  });
+  // Buttons with data-confirm ask first (e.g. "Delete all").
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('[data-confirm]') : null;
+    if (btn && !window.confirm(btn.getAttribute('data-confirm'))) e.preventDefault();
+  });
+
   // "(max)" links fill unit inputs.
   document.addEventListener('click', function (e) {
     var a = e.target.closest ? e.target.closest('[data-fill]') : null;

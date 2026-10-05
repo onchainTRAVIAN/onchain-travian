@@ -1,4 +1,4 @@
-import { and, desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
 import { messages, users } from '../../db/schema.js';
 import { assertGame } from '../errors.js';
@@ -58,4 +58,24 @@ export function deleteMessage(db: DB, userId: number, id: number): void {
   assertGame(m && (m.toUserId === userId || m.fromUserId === userId), 'Message not found');
   if (m.toUserId === userId) db.update(messages).set({ deletedByRecipient: true }).where(eq(messages.id, id)).run();
   if (m.fromUserId === userId) db.update(messages).set({ deletedBySender: true }).where(eq(messages.id, id)).run();
+}
+
+/** Bulk actions on the mailbox; ids the player can't touch are skipped. */
+export function deleteMessages(db: DB, userId: number, ids: number[]): number {
+  let n = 0;
+  db.transaction((tx) => {
+    for (const id of ids) {
+      const m = tx.select().from(messages).where(eq(messages.id, id)).get();
+      if (!m || (m.toUserId !== userId && m.fromUserId !== userId)) continue;
+      if (m.toUserId === userId) tx.update(messages).set({ deletedByRecipient: true }).where(eq(messages.id, id)).run();
+      if (m.fromUserId === userId) tx.update(messages).set({ deletedBySender: true }).where(eq(messages.id, id)).run();
+      n++;
+    }
+  });
+  return n;
+}
+
+export function markMessagesRead(db: DB, userId: number, ids: number[] | 'all'): void {
+  const mine = eq(messages.toUserId, userId);
+  db.update(messages).set({ isRead: true }).where(ids === 'all' ? mine : and(mine, inArray(messages.id, ids.length ? ids : [-1]))).run();
 }

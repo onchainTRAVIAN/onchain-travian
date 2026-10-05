@@ -48,14 +48,18 @@ export function reportListView(d: {
     )}</nav>
     ${d.rows.length === 0
       ? html`<p class="muted">No reports yet. Battles, scouting and reinforcements show up here.</p>`
-      : html`<table class="tb"><thead><tr><th></th><th>Subject:</th><th>Sent:</th></tr></thead><tbody>${d.rows.map(
-          (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td>${kindIcon(r.kind)}</td>
+      : html`<form method="post" action="/reports/bulk" class="bulk">${csrfField(d.csrf)}<input type="hidden" name="f" value="${d.filter}">
+        <table class="tb"><thead><tr><th class="chk"><label class="sr" for="chkall">Select all</label><input type="checkbox" id="chkall" data-checkall title="Select all"></th><th></th><th>Subject:</th><th>Sent:</th></tr></thead><tbody>${d.rows.map(
+          (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td class="chk"><label class="sr" for="r${r.id}">Select</label><input type="checkbox" id="r${r.id}" name="ids" value="${r.id}"></td><td>${kindIcon(r.kind)}</td>
             <td><a href="/reports/${r.id}">${r.title}</a>${r.isRead ? '' : html` <span class="small bad">(new)</span>`}</td><td class="nowrap">${fmtAgo(r.createdAt, d.now)}</td></tr>`,
-        )}</tbody></table>`}
-    ${paginate(`/reports?f=${d.filter}`, d.page, d.hasMore)}
-    ${d.rows.length > 0
-      ? html`<form method="post" action="/reports/read-all" class="actions">${csrfField(d.csrf)}<button type="submit" class="small secondary">Mark all as read</button></form>`
-      : ''}`;
+        )}</tbody></table>
+        <p class="bulkbar"><button type="submit" name="act" value="delete" class="small">Delete selected</button>
+          <button type="submit" name="act" value="read" class="small secondary">Mark selected as read</button>
+          <span class="sep"></span>
+          <button type="submit" name="act" value="readall" class="small secondary">Mark all as read</button>
+          <button type="submit" name="act" value="deleteall" class="small secondary" data-confirm="Delete all ${d.filter === 'all' ? '' : 'these '}reports? This can't be undone.">Delete all${d.filter === 'all' ? '' : ' in this tab'}</button></p>
+        </form>`}
+    ${paginate(`/reports?f=${d.filter}`, d.page, d.hasMore)}`;
 }
 
 function sideBlock(title: string, s: ReportSide, hideUnits = false, extra?: SafeHtml): SafeHtml {

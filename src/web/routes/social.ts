@@ -1,6 +1,6 @@
 import { Router, type Request } from 'express';
 import multer from 'multer';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { heroes, reports, users } from '../../db/schema.js';
@@ -18,7 +18,7 @@ import { unitInfoView, unitsIndexView } from '../views/units.js';
 import { endgameOverview } from '../../game/actions/endgame.js';
 import { endgameView } from '../views/endgame.js';
 import { WEEKLY_CATEGORIES, lastWinners, medalsOf, weekStart, weeklyStandings } from '../../game/actions/weekly.js';
-import { deleteMessage, inbox, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
+import { deleteMessage, deleteMessages, inbox, markMessagesRead, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
 import { parseReport } from '../../game/engine/reports.js';
 import { heroRankings, playerProfile, playerRank, rankings, reportList, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
 import { authed, setFlash } from '../session.js';
@@ -85,7 +85,67 @@ socialRouter.post(
   }, '/reports'),
 );
 
+/** Checked ids from a list form ("ids" may come once or many times). */
+const idList = z.preprocess(
+  (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]),
+  z.array(z.coerce.number().int().positive()).max(200),
+);
+
+socialRouter.post(
+  '/reports/bulk',
+  requireAuth,
+  formAction(
+    z.object({ act: z.enum(['delete', 'read', 'readall', 'deleteall']), ids: idList, f: z.string().optional() }),
+    (req, res, d) => {
+      const ctx = authed(req);
+      const f = d.f && d.f in REPORT_FILTERS ? (d.f as ReportFilter) : 'all';
+      const back = `/reports?f=${f}`;
+      const mine = eq(reports.userId, ctx.user.id);
+      const kinds = REPORT_FILTERS[f];
+      const inTab = kinds.length ? and(mine, inArray(reports.kind, [...kinds])) : mine;
+      if ((d.act === 'delete' || d.act === 'read') && d.ids.length === 0) throw new GameError('Tick the reports first (or use the box at the top to select all).');
+      if (d.act === 'delete') {
+        const n = db.delete(reports).where(and(mine, inArray(reports.id, d.ids))).run().changes;
+        setFlash(res, 'ok', `${n} report${n === 1 ? '' : 's'} deleted.`);
+      } else if (d.act === 'read') {
+        db.update(reports).set({ isRead: true }).where(and(mine, inArray(reports.id, d.ids))).run();
+      } else if (d.act === 'readall') {
+        db.update(reports).set({ isRead: true }).where(mine).run();
+        setFlash(res, 'ok', 'All reports marked as read.');
+      } else {
+        const n = db.delete(reports).where(inTab).run().changes;
+        setFlash(res, 'ok', `${n} report${n === 1 ? '' : 's'} deleted.`);
+      }
+      res.redirect(303, back);
+    },
+    '/reports',
+  ),
+);
+
 /* ---------- Messages ---------- */
+
+socialRouter.post(
+  '/messages/bulk',
+  requireAuth,
+  formAction(
+    z.object({ act: z.enum(['delete', 'read', 'readall']), ids: idList, box: z.enum(['in', 'out']).default('in') }),
+    (req, res, d) => {
+      const ctx = authed(req);
+      const back = d.box === 'out' ? '/messages?box=out' : '/messages';
+      if (d.act !== 'readall' && d.ids.length === 0) throw new GameError('Tick the messages first (or use the box at the top to select all).');
+      if (d.act === 'delete') {
+        const n = deleteMessages(db, ctx.user.id, d.ids);
+        setFlash(res, 'ok', `${n} message${n === 1 ? '' : 's'} deleted.`);
+      } else if (d.act === 'read') markMessagesRead(db, ctx.user.id, d.ids);
+      else {
+        markMessagesRead(db, ctx.user.id, 'all');
+        setFlash(res, 'ok', 'All messages marked as read.');
+      }
+      res.redirect(303, back);
+    },
+    '/messages',
+  ),
+);
 
 socialRouter.get('/messages', requireAuth, (req, res) => {
   const ctx = authed(req);
@@ -96,7 +156,7 @@ socialRouter.get('/messages', requireAuth, (req, res) => {
     box === 'in'
       ? inbox(db, ctx.user.id, PAGE + 1, (p - 1) * PAGE).map((r) => ({ id: r.m.id, subject: r.m.subject, other: r.from ?? 'System', isRead: r.m.isRead, createdAt: r.m.createdAt }))
       : outbox(db, ctx.user.id, PAGE + 1, (p - 1) * PAGE).map((r) => ({ id: r.m.id, subject: r.m.subject, other: r.to ?? '?', isRead: true, createdAt: r.m.createdAt }));
-  sendPage(req, res, 'Messages', inboxView({ box, rows: rows.slice(0, PAGE), page: p, hasMore: rows.length > PAGE, now: ctx.now }), {
+  sendPage(req, res, 'Messages', inboxView({ box, rows: rows.slice(0, PAGE), page: p, hasMore: rows.length > PAGE, now: ctx.now, csrf: ctx.csrf }), {
     nav: 'messages',
     chrome: page.chrome,
   });

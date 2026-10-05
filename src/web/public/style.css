@@ -524,3 +524,6 @@ a.uico:hover img { filter: drop-shadow(0 0 1.5px #71d000); }
 .mvscroll td { white-space: normal; }
 .mvscroll td.num { white-space: nowrap; width: 1%; }
 .mvscroll td:first-child { width: 1%; }
+.bulk th.chk, .bulk td.chk { width: 1%; text-align: center; }
+.bulkbar { margin: 6px 0; }
+.bulkbar .sep { display: inline-block; width: 12px; }
