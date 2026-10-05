@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.16.4 — 2026-10-05
+- **Switching villages keeps you on the same page** (Train troops, Rally Point, Production, a building, the map…), now showing the chosen village's resources and troops.
+
 ## 0.16.3 — 2026-10-05
 - **Map villages grow** with population: the picture changes at 250, 500, 1,000 (walled town) and 1,500 (grand city with a golden-domed palace).
 - **Attack again:** your attack, raid and scout reports (on village/oasis pages and on the report itself) have an "Attack again" / "Scout again" button that opens Send troops with the same target, mission, troops and hero.

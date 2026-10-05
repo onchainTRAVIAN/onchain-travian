@@ -357,7 +357,11 @@ villageRouter.post(
       throw new GameError('Village not found');
     }
     setActiveVillage(req, data.villageId);
-    res.redirect(303, '/fields');
+    // Stay on the same page (Train troops, Rally Point, a building…), now showing the other village.
+    // Pages about one item of the old village (a troop movement, a market offer being edited) fall back.
+    const back = backUrl(req, '/fields');
+    const tiedToOldVillage = ['/troops/movement/', '/goldmarket/edit', '/village/switch'];
+    res.redirect(303, tiedToOldVillage.some((p) => back.startsWith(p)) ? '/fields' : back);
   }),
 );
 
