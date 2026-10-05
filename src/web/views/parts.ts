@@ -216,6 +216,12 @@ const FIELD_ART: Record<string, string> = { woodcutter: 'wood', claypit: 'clay',
 const WALL_ART: Record<string, string> = { citywall: 'city', earthwall: 'earth', palisade: 'palisade' };
 
 /** 75×100 building picture (resource fields and walls use their own small art); `level` picks the look stage. */
+/** A building picture that opens the building's guide page (every level, cost, time and benefit). */
+export function buildingInfoImg(id: string, alt?: string, level = 1): SafeHtml {
+  const name = alt ?? buildingLabel(id).name;
+  return html`<a class="binfo" href="/help/buildings/${id}" title="${name}: all levels and details">${buildingImg(id, name, false, level)}</a>`;
+}
+
 export function buildingImg(id: string | null, alt?: string, floated = false, level = 1): SafeHtml {
   const label = alt ?? buildingLabel(id).name;
   const cls = floated ? 'building' : '';

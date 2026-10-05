@@ -1180,3 +1180,7 @@ a.gbtn { display: inline-flex; text-decoration: none; }
 .advleft b { display: block; }
 .advcard.wide .advleft { text-align: left; }
 .advcard.wide .advleft b { display: inline; }
+a.binfo { display: inline-block; border-radius: 6px; cursor: help; }
+a.binfo:hover img { filter: drop-shadow(0 0 3px #9cc66a); }
+.ftlv { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.ftlv img { width: 48px; height: auto; }

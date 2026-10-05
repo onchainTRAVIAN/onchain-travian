@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.16.4 — 2026-10-05
+- **Building pictures are clickable:** on a building's page and on the "construct new building" cards, the picture opens that building's guide page with every level (cost, build time, what it gives). Guide articles about a building link there too.
 - **Switching villages keeps you on the same page** (Train troops, Rally Point, Production, a building, the map…), now showing the chosen village's resources and troops.
 
 ## 0.16.3 — 2026-10-05

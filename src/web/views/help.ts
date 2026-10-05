@@ -1,4 +1,5 @@
-import { woodTabs } from './parts.js';
+import type { BuildingId } from '../../game/rules/buildings.js';
+import { buildingImg, woodTabs } from './parts.js';
 import { FAQ, FAQ_CATEGORIES, type FaqBlock, type FaqCategory, type FaqTopic } from '../../game/rules/faq.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon } from './layout.js';
@@ -67,6 +68,30 @@ export function helpHome(d: { q: string; results: { topic: FaqTopic; score: numb
         )}</div>`}`;
 }
 
+/** Guide articles about one building link to that building's full level table. */
+const TOPIC_BUILDING: Record<string, BuildingId> = {
+  'main-building': 'main',
+  'rally-point': 'rally',
+  'great-storage': 'greatwarehouse',
+  embassy: 'embassy',
+  'residence-palace': 'residence',
+  treasury: 'treasury',
+  'trade-office': 'tradeoffice',
+  'heros-mansion': 'heromansion',
+  'tournament-square': 'tournament',
+  stonemason: 'stonemason',
+  brewery: 'brewery',
+  'horse-trough': 'horsetrough',
+  walls: 'citywall',
+  cranny: 'cranny',
+  traps: 'trapper',
+  storage: 'warehouse',
+  'bonus-buildings': 'sawmill',
+  'production-fields': 'woodcutter',
+  'military-buildings': 'barracks',
+  celebrations: 'townhall',
+};
+
 export function helpTopic(t: FaqTopic): SafeHtml {
   const cat = FAQ_CATEGORIES.find((c) => c.id === t.category);
   const siblings = FAQ.filter((x) => x.category === t.category);
@@ -78,6 +103,10 @@ export function helpTopic(t: FaqTopic): SafeHtml {
     ${searchBox('')}
     <article class="spanel ftopic">
       <h1 class="ftitle">${t.title}</h1>
+      ${(() => {
+        const bid = TOPIC_BUILDING[t.id];
+        return bid ? html`<p class="ftlv"><a class="binfo" href="/help/buildings/${bid}">${buildingImg(bid, '', false, 1)}</a> <a href="/help/buildings/${bid}">All levels: cost, build time and what each level gives »</a></p>` : '';
+      })()}
       <div class="fanswer">${inline(t.summary)}</div>
       <div class="fbody">${t.body.map(block)}</div>
       ${t.links?.length ? html`<p class="flinks">${t.links.filter((l) => l.href.startsWith('/') && !l.href.startsWith('//')).map((l) => html`<a class="btn small secondary" href="${l.href}">${l.label}</a> `)}</p>` : ''}

@@ -7,7 +7,7 @@ import type { TribeId, UnitCounts } from '../../game/rules/units.js';
 import { fmtClock, fmtDuration, fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
-import { buildingImg, effectAt, unitIcon } from './parts.js';
+import { buildingInfoImg, effectAt, unitIcon } from './parts.js';
 import { trainingQueue } from './village.js';
 import { UNIT_GUIDE } from '../../game/rules/unitguide.js';
 
@@ -112,7 +112,7 @@ export function slotView(d: SlotViewData): SafeHtml {
     const ready = d.buildable.filter((o) => !o.reason?.startsWith('Requires'));
     const soon = d.buildable.filter((o) => o.reason?.startsWith('Requires'));
     const card = (o: BuildOption, available: boolean) => html`<div class="spanel bcard${available ? '' : ' soon'}">
-      <div class="bctop"><span class="bcimg">${buildingImg(o.def.id)}</span>
+      <div class="bctop"><span class="bcimg">${buildingInfoImg(o.def.id)}</span>
         <div><b class="bcname">${o.def.name}</b><p class="small">${o.def.description}</p></div></div>
       ${available
         ? html`${costWithTime(o, d.have)}<div class="bact">${buildAction(o, d.csrf, d.now, 'Construct', o.def.id)}</div>`
@@ -125,7 +125,7 @@ export function slotView(d: SlotViewData): SafeHtml {
   const def = d.def;
   return html`<div id="build" class="gid-${def.id}">
     <div class="spanel bhead">
-      <div class="bpic">${buildingImg(def.id, def.name, false, d.level)}<span class="lvlbadge" title="Level">${d.level}</span></div>
+      <div class="bpic">${buildingInfoImg(def.id, def.name, d.level)}<span class="lvlbadge" title="Level">${d.level}</span></div>
       <div class="binfo"><h1 class="btitle">${def.name} <span class="lvl">level ${d.level}</span></h1>
         <p class="bdesc">${def.description}</p>
         ${effectTiles(d.option, def, d.level, d.tribe)}</div>
