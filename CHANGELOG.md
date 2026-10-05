@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.7 — 2026-10-05
+- Training buildings (Barracks, Stable, Workshop, Great Barracks/Stable, Residence/Palace): each unit shows "(Available: N)" in the village, plus "of M" when some are away or on the move.
+
 ## 0.10.6 — 2026-10-05
 - Reports and Messages: checkbox per row with "select all", Delete selected, Mark selected as read, Mark all as read; Reports also "Delete all" (per tab, asks first).
 

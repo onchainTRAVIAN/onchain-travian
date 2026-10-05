@@ -7,7 +7,7 @@ import { buildOption, buildOrdersOf, buildableOnEmptyPlot, cancelBuild, isValidS
 import { isTrainingSite, startTraining, trainOptions, trainOrdersOf } from '../../game/actions/train.js';
 import { BUILDINGS, type BuildingId } from '../../game/rules/buildings.js';
 import { TRIBES, type TrainingBuilding } from '../../game/rules/units.js';
-import { stockOf, troopsAt } from '../../game/engine/state.js';
+import { ownedTroopTotals, stockOf, troopsAt } from '../../game/engine/state.js';
 import { villageMovements } from '../../game/queries.js';
 import { GameError } from '../../game/errors.js';
 import { authed, setActiveVillage, setFlash } from '../session.js';
@@ -95,6 +95,8 @@ villageRouter.get('/slot/:n', (req, res) => {
           building: def.id,
           options: trainOptions(db, state, def.id, ctx.now),
           queue: trainOrdersOf(db, state.village.id).filter((o) => o.building === def.id),
+          home: troopsAt(db, state.village.id, state.village.id),
+          owned: ownedTroopTotals(db, state.village.id),
         }
       : null;
   const title = def ? def.name : 'Build';

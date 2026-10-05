@@ -2,7 +2,7 @@ import type { BuildOption } from '../../game/actions/build.js';
 import type { TrainOption, TrainOrderRow } from '../../game/actions/train.js';
 import { popAtLevel, type BuildingDef } from '../../game/rules/buildings.js';
 import type { Resources } from '../../game/rules/resources.js';
-import type { TribeId } from '../../game/rules/units.js';
+import type { TribeId, UnitCounts } from '../../game/rules/units.js';
 import { fmtClock, fmtDuration, fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
@@ -58,7 +58,7 @@ export interface SlotViewData {
   buildable: BuildOption[];
   have: Resources;
   tribe: TribeId;
-  training: { building: string; options: TrainOption[]; queue: TrainOrderRow[] } | null;
+  training: { building: string; options: TrainOption[]; queue: TrainOrderRow[]; home: UnitCounts; owned: UnitCounts } | null;
   /** Building-specific panels (academy, market, residence...). */
   panels: SafeHtml[];
   csrf: string;
@@ -73,7 +73,8 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
     <table class="build_details"><thead><tr><th>Name</th><th>Quantity</th><th>Max</th></tr></thead><tbody>
     ${t.options.map(
       (o) => html`<tr id="u${o.slot}">
-        <td class="desc">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b> <span class="small muted" title="${UNIT_GUIDE[o.unit.id]?.use ?? ''}">${UNIT_GUIDE[o.unit.id]?.kind ?? ''}</span>
+        <td class="desc">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b> <span class="avail" title="${o.unit.name} in this village now${(t.owned[o.slot] ?? 0) > (t.home[o.slot] ?? 0) ? ` · ${fmtNum(t.owned[o.slot] ?? 0)} including troops away and on the move` : ''}">(Available: ${fmtNum(t.home[o.slot] ?? 0)}${(t.owned[o.slot] ?? 0) > (t.home[o.slot] ?? 0) ? html` <span class="muted">of ${fmtNum(t.owned[o.slot] ?? 0)}</span>` : ''})</span>
+          <span class="small muted" title="${UNIT_GUIDE[o.unit.id]?.use ?? ''}">${UNIT_GUIDE[o.unit.id]?.kind ?? ''}</span>
           <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>${o.unit.carry > 0 ? html`<span class="carry" title="Resources each one can carry home from a raid">carries ${fmtNum(o.unit.carry)}</span>` : ''}`)}
           ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>
         <td class="val">${o.available
