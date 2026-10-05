@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.3 — 2026-10-05
+- Statistics back to the classic Travian look: text tabs (Players / Alliances / Villages / Heroes / Top 10 / Wonders) with player sub-tabs, grey-grid tables with a title bar and alliance column, your own row highlighted, opens at your own position, "Rank / Name" search and « back | forward » under the table. "This week" is now the Top 10 page: one small table per weekly category, plus last week's medals.
+
 ## 0.11.2 — 2026-10-05
 - Statistics redesigned: grouped pill tabs (Players / More / Events), a short explanation per ranking, a "Your position" card with "Show me", a podium for the top 3, rank medals, avatars, tribe icons, alliance tags and bars comparing everyone to the leader; same style for Villages, Heroes and This week. Natars get their own avatar.
 

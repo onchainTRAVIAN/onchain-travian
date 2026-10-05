@@ -236,28 +236,31 @@ const RANK_KINDS: RankKind[] = ['population', 'attack', 'defense', 'raid'];
 
 socialRouter.get('/stats', (req, res) => {
   const kind = RANK_KINDS.find((k) => k === req.query.k) ?? 'population';
-  const p = pageParam(req.query.page);
+  const me = req.ctx.user?.id ?? null;
+  // Like the original: open at your own position; "Rank" / "Name" jump to that player.
+  let findId: number | null = null;
+  let p = pageParam(req.query.page);
+  const rankQ = intParam(req.query.rank, 0);
+  const nameQ = typeof req.query.name === 'string' ? req.query.name.trim().toLowerCase() : '';
+  if (nameQ) {
+    const u = db.select({ id: users.id }).from(users).where(eq(users.usernameLower, nameQ)).get();
+    if (u) {
+      findId = u.id;
+      p = Math.ceil(rankOf(db, kind, u.id).rank / PAGE);
+    } else setFlash(res, 'error', `No player called "${String(req.query.name)}".`);
+  } else if (rankQ > 0) {
+    p = Math.ceil(rankQ / PAGE);
+    findId = rankings(db, kind, 1, rankQ - 1)[0]?.id ?? null;
+  } else if (req.query.page === undefined && me !== null) {
+    p = Math.ceil(rankOf(db, kind, me).rank / PAGE);
+  }
   const rows = rankings(db, kind, PAGE + 1, (p - 1) * PAGE);
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
   sendPage(
     req,
     res,
-    'Rankings',
-    rankingView({
-      kind,
-      rows: rows.slice(0, PAGE),
-      offset: (p - 1) * PAGE,
-      page: p,
-      hasMore: rows.length > PAGE,
-      myId: req.ctx.user?.id ?? null,
-      me: req.ctx.user ? rankOf(db, kind, req.ctx.user.id) : null,
-      top: (() => {
-        const first = rankings(db, kind, 1, 0)[0];
-        if (!first) return 0;
-        return kind === 'attack' ? first.off : kind === 'defense' ? first.def : kind === 'raid' ? first.loot : first.pop;
-      })(),
-      perPage: PAGE,
-    }),
+    'Statistics',
+    rankingView({ kind, rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE, myId: me, findId }),
     { nav: 'stats', chrome },
   );
 });
@@ -403,13 +406,18 @@ socialRouter.get('/avatar/:id', (req, res) => {
 });
 
 socialRouter.get('/stats/week', (req, res) => {
-  const category = WEEKLY_CATEGORIES.find((c) => c === req.query.c) ?? 'attack';
   const ws = weekStart(req.ctx.now);
   sendPage(
     req,
     res,
-    'This week',
-    weeklyView({ category, rows: weeklyStandings(db, category, ws, 50), weekStart: ws, now: req.ctx.now, myId: req.ctx.user?.id ?? null, winners: lastWinners(db) }),
+    'Top 10',
+    weeklyView({
+      standings: WEEKLY_CATEGORIES.map((c) => ({ category: c, rows: weeklyStandings(db, c, ws, 10) })),
+      weekStart: ws,
+      now: req.ctx.now,
+      myId: req.ctx.user?.id ?? null,
+      winners: lastWinners(db),
+    }),
     { nav: 'stats', chrome: req.ctx.user ? loadGamePage(req).chrome : null },
   );
 });
