@@ -512,3 +512,15 @@ a.uico:hover img { filter: drop-shadow(0 0 1.5px #71d000); }
 .prodtb th { text-align: left; background: #f3f3f3; }
 .prodtb tr.sum td { border-top: 2px solid #ccc; }
 .carry { white-space: nowrap; margin-left: 6px; color: #555; }
+/* Troop movements: scrollable list with tabs (Rally Point), compact summary (village). */
+.mvbox .mvtabs { margin: 0 0 4px; }
+.mvbox .mvtabs a.empty { color: #aaa; }
+.mvscroll { max-height: 340px; overflow-y: auto; border: 1px solid #ccc; }
+.mvscroll table.tb { margin: 0; border: 0; }
+.mvscroll td { padding: 3px 6px; vertical-align: middle; }
+.mvscroll td .small { line-height: 1.5; }
+.mvsum td { padding: 2px 6px; }
+.mvscroll .mvx { margin-left: 8px; color: #555; }
+.mvscroll td { white-space: normal; }
+.mvscroll td.num { white-space: nowrap; width: 1%; }
+.mvscroll td:first-child { width: 1%; }

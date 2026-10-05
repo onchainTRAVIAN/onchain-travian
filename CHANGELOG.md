@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.4 — 2026-10-05
+- Troop movements: the village overview shows a compact classic summary (e.g. "23 Outgoing — first in 0:20:37"); the Rally Point lists every movement on one line each in a scrollable box with All / Incoming / Outgoing / Returning tabs.
+
 ## 0.10.3 — 2026-10-05
 - Resource icons in the top bar open a Production page: base production per field level, every bonus on top (oases, Sawmill/Brickyard/Iron Foundry/Grain Mill/Bakery, Gold boosts with end time, token perks, bonus limit) and crop consumption (population, troops, hero).
 - Carry capacity everywhere troops are picked: per unit and "can carry" total when training, live total on Send troops (fixed — a script clash had stopped it updating) and in the farm list form, plus per target.

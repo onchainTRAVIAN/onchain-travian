@@ -35,6 +35,7 @@ troopsRouter.get('/troops', (req, res) => {
     res,
     'Rally Point',
     troopsView({
+      movementTab: (['all', 'in', 'out', 'back'] as const).find((t) => t === req.query.tab) ?? 'all',
       tribe: page.state.tribe,
       hasRally: levelOf(page.state, 'rally') > 0,
       home: troopsAt(db, v, v),

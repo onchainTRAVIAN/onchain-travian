@@ -20,7 +20,7 @@ import { html, type SafeHtml } from '../html.js';
 import { TOWN_SPOTS } from './spots.js';
 import { stagedImage, wallImage } from '../assets.js';
 import { csrfField, icon, resIcon, timer } from './layout.js';
-import { buildingImg, buildingLabel, movementList, unitIcon } from './parts.js';
+import { buildingImg, buildingLabel, movementSummary, unitIcon } from './parts.js';
 
 export interface VillageViewData {
   state: VillageState;
@@ -120,7 +120,7 @@ export function fieldsView(d: VillageViewData & { layout: string }): SafeHtml {
     <a class="vlink" href="/village" title="Village centre" aria-label="Village centre"></a>
   </div>
   <div id="map_details">
-    ${d.movements.length ? movementList(d.movements, d.now) : ''}
+    ${movementSummary(d.movements, d.now)}
     ${productionTable(d.eco)}
     ${troopsTable(d.state.tribe, d.homeTroops)}
   </div>

@@ -350,6 +350,22 @@
     recount();
   }
 
+  // Rally Point movement tabs: filter rows without reloading.
+  var mvBox = document.getElementById('movements');
+  if (mvBox && mvBox.classList.contains('mvbox')) {
+    mvBox.addEventListener('click', function (e) {
+      var tabLink = e.target.closest ? e.target.closest('[data-tab]') : null;
+      if (!tabLink) return;
+      e.preventDefault();
+      var want = tabLink.getAttribute('data-tab');
+      var mvTabs = mvBox.querySelectorAll('[data-tab]');
+      for (var i = 0; i < mvTabs.length; i++) mvTabs[i].classList.toggle('on', mvTabs[i] === tabLink);
+      var mvRows = mvBox.querySelectorAll('tr[data-dir]');
+      for (var j = 0; j < mvRows.length; j++) mvRows[j].hidden = want !== 'all' && mvRows[j].getAttribute('data-dir') !== want;
+      mvBox.querySelector('.mvscroll').scrollTop = 0;
+    });
+  }
+
   // "(max)" links fill unit inputs.
   document.addEventListener('click', function (e) {
     var a = e.target.closest ? e.target.closest('[data-fill]') : null;

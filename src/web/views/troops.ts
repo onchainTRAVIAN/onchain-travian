@@ -17,6 +17,7 @@ export interface TroopsViewData {
   reinforcements: StationedView[];
   away: StationedView[];
   movements: MovementView[];
+  movementTab?: 'all' | 'in' | 'out' | 'back';
   csrf: string;
   now: number;
 }
@@ -28,7 +29,7 @@ export function troopsView(d: TroopsViewData): SafeHtml {
     ${unitsTable(d.tribe, d.home)}
     ${d.hasRally ? html`<div class="actions"><a class="btn block" href="/troops/send">⚔️ Send troops</a> <a class="btn secondary block" href="/troops/farmlist">Farm list</a></div>` : ''}
     <h2>Troop movements</h2>
-    ${movementList(d.movements, d.now)}
+    ${movementList(d.movements, d.now, d.movementTab)}
     <h2>Reinforcements in this village</h2>
     ${d.reinforcements.length === 0
       ? html`<p class="muted small">No other armies are stationed here.</p>`

@@ -80,9 +80,48 @@ export function movementVisible(m: Pick<MovementView, 'direction' | 'kind'>): bo
   return !(m.direction === 'in' && (m.kind === 'attack' || m.kind === 'raid' || m.kind === 'scout'));
 }
 
-export function movementList(moves: MovementView[], now: number): SafeHtml {
+type MoveTab = 'in' | 'out' | 'back';
+function moveTab(m: MovementView): MoveTab {
+  return m.direction === 'in' ? 'in' : m.direction === 'home' ? 'back' : 'out';
+}
+
+/** Village overview: one classic line per kind of movement ("3 Returning — first in 0:05:12"). */
+export function movementSummary(moves: MovementView[], now: number): SafeHtml {
+  if (moves.length === 0) return html``;
+  const groups: { key: string; tab: MoveTab; ico: string; label: string; cls?: string; list: MovementView[] }[] = [
+    { key: 'inatt', tab: 'in', ico: 'ui/incoming', label: 'Incoming attack', cls: 'bad', list: [] },
+    { key: 'in', tab: 'in', ico: 'ui/reinforce', label: 'Incoming', list: [] },
+    { key: 'out', tab: 'out', ico: 'ui/attack', label: 'Outgoing', list: [] },
+    { key: 'back', tab: 'back', ico: 'ui/return', label: 'Returning', list: [] },
+  ];
+  for (const m of moves) {
+    const hostileIn = m.direction === 'in' && !movementVisible(m);
+    const g = groups.find((x) => x.key === (hostileIn ? 'inatt' : moveTab(m)));
+    g?.list.push(m);
+  }
+  return html`<table class="tb mvsum"><thead><tr><th colspan="3"><a href="/troops#movements">Troop movements</a></th></tr></thead><tbody>${groups
+    .filter((g) => g.list.length > 0)
+    .map((g) => {
+      const first = Math.min(...g.list.map((m) => m.arriveAt));
+      return html`<tr><td>${icon(g.ico, g.label, 16)}</td><td><a href="/troops?tab=${g.tab}#movements" class="${g.cls ?? ''}">${g.list.length} ${g.label}</a></td><td class="num small">${g.list.length > 1 ? 'first ' : ''}in ${timer(first, now)}</td></tr>`;
+    })}</tbody></table>`;
+}
+
+/** Rally Point: every movement in a scrollable box with All / Incoming / Outgoing / Returning tabs. */
+export function movementList(moves: MovementView[], now: number, tab: 'all' | MoveTab = 'all'): SafeHtml {
   if (moves.length === 0) return html`<p class="muted small">No troop movements.</p>`;
-  return html`<table class="tb"><thead><tr><th colspan="3">Troop movements</th></tr></thead><tbody>${moves.map((m) => {
+  const count = (t: MoveTab) => moves.filter((m) => moveTab(m) === t).length;
+  const tabs: { key: 'all' | MoveTab; label: string; n: number }[] = [
+    { key: 'all', label: 'All', n: moves.length },
+    { key: 'in', label: 'Incoming', n: count('in') },
+    { key: 'out', label: 'Outgoing', n: count('out') },
+    { key: 'back', label: 'Returning', n: count('back') },
+  ];
+  return html`<div class="mvbox" id="movements" data-mvtab="${tab}">
+    <p class="tabs mvtabs">${tabs.map(
+      (t) => html`<a href="/troops?tab=${t.key}#movements" data-tab="${t.key}" class="${t.key === tab ? 'on' : ''}${t.n === 0 && t.key !== 'all' ? ' empty' : ''}">${t.label} (${t.n})</a>`,
+    )}</p>
+    <div class="mvscroll"><table class="tb"><tbody>${moves.map((m) => {
     const link = html`<a href="/map/tile?x=${m.otherX}&amp;y=${m.otherY}">${m.otherName}</a>`;
     const detail = (t: SafeHtml) => (movementVisible(m) ? html`<a href="/troops/movement/${m.id}" class="mvlink" title="Show troops and haul">${t}</a>` : t);
     let ico: SafeHtml;
@@ -99,10 +138,11 @@ export function movementList(moves: MovementView[], now: number): SafeHtml {
       ico = icon(map[m.kind] ?? 'ui/attack', KIND_LABEL[m.kind], 16);
       text = html`${detail(html`${KIND_LABEL[m.kind]}`)} to ${link}`;
     }
-    const cargo = m.units && totalUnits(m.units) > 0 ? html`<br><span class="small">${unitsInline(m.tribe, m.units)}</span>` : '';
-    const haul = m.loot && sumRes(m.loot) > 0 ? html`<br><span class="small">${m.direction === 'home' && m.kind === 'return' ? 'Haul: ' : ''}${haulInline(m.loot)}</span>` : '';
-    return html`<tr><td>${ico}</td><td>${text}${m.hero ? html` ${unitIcon(m.tribe, 10)}` : ''}${cargo}${haul}</td><td class="num">in ${timer(m.arriveAt, now)}</td></tr>`;
-  })}</tbody></table>`;
+    const cargo = m.units && totalUnits(m.units) > 0 ? html` <span class="small mvx">${unitsInline(m.tribe, m.units)}</span>` : '';
+    const haul = m.loot && sumRes(m.loot) > 0 ? html` <span class="small mvx">${m.direction === 'home' && m.kind === 'return' ? 'Haul: ' : ''}${haulInline(m.loot)}</span>` : '';
+    const t = moveTab(m);
+    return html`<tr data-dir="${t}"${tab !== 'all' && tab !== t ? html` hidden` : ''}><td>${ico}</td><td>${text}${m.hero ? html` ${unitIcon(m.tribe, 10)}` : ''}${cargo}${haul}</td><td class="num">in ${timer(m.arriveAt, now)}</td></tr>`;
+  })}</tbody></table></div></div>`;
 }
 
 export function pct(n: number): string {
