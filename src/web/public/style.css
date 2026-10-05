@@ -1161,3 +1161,18 @@ a.gbtn { display: inline-flex; text-decoration: none; }
 .stack label { display: block; margin: 8px 0 3px; font-weight: bold; }
 .stack input[type=text], .stack input[type=password] { width: 60%; max-width: 320px; }
 .stack .actions { margin-top: 10px; }
+/* Building level tables */
+.lvtable { font-size: 11px; }
+.lvtable th, .lvtable td { padding: 3px 4px; }
+.lvtable th { white-space: nowrap; }
+.lvtable tr.cur td { background: #e4f0d2; font-weight: bold; }
+.lvtable tr.done td { color: #888; }
+.lvtable td.eff { white-space: nowrap; }
+.lvdetails summary { cursor: pointer; list-style: none; }
+.lvdetails summary::-webkit-details-marker { display: none; }
+.lvdetails[open] summary { border-bottom: 1px solid #d6cdb0; }
+.bguide { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; padding: 10px; }
+.bgcard { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; border: 1px solid #e3dcc4; border-radius: 6px; background: rgba(255, 255, 255, 0.5); text-align: center; color: #3b2f16; }
+.bgcard:hover { border-color: #9cc66a; background: #f6fbec; }
+.bgcard img { width: 56px; height: auto; }
+.mbpick { margin: 0 0 10px; }

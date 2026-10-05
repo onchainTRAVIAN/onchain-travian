@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.16.2 — 2026-10-05
+- **All levels of every building:** each building page has an "All levels" table — cost in each resource, build time with your Main Building, population and culture points added, and what the level gives (production, capacity, merchants, defence…) with the gain over the previous level. The game guide has a new **Buildings** tab with the same table for every building, and a Main Building level picker for build times.
 - **Your reports on every village and oasis:** open any village (player or Natar) or oasis and see your latest 10 reports about it — your attacks, raids and scouting there, and attacks that came from it. Older reports are included.
 - **10× merchants** on this x100 world: each Marketplace level now gives 10 merchants (200 at level 20). World setting `MERCHANT_MULTIPLIER`.
 

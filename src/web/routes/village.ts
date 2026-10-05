@@ -1,3 +1,5 @@
+import { config } from '../../config.js';
+import { getModifiers } from '../../game/modifiers.js';
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
@@ -122,6 +124,8 @@ villageRouter.get('/slot/:n', (req, res) => {
       tribe: state.tribe,
       training,
       panels: def ? buildingPanels(req, page, def.id) : [],
+      mainLevel: levelOf(state, 'main'),
+      buildSpeed: config.WORLD_SPEED * getModifiers(db, ctx.user.id, ctx.now).buildSpeed,
       csrf: ctx.csrf,
       now: ctx.now,
     }),

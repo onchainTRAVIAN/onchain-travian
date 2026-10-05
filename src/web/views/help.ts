@@ -1,3 +1,4 @@
+import { woodTabs } from './parts.js';
 import { FAQ, FAQ_CATEGORIES, type FaqBlock, type FaqCategory, type FaqTopic } from '../../game/rules/faq.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon } from './layout.js';
@@ -47,6 +48,7 @@ export function helpHome(d: { q: string; results: { topic: FaqTopic; score: numb
   const cats = FAQ_CATEGORIES.map((c) => ({ ...c, topics: FAQ.filter((t) => t.category === c.id) })).filter((c) => c.topics.length > 0);
   const chosen = d.category ? cats.find((c) => c.id === d.category) : undefined;
   return html`${head('Game guide', `${FAQ.length} topics · search or browse`)}
+    ${woodTabs([{ href: '/help', label: 'Guide', on: true }, { href: '/help/buildings', label: 'Buildings' }, { href: '/units', label: 'Troops' }], 'Game guide')}
     ${FAQ.length < 10 ? html`<p class="small muted">The full guide is being written — more topics are coming very soon.</p>` : ''}
     ${searchBox(d.q)}
     ${d.results

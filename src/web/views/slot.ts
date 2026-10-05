@@ -1,3 +1,4 @@
+import { levelTable } from './levels.js';
 import type { BuildOption } from '../../game/actions/build.js';
 import type { TrainOption, TrainOrderRow } from '../../game/actions/train.js';
 import { popAtLevel, type BuildingDef } from '../../game/rules/buildings.js';
@@ -63,6 +64,9 @@ export interface SlotViewData {
   training: { building: string; options: TrainOption[]; queue: TrainOrderRow[]; home: UnitCounts; owned: UnitCounts } | null;
   /** Building-specific panels (academy, market, residence...). */
   panels: SafeHtml[];
+  /** For the "All levels" table: Main Building level and the build speed (world speed × boosts). */
+  mainLevel: number;
+  buildSpeed: number;
   csrf: string;
   now: number;
 }
@@ -130,5 +134,8 @@ export function slotView(d: SlotViewData): SafeHtml {
     ${d.level > 0 && def.id === 'rally' ? html`<p class="actions"><a class="btn" href="/troops">Rally Point overview</a> <a class="btn secondary" href="/troops/send">Send troops</a> <a class="btn secondary" href="/simulator">Simulator</a></p>` : ''}
     ${d.level > 0 ? d.panels : ''}
     ${d.training && d.level > 0 ? trainingPanel(d.training, d.tribe, d.have, d.csrf, d.now) : ''}
+    <details class="spanel lvdetails"${d.level === 0 ? html` open` : ''}><summary class="sp-head">All levels<span>cost, time and what each level gives</span></summary>
+      ${levelTable(def, { tribe: d.tribe, mainLevel: d.mainLevel, current: d.level, speed: d.buildSpeed })}
+      <p class="small pad"><a href="/help/buildings/${def.id}">» ${def.name} in the game guide</a></p></details>
   </div>`;
 }

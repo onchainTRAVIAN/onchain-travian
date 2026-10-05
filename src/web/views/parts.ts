@@ -172,7 +172,7 @@ export function effectAt(def: BuildingDef, level: number, tribe: TribeId): SafeH
     case 'palisade':
       return html`Defence bonus: ${Math.round((Math.pow(1 + TRIBES[tribe].wallPerLevel, level) - 1) * 100)}%`;
     case 'market':
-      return html`Merchants: ${level}`;
+      return html`Merchants: ${level * config.MERCHANT_MULTIPLIER}`;
     case 'tradeoffice':
       return html`Merchant capacity: ${100 + level * 10}%`;
     case 'tournament':

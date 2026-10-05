@@ -125,6 +125,17 @@ describe('account flow', () => {
     }
   });
 
+  it('building guide lists every level with cost, time and benefit', async () => {
+    const all = await request(app).get('/help/buildings');
+    expect(all.status).toBe(200);
+    expect(all.text).toContain('/help/buildings/warehouse');
+    const wh = await request(app).get('/help/buildings/warehouse?mb=20');
+    expect(wh.status).toBe(200);
+    expect((wh.text.match(/<tr class=/g) ?? []).length).toBe(20);
+    expect(wh.text).toContain('80,000');
+    expect((await request(app).get('/help/buildings/nope')).status).toBe(404);
+  });
+
   it('logs in and out', async () => {
     await newPlayer('Boudicca', 'romans');
     const agent = request.agent(app);

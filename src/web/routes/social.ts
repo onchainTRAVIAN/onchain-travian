@@ -1,3 +1,7 @@
+import type { TribeId } from '../../game/rules/units.js';
+import { html } from '../html.js';
+import { buildingsGuideView } from '../views/levels.js';
+import { BUILDINGS, type BuildingId } from '../../game/rules/buildings.js';
 import { Router, type Request } from 'express';
 import multer from 'multer';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -481,6 +485,19 @@ socialRouter.get('/endgame', (req, res) => {
 socialRouter.get('/units', (req, res) => {
   const tribe = UNIT_TRIBES.find((t) => t === req.query.t) ?? null;
   sendPage(req, res, 'Troops', unitsIndexView({ tribe }), { chrome: req.ctx.user ? loadGamePage(req).chrome : null });
+});
+
+socialRouter.get(['/help/buildings', '/help/buildings/:id'], (req, res) => {
+  const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
+  const raw = typeof req.params.id === 'string' ? req.params.id : null;
+  const id = raw && raw in BUILDINGS ? (raw as BuildingId) : null;
+  if (raw && !id) {
+    sendPage(req, res, 'Not found', html`<h1>Unknown building</h1><p><a href="/help/buildings">» All buildings</a></p>`, { status: 404, chrome });
+    return;
+  }
+  const tribe = (req.ctx.user?.tribe as TribeId | undefined) ?? 'romans';
+  const mb = Math.max(1, Math.min(20, Math.floor(Number(req.query.mb) || 1)));
+  sendPage(req, res, id ? `${BUILDINGS[id].name} — all levels` : 'Buildings', buildingsGuideView({ tribe, id, mainLevel: mb }), { nav: 'help', chrome });
 });
 
 socialRouter.get('/help', (req, res) => {
