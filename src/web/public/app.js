@@ -379,6 +379,40 @@
     if (btn && !window.confirm(btn.getAttribute('data-confirm'))) e.preventDefault();
   });
 
+  // Combat simulator: results update as you type (the form still works as a plain GET).
+  var simForm = document.getElementById('simform');
+  var simOut = document.getElementById('simresult');
+  if (simForm && simOut && window.fetch && window.URLSearchParams) {
+    var simTimer = null;
+    var simSeq = 0;
+    var simRun = function () {
+      var params = new URLSearchParams(new FormData(simForm));
+      var url = '/simulator?' + params.toString();
+      var mine = ++simSeq;
+      simOut.classList.add('busy');
+      fetch(url + '&partial=1', { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+        .then(function (htmlText) {
+          if (mine !== simSeq) return;
+          simOut.innerHTML = htmlText;
+          simOut.classList.remove('busy');
+          if (window.history && history.replaceState) history.replaceState(null, '', url);
+        })
+        .catch(function () { simOut.classList.remove('busy'); });
+    };
+    simForm.addEventListener('input', function () {
+      clearTimeout(simTimer);
+      simTimer = setTimeout(simRun, 250);
+    });
+    // Tribe, mode or target changes redraw the unit columns: reload the whole page.
+    simForm.addEventListener('change', function (e) {
+      var t = e.target;
+      if (t.classList.contains('simtribe') || t.name === 'oasis') simForm.submit();
+      else if (t.type === 'radio' || t.tagName === 'SELECT') { clearTimeout(simTimer); simRun(); }
+    });
+    simForm.addEventListener('submit', function (e) { e.preventDefault(); clearTimeout(simTimer); simRun(); });
+  }
+
   // "(max)" links fill unit inputs.
   document.addEventListener('click', function (e) {
     var a = e.target.closest ? e.target.closest('[data-fill]') : null;

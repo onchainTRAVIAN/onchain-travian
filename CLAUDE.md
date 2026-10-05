@@ -28,6 +28,7 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Rules data: `src/game/rules/{units,buildings,production}.ts` follow T3.6 formulas; `tests/classic.test.ts` pins reference values. Art: `src/web/public/img/` (SVG); dorf1/dorf2/map positions come from `scripts/gen-positions.py` (pasted at the end of `style.css`).
 - Static assets: link via `assetUrl(rel)` (`src/web/assets.ts`, content-hash `?v=`) — `/static` is cached 1 day, so unversioned links serve stale JS/CSS after deploys.
 - Oasis Raider: `src/game/actions/raider.ts` (`planOasisRaids` is shared by preview and run; tick in `src/server.ts`; tables `oasis_raiders`, `farm_blocks`); view `src/web/views/raider.ts`.
+- Combat simulator: `src/game/rules/simulate.ts` (pure, wraps `resolveBattle` exactly like `handleCombat`; keep them in sync — `tests/simulator.test.ts` compares with a real fight); `/simulator` GET form, `partial=1` returns the result panel for app.js live updates; `?mine=1` prefills your troops.
 - Production breakdown: `src/game/engine/breakdown.ts` (`/production`) must mirror `grossProduction`/`economyOf` — update both together.
 - `app.js` is one IIFE: never reuse a `var` name across feature blocks (hoisting made blocks clobber each other twice).
 - Map movement markers: `movementMarks()` in `src/web/routes/map.ts` → `marks` in `mapView`.

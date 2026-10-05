@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.12.0 — 2026-10-05
+- **Combat simulator** (Rally Point tab, sidebar link): normal attack or raid against a village or an oasis. Attacker and defender tribes, troops, Blacksmith/Armoury levels, heroes (unit, points, bonus), populations (morale), attack/defence bonus %, wall, Residence/Palace, Stonemason, catapult target level, up to two reinforcement armies. Results update live as you type: winner, attack vs defence, casualties and survivors per side (with heroes), wall after rams, building after catapults, how much survivors can carry, and how much stronger the attack must be (or how much weaker it could be). Uses the real battle code — verified identical to an actual fight. Prefilled with your troops; "Simulate" links on map villages/oases and on scout reports carry what you know.
+
 ## 0.11.7 — 2026-10-05
 - Scouting reports show heroes: a hero column next to its owner's troops (named per army), and a hero standing alone still shows.
 

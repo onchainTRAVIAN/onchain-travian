@@ -265,6 +265,11 @@ export interface TileViewData {
   now: number;
 }
 
+/** Combat simulator prefilled with your own troops and these defender details. */
+export function simLink(params: Record<string, string>): string {
+  return `/simulator?${new URLSearchParams({ mine: '1', ...params }).toString()}`;
+}
+
 export function tileView(d: TileViewData): SafeHtml {
   const title = d.village ? d.village.name : d.kind === 'oasis' ? 'Oasis' : 'Abandoned valley';
   const v = d.village;
@@ -292,6 +297,7 @@ export function tileView(d: TileViewData): SafeHtml {
           <a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=attack">⚔️ Attack</a>
           <a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=raid">💰 Raid</a>
           <a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=scout">🔭 Scout</a>
+          <a class="btn secondary" href="${simLink({ oasis: '1', mode: 'raid', d1_t: 'nature', ...Object.fromEntries((d.animals ?? []).map((n, i) => [`d1${i}`, String(n)]).filter(([, n]) => n !== '0')) })}">Simulate</a>
         </div><p class="small muted">Clear all animals with an attack that includes your hero to capture this oasis (needs a Hero's Mansion at level 10 and the oasis within 3 fields).</p>`
       : ''}
     ${d.kind === 'field' && !v ? html`<div class="actions"><a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=settle">🧺 Found a village here</a></div>` : ''}
@@ -302,6 +308,7 @@ export function tileView(d: TileViewData): SafeHtml {
           <a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=attack">⚔️ Attack</a>
           <a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=scout">🔭 Scout</a>
           <a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=reinforce">🛡️ Reinforce</a>
+          <a class="btn secondary" href="${simLink({ d1_t: v.tribe, dpop: String(v.pop) })}">Simulate</a>
           ${v.ownerId ? html`<a class="btn secondary" href="/messages/new?to=${encodeURIComponent(v.owner)}">✉️ Message</a>` : ''}
         </div>`
       : ''}

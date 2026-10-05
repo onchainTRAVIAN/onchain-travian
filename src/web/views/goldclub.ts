@@ -48,7 +48,7 @@ export function farmListView(d: {
   now: number;
 }): SafeHtml {
   const head = html`<h1>Rally Point</h1>
-    <p class="tabs"><a href="/troops">Overview</a><a href="/troops/send">Send troops</a><a href="/troops/farmlist" class="on">Farm list</a></p>`;
+    <p class="tabs"><a href="/troops">Overview</a><a href="/troops/send">Send troops</a><a href="/troops/farmlist" class="on">Farm list</a><a href="/simulator">Combat simulator</a></p>`;
   if (!d.member) return html`${head}${goldClubLocked()}`;
   const units = TRIBES[d.tribe].units;
   return html`${head}

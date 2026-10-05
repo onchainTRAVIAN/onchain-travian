@@ -144,7 +144,7 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
       )}</ul>
       ${c.villages.length > 1 ? html`<p class="sp-total small">Total population: <b>${fmtNum(c.villages.reduce((a, v) => a + v.pop, 0))}</b></p>` : ''}</section>
     <section class="sp"><h3 class="sp-head">Links</h3>
-      <div class="sp-body">${mi('/troops/send', 'send', 'Send troops')}${mi('/goldmarket', 'market', 'Gold market')}${mi('/units', 'hero', 'Troop guide')}${mi('/shop/ticker', 'news', 'News ticker')}</div></section>
+      <div class="sp-body">${mi('/troops/send', 'send', 'Send troops')}${mi('/simulator', 'send', 'Combat simulator')}${mi('/goldmarket', 'market', 'Gold market')}${mi('/units', 'hero', 'Troop guide')}${mi('/shop/ticker', 'news', 'News ticker')}</div></section>
   </div>`;
 }
 

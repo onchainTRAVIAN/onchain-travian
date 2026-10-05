@@ -64,6 +64,26 @@ export function reportListView(d: {
 
 type HeroLine = NonNullable<BattleReportData['heroes']>[number];
 
+/** Simulator link with what the scouts saw (up to three armies, the wall) and your own troops. */
+function scoutSimLink(r: BattleReportData): string {
+  const p: Record<string, string> = { mine: '1', mode: 'attack' };
+  if (r.oasis) {
+    p.oasis = '1';
+  }
+  (r.scout?.troops ?? []).slice(0, 3).forEach((t, k) => {
+    p[`d${k + 1}_t`] = t.tribe;
+    t.units.forEach((n, i) => {
+      if (n > 0) p[`d${k + 1}${i}`] = String(n);
+    });
+  });
+  if (r.scout?.wallLevel) p.wall = String(r.scout.wallLevel);
+  return `/simulator?${simParams(p)}`;
+}
+
+function simParams(p: Record<string, string>): string {
+  return new URLSearchParams(p).toString();
+}
+
 function sideBlock(title: string, s: ReportSide, hideUnits = false, extra?: SafeHtml, hero?: HeroLine): SafeHtml {
   return html`<table class="report"><thead><tr><th class="side ${title === 'Attacker' ? 'att' : 'def'}">${title}</th>
       <th><a href="/stats">${s.username}</a> from the village <a href="/map/tile?x=${s.x}&amp;y=${s.y}">${s.villageName}</a> <span class="small muted">(${TRIBES[s.tribe].name})</span></th></tr></thead>
@@ -113,6 +133,7 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
         <p class="small">City Wall level ${r.scout.wallLevel ?? 0} · Cranny hides ${typeof r.scout.crannyHides === 'object'
           ? RESOURCE_KEYS.map((k) => html`${resIcon(k)}${fmtNum((r.scout?.crannyHides as Resources)[k])} `)
           : html`${fmtNum((r.scout.crannyHides as number | undefined) ?? 0)} of each`}</p>
+        ${isAttacker ? html`<p><a class="btn small secondary" href="${scoutSimLink(r)}">Simulate an attack on this</a></p>` : ''}
         ${(r.scout.troops ?? []).every((t) => !t.hero && t.units.every((n) => n === 0)) ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units, undefined, { hero: !!t.hero, label: t.owner ?? 'Troops' }))}`
       : ''}
     ${r.loyalty ? html`<p>🎖️ Loyalty: ${r.loyalty.from}% → <b>${r.loyalty.to}%</b></p>` : ''}

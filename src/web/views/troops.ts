@@ -30,7 +30,7 @@ export function troopsView(d: TroopsViewData): SafeHtml {
     <h2>Your troops at home</h2>
     ${unitsTable(d.tribe, d.home, undefined, { hero: !!d.hero })}
     ${d.hero ? html`<p class="small herorow">${unitIcon(d.tribe, 10, 16, false)} <a href="/hero"><b>${d.hero.name}</b></a> is at home · health ${d.hero.health}%</p>` : ''}
-    ${d.hasRally ? html`<div class="actions"><a class="btn block" href="/troops/send">⚔️ Send troops</a> <a class="btn secondary block" href="/troops/farmlist">Farm list</a></div>` : ''}
+    ${d.hasRally ? html`<div class="actions"><a class="btn block" href="/troops/send">⚔️ Send troops</a> <a class="btn secondary block" href="/troops/farmlist">Farm list</a> <a class="btn secondary block" href="/simulator">Combat simulator</a></div>` : ''}
     <h2>Troop movements</h2>
     ${movementList(d.movements, d.now, d.movementTab)}
     <h2>Reinforcements in this village</h2>
