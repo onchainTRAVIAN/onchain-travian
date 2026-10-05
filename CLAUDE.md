@@ -26,4 +26,6 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Combat follows Kirilloid's T3 model (`src/game/rules/battle.ts`: moraleMalus, demolishPoints/demolish, wallDuringBattle, catapultTargetAllowed); reference values pinned in `tests/rules.test.ts`, scenarios in `tests/combat.test.ts`. Rule decisions: memory `project-classic-rules`.
 - Endgame: `src/game/actions/endgame.ts` (Natars, release, capture, Wonder rules, winner in meta `winner`); artifact effects in `src/game/engine/artifacts.ts` (`artifactValue(q, villageId, kind, now)`, used by combat/movement/training/upkeep/cranny). New building SVGs → rerun `scripts/gen-masks.py`.
 - Rules data: `src/game/rules/{units,buildings,production}.ts` follow T3.6 formulas; `tests/classic.test.ts` pins reference values. Art: `src/web/public/img/` (SVG); dorf1/dorf2/map positions come from `scripts/gen-positions.py` (pasted at the end of `style.css`).
+- Static assets: link via `assetUrl(rel)` (`src/web/assets.ts`, content-hash `?v=`) — `/static` is cached 1 day, so unversioned links serve stale JS/CSS after deploys.
+- Map movement markers: `movementMarks()` in `src/web/routes/map.ts` → `marks` in `mapView`.
 - Gold Club: `src/game/actions/goldclub.ts` (farm lists + auto-raids, evasion hooked in `handleCombat`, trade routes, cropper finder); automation runs in the `src/server.ts` tick.
