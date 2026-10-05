@@ -320,6 +320,25 @@
         for (var j = 0; j < 7; j++) sum[j] += n * (c[j] || 0);
       }
       for (var k = 0; k < 4; k++) setText('tt-' + keys[k], fmtCount(sum[k])).className = sum[k] > have[k] ? 'miss' : '';
+      // Every "(max)" counts only what is left after the other rows.
+      for (var m = 0; m < ins.length; m++) {
+        var cm = ins[m].getAttribute('data-cost').split(',').map(Number);
+        var own = Math.max(0, Math.floor(Number(ins[m].value) || 0));
+        var maxN = Infinity;
+        for (var r = 0; r < 4; r++) {
+          if (cm[r] > 0) maxN = Math.min(maxN, Math.floor((have[r] - (sum[r] - own * cm[r])) / cm[r]));
+        }
+        maxN = Math.max(0, maxN === Infinity ? 0 : maxN);
+        var link = form.querySelector('[data-fill="' + ins[m].id + '"]');
+        if (link) {
+          // The server's max may include other limits (settler slots, batch size): never go above it.
+          if (!link.hasAttribute('data-base')) link.setAttribute('data-base', link.getAttribute('data-value') || '0');
+          maxN = Math.min(maxN, Number(link.getAttribute('data-base')) || 0);
+          link.setAttribute('data-value', maxN);
+          link.textContent = '(' + fmtCount(maxN) + ')';
+        }
+        ins[m].max = maxN;
+      }
       setText('tt-upkeep', fmtCount(sum[4]));
       setText('tt-time', dur(sum[5]));
       if (document.getElementById('tt-carry')) setText('tt-carry', ' ' + fmtCount(sum[6]));

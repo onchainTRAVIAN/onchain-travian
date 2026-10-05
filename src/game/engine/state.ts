@@ -82,7 +82,10 @@ export function levelOf(state: Pick<VillageState, 'slots'>, id: BuildingId): num
   return max;
 }
 
-export function storageOf(state: Pick<VillageState, 'slots'>): { warehouse: number; granary: number } {
+/** Storage expansion (Gold): +50% warehouse and granary capacity in that village. */
+export const STORAGE_BOOST = 1.5;
+
+export function storageOf(state: Pick<VillageState, 'slots'> & { village?: { storageBoost?: boolean } }): { warehouse: number; granary: number } {
   let warehouse = 0;
   let granary = 0;
   let hasW = false;
@@ -97,10 +100,14 @@ export function storageOf(state: Pick<VillageState, 'slots'>): { warehouse: numb
       hasG = true;
     }
   }
-  return { warehouse: hasW ? warehouse : storageCapacity(0), granary: hasG ? granary : storageCapacity(0) };
+  const boost = state.village?.storageBoost ? STORAGE_BOOST : 1;
+  return {
+    warehouse: Math.floor((hasW ? warehouse : storageCapacity(0)) * boost),
+    granary: Math.floor((hasG ? granary : storageCapacity(0)) * boost),
+  };
 }
 
-export function capacityFor(state: Pick<VillageState, 'slots'>): Resources {
+export function capacityFor(state: Pick<VillageState, 'slots'> & { village?: { storageBoost?: boolean } }): Resources {
   const { warehouse, granary } = storageOf(state);
   return res(warehouse, warehouse, warehouse, granary);
 }

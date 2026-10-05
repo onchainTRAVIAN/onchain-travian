@@ -43,7 +43,6 @@ export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Re
                 <td class="max">${o.available ? html`<a href="#t_${g.building}_${o.slot}" class="fill" data-fill="t_${g.building}_${o.slot}" data-value="${o.maxAffordable}">(${fmtNum(o.maxAffordable)})</a>` : html`<span class="none">(0)</span>`}</td>
               </tr>`,
             )}</tbody></table>`}
-        ${g.queue.length ? html`<div class="pad">${trainingQueue(g.queue, d.tribe, d.now, d.csrf)}</div>` : ''}
       </section>`,
     )}
     ${any
@@ -55,5 +54,10 @@ export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Re
         </div>
         <p class="small muted">Each building trains its own queue at the same time. The total cost counts everything you entered; if resources run out, the first rows are trained first.</p>`
       : ''}
-    </form>`;
+    </form>
+    ${d.groups.some((g) => g.queue.length)
+      ? html`<section class="spanel"><h3 class="sp-head">In training</h3><div class="pad">${d.groups
+          .filter((g) => g.queue.length)
+          .map((g) => html`<p class="small"><b>${BUILDINGS[g.building].name}</b></p>${trainingQueue(g.queue, d.tribe, d.now, d.csrf)}`)}</div></section>`
+      : ''}`;
 }

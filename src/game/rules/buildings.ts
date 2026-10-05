@@ -196,7 +196,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     description: 'The king or queen of the empire lives in the palace. You can have only one; the village where it stands becomes your capital.' }),
   treasury: B({ id: 'treasury', name: 'Treasury', icon: '💰', cost: [2880, 2740, 2580, 990], costFactor: 1.26, maxLevel: 20, t1: 8000, pop: 4, cp: 6,
     requires: [['main', 10]],
-    description: 'The riches of your empire are kept in the treasury. There are no artefacts in this world yet.' }),
+    description: 'Holds artifacts. Destroy the Treasury of a Natar stronghold, then attack with your hero to capture its artifact; a level 10 Treasury holds a small artifact, level 20 a large or unique one.' }),
   tradeoffice: B({ id: 'tradeoffice', name: 'Trade Office', icon: '🐫', cost: [1400, 1330, 1200, 400], costFactor: 1.28, maxLevel: 20, t1: 3000, pop: 3, cp: 3,
     requires: [['market', 20], ['stable', 10]],
     description: 'Better carts and horses: each level increases your merchants’ capacity by 10%.' }),

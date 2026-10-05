@@ -1,3 +1,4 @@
+import { STORAGE_BOOST_PRICE } from '../../game/actions/credits.js';
 import { config } from '../../config.js';
 import { PROTECTION_PRICE, TRANSFER_MAX, NPC_TRADE_PRICE, PRODUCTS, TICKER_MAX_HOURS, TICKER_MAX_LENGTH } from '../../game/actions/credits.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
@@ -15,6 +16,7 @@ export function shopView(d: {
   sendTo: string;
   protection: { protectedUntil: number; canBuyAt: number };
   goldClub: boolean;
+  storage: { id: number; name: string; boosted: boolean; current: number }[];
   csrf: string;
   now: number;
 }): SafeHtml {
@@ -25,6 +27,18 @@ export function shopView(d: {
       <a class="btn gold" href="/shop/topup">Buy Gold</a></div>
     <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold.</p>
     ${goldClubCard({ member: d.goldClub, balance: d.balance, csrf: d.csrf })}
+    <h2 id="storage">Storage expansion</h2>
+    <div class="card"><div class="cardrow"><b>+50% warehouse and granary — permanent</b><span class="price">${STORAGE_BOOST_PRICE} Gold per village</span></div>
+      <p class="small">The chosen village stores 50% more of every resource, forever (Great Warehouse and Great Granary included). Once per village.</p>
+      ${d.storage.every((v) => v.boosted)
+        ? html`<p class="small good">All your villages already have it.</p>`
+        : html`<form method="post" action="/shop/storage" class="row">${csrfField(d.csrf)}
+            <div><label for="sv" class="sr">Village</label><select id="sv" name="villageId">${d.storage.filter((v) => !v.boosted).map(
+              (v) => html`<option value="${v.id}">${v.name} — ${fmtNum(v.current)} → ${fmtNum(Math.floor(v.current * 1.5))}</option>`,
+            )}</select></div>
+            <div><button type="submit"${d.balance < STORAGE_BOOST_PRICE ? html` class="secondary"` : ''}>Expand storage</button></div></form>`}
+      ${d.storage.some((v) => v.boosted) ? html`<p class="small muted">Already expanded: ${d.storage.filter((v) => v.boosted).map((v) => v.name).join(', ')}</p>` : ''}
+    </div>
     <h2 id="protection">Protection</h2>
     <div class="card"><div class="cardrow"><b>🛡️ 24 hours of protection</b><span class="price">${PROTECTION_PRICE} Gold</span></div>
       <div class="small">Nobody can attack, raid or scout your villages for 24 hours. Attacking another player ends it early.
@@ -58,7 +72,7 @@ export function shopView(d: {
       <b>${config.TICKER_PRICE_PER_HOUR} Gold per hour.</b></p><a class="btn" href="/shop/ticker">Book a time slot</a></div>
     ${npcPanel(d.stock, d.capacity, d.balance, d.csrf)}
     <h2>Finish immediately</h2>
-    <p class="small">Tap the <span class="btn gold small">⚡</span> button next to any construction, training or research to finish it now (2 Gold per hour left, at least 2).</p>
+    <p class="small">Tap the <span class="btn gold small">⚡</span> button next to any construction, training or research to finish it now. The price follows the time left: ${config.WORLD_SPEED !== 1 ? `on this x${config.WORLD_SPEED} world about 1 Gold per ${Math.max(1, Math.round(100 / config.WORLD_SPEED))} minute${Math.round(100 / config.WORLD_SPEED) === 1 ? '' : 's'} left` : '1 Gold per 100 minutes left'}, at least 2. A training row also finishes the batches above it.</p>
     <h2>Gold history</h2>
     ${d.history.length === 0
       ? html`<p class="muted small">No transactions yet.</p>`

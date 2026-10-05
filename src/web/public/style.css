@@ -881,3 +881,6 @@ input.tickerin { width: 100%; box-sizing: border-box; font-size: 14px; padding: 
 .revents li { padding: 3px 0 3px 14px; position: relative; }
 .revents li::before { content: ''; position: absolute; left: 2px; top: 10px; width: 5px; height: 5px; border-radius: 50%; background: #c9a227; }
 @media (max-width: 600px) { .rephead { flex-wrap: wrap; } .rephead .racts { width: 100%; } }
+/* Menu items stay on one line; the active one is marked by colour and the bar, not bold text. */
+#side_navi .sp-body a, #side_navi .sp-body button.lnk { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#side_navi .sp-body a.on { font-weight: normal; text-shadow: 0 0 0.01px #1f4d00; }

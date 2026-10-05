@@ -98,6 +98,8 @@ export const villages = sqliteTable(
     prisoners: text('prisoners').notNull().default('{}'),
     /** Gaul traps built in this village (each holds one prisoner). */
     traps: integer('traps').notNull().default(0),
+    /** Gold "Storage expansion": warehouse and granary hold 50% more, permanently. */
+    storageBoost: integer('storage_boost', { mode: 'boolean' }).notNull().default(false),
     /** Gold Club evasion: the village's own troops leave when an attack arrives (capital only). */
     evade: integer('evade', { mode: 'boolean' }).notNull().default(false),
     /** A World Wonder village (Natar-founded; the Wonder stands on plot 25). */

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { loadVillage, storageOf } from '../../game/engine/state.js';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { hasGoldClub } from '../../game/actions/goldclub.js';
@@ -8,6 +9,8 @@ import {
   activeBoosts,
   activeTicker,
   bookTicker,
+  buyStorageBoost,
+  STORAGE_BOOST_PRICE,
   buyBoost,
   creditBalance,
   creditHistory,
@@ -44,6 +47,10 @@ shopRouter.get('/shop', (req, res_) => {
       sendTo: typeof req.query.to === 'string' ? req.query.to.slice(0, 20) : '',
       protection: protectionStatus(db, ctx.user.id, ctx.now),
       goldClub: hasGoldClub(db, ctx.user.id),
+      storage: page.chrome.villages.map((v) => {
+        const st = loadVillage(db, v.id);
+        return { id: v.id, name: v.name, boosted: !!st?.village.storageBoost, current: st ? storageOf({ slots: st.slots }).warehouse : 0 };
+      }),
       csrf: ctx.csrf,
       now: ctx.now,
     }),
@@ -142,6 +149,16 @@ shopRouter.get('/shop/ticker', (req, r) => {
     { nav: 'shop', chrome: page.chrome },
   );
 });
+
+shopRouter.post(
+  '/shop/storage',
+  formAction(z.object({ villageId: z.coerce.number().int().positive() }), (req, r, d) => {
+    const ctx = authed(req);
+    buyStorageBoost(db, ctx.user.id, d.villageId, ctx.now);
+    setFlash(r, 'ok', `Storage expanded by 50% for good (${STORAGE_BOOST_PRICE} Gold).`);
+    r.redirect(303, '/shop#storage');
+  }, '/shop#storage'),
+);
 
 shopRouter.post(
   '/shop/ticker',

@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
-import { buildOrders, creditsLedger, messages, perks, researchOrders, tickerMessages, trainOrders, users } from '../../db/schema.js';
+import { buildOrders, creditsLedger, messages, perks, researchOrders, tickerMessages, trainOrders, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { RESOURCE_KEYS, sumRes, type Resources } from '../rules/resources.js';
 import type { PerkKind } from '../modifiers.js';
@@ -36,7 +36,7 @@ export function creditHistory(q: Q, userId: number, limit = 30) {
 
 /* ---------- Instant finish ---------- */
 
-/** 2 credits per hour left, minimum 2. */
+/** Finish-now price: see FINISH_X1_MINUTES_PER_GOLD (scaled by world speed), minimum 2. */
 /**
  * "Finish now" price follows the world speed: it is based on how long the remaining work
  * would take on a normal-speed (x1) world — 1 Gold per 100 minutes at x1, at least 2.
@@ -236,6 +236,19 @@ export function npcTrade(db: DB, userId: number, villageId: number, target: Reso
 /* ---------- Protection for Gold ---------- */
 
 export const PROTECTION_PRICE = 80;
+
+/** Permanent +50% warehouse and granary for one village (once per village). */
+export const STORAGE_BOOST_PRICE = 150;
+
+export function buyStorageBoost(db: DB, userId: number, villageId: number, now: number): void {
+  db.transaction((tx) => {
+    const v = ownedVillage(tx, userId, villageId);
+    assertGame(!v.storageBoost, 'This village already has the storage expansion');
+    catchUp(tx, villageId, now);
+    spend(tx, userId, STORAGE_BOOST_PRICE, `Storage expansion: ${v.name}`, now);
+    tx.update(villages).set({ storageBoost: true }).where(eq(villages.id, villageId)).run();
+  });
+}
 export const PROTECTION_BUY_MS = 24 * 3_600_000;
 /** After bought protection ends you stay attackable at least this long before buying again. */
 export const PROTECTION_COOLDOWN_MS = 8 * 3_600_000;

@@ -1,0 +1,1 @@
+ALTER TABLE `villages` ADD `storage_boost` integer DEFAULT false NOT NULL;

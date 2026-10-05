@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.1 — 2026-10-05
+- **Game guide** with 120 topics in 16 categories (getting started, resources, buildings, troops, combat, defence, hero, oases, expansion, market, alliance, Gold, endgame, statistics, account, strategy), checked against the game code; search box with live suggestions, category pages, related topics and links into the game.
+- New Gold service **Storage expansion**: +50% warehouse and granary in a chosen village, permanently, 150 Gold, once per village.
+- New colourful game-style menu icons (and new ones for Village centre, Train troops, Farm list, Simulator, Troop guide, Game guide).
+- Fix: training twice from the Train troops page said "session expired" (the queue's forms were nested inside the training form).
+- Training "(max)" amounts update live: they count only the resources left after the other rows you filled in.
+- Fixed outdated texts (finish-now price, Treasury description).
+
 ## 0.13.0 — 2026-10-05
 - **Train troops** page (left menu): every unit of all the village's training buildings in one form with a live total, plus each building's queue.
 - Side panels: player card (avatar, tribe, population, Gold), softer section titles, Village centre and Train troops entries; Links panel as icon tiles (send, train, farm list, simulator, Gold market, troop guide, news ticker, game guide).

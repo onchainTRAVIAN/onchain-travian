@@ -31,3 +31,19 @@ describe('Master Trainer', () => {
     expect(() => startResearch(db, p.userId, p.villageId, 'blacksmith', 0, clock.now())).toThrow();
   });
 });
+
+describe('Storage expansion', () => {
+  it('permanently adds 50% to warehouse and granary, once per village', async () => {
+    const { buyStorageBoost, STORAGE_BOOST_PRICE, creditBalance } = await import('../src/game/actions/credits.js');
+    const { capacityFor, loadVillage } = await import('../src/game/engine/state.js');
+    const before = capacityFor(loadVillage(db, p.villageId)!);
+    grantCredits(db, p.userId, 1000, 'test', 'storage-test', clock.now());
+    const bal = creditBalance(db, p.userId);
+    buyStorageBoost(db, p.userId, p.villageId, clock.now());
+    expect(creditBalance(db, p.userId)).toBe(bal - STORAGE_BOOST_PRICE);
+    const after = capacityFor(loadVillage(db, p.villageId)!);
+    expect(after.wood).toBe(Math.floor(before.wood * 1.5));
+    expect(after.crop).toBe(Math.floor(before.crop * 1.5));
+    expect(() => buyStorageBoost(db, p.userId, p.villageId, clock.now())).toThrow(/already/);
+  });
+});
