@@ -201,6 +201,19 @@ function releasePrisoners(q: Q, villageId: number, ownerVillageId: number): Unit
 /* Villages                                                            */
 /* ------------------------------------------------------------------ */
 
+/** What scouts see: each army in the village, with a hero marked next to its owner's troops. */
+function scoutedArmies(
+  defenders: { owner: VillageInfo | undefined; group: ArmyGroup }[],
+  heroes: { userId: number }[],
+  target: VillageInfo,
+): NonNullable<NonNullable<BattleReportData['scout']>['troops']> {
+  const heroOwners = new Set(heroes.map((h) => h.userId));
+  const out = defenders.map((d) => ({ tribe: d.group.tribe, units: d.group.units, owner: d.owner?.username, hero: d.owner?.userId != null && heroOwners.delete(d.owner.userId) }));
+  // A hero standing without troops of its owner still shows up.
+  for (const uid of heroOwners) out.push({ tribe: uid === target.userId ? target.tribe : 'romans', units: emptyUnits(), owner: undefined, hero: true });
+  return out;
+}
+
 function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const home = villageInfo(q, mv.fromVillageId);
   if (!home) return;
@@ -263,7 +276,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
         ? {
             success: true,
             resources: stockOf(target.village),
-            troops: defenders.map((d) => ({ tribe: d.group.tribe, units: d.group.units })),
+            troops: scoutedArmies(defenders, defHeroes, targetInfo),
             wallLevel,
             crannyHides: hiddenByCranny(target, home.tribe, artifactValue(q, targetId, 'confusion', t)),
           }

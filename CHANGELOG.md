@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.7 — 2026-10-05
+- Scouting reports show heroes: a hero column next to its owner's troops (named per army), and a hero standing alone still shows.
+
 ## 0.11.6 — 2026-10-05
 - The hero shows with your troops when it is at home: a hero column in the Rally Point's "Your troops at home" (with name and health) and a "1 Hero" line in the village overview's Troops box.
 

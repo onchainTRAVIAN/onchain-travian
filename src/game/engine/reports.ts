@@ -38,7 +38,8 @@ export interface BattleReportData {
   scout?: {
     success: boolean;
     resources?: Resources;
-    troops?: { tribe: TribeId; units: UnitCounts }[];
+    /** Armies seen in the village; `hero` = a hero stands with that owner's troops. */
+    troops?: { tribe: TribeId; units: UnitCounts; hero?: boolean; owner?: string }[];
     wallLevel?: number;
     /** Per resource (older reports: one number for all). */
     crannyHides?: number | Resources;

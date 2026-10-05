@@ -113,7 +113,7 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
         <p class="small">City Wall level ${r.scout.wallLevel ?? 0} · Cranny hides ${typeof r.scout.crannyHides === 'object'
           ? RESOURCE_KEYS.map((k) => html`${resIcon(k)}${fmtNum((r.scout?.crannyHides as Resources)[k])} `)
           : html`${fmtNum((r.scout.crannyHides as number | undefined) ?? 0)} of each`}</p>
-        ${(r.scout.troops ?? []).length === 0 ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units))}`
+        ${(r.scout.troops ?? []).every((t) => !t.hero && t.units.every((n) => n === 0)) ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units, undefined, { hero: !!t.hero, label: t.owner ?? 'Troops' }))}`
       : ''}
     ${r.loyalty ? html`<p>🎖️ Loyalty: ${r.loyalty.from}% → <b>${r.loyalty.to}%</b></p>` : ''}
     ${r.conquered ? html`<p class="good"><b>👑 The village was conquered!</b></p>` : ''}
