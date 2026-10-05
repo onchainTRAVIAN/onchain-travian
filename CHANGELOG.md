@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.5 — 2026-10-05
+- Fix: training queue countdowns on Barracks/Stable/Workshop pages showed raw milliseconds (e.g. "45,569") — a helper in the training-total script shadowed the countdown formatter. The "Finished" column now shows seconds too.
+
 ## 0.9.4 — 2026-10-05
 - Every troop has a short guide (what kind of unit, what it's best used for) on its info page, the troop list and the training tables.
 - Buildings and walls can show a grander picture every 5 levels (stage pictures `img/buildings/<id>-2..5.svg`, `img/walls/<stem>-2..5.svg`, wooden spikes for walls at levels 1–4); missing stages fall back to the base picture.

@@ -202,7 +202,7 @@
     var form = tt.closest('form');
     var have = tt.getAttribute('data-have').split(',').map(Number);
     var keys = ['wood', 'clay', 'iron', 'crop'];
-    var fmt = function (n) { return Math.round(n).toLocaleString('en-US'); };
+    var fmtCount = function (n) { return Math.round(n).toLocaleString('en-US'); };
     var dur = function (ms) {
       var s = Math.round(ms / 1000);
       var h = Math.floor(s / 3600);
@@ -224,8 +224,8 @@
         var c = ins[i].getAttribute('data-cost').split(',').map(Number);
         for (var j = 0; j < 6; j++) sum[j] += n * c[j];
       }
-      for (var k = 0; k < 4; k++) setText('tt-' + keys[k], fmt(sum[k])).className = sum[k] > have[k] ? 'miss' : '';
-      setText('tt-upkeep', fmt(sum[4]));
+      for (var k = 0; k < 4; k++) setText('tt-' + keys[k], fmtCount(sum[k])).className = sum[k] > have[k] ? 'miss' : '';
+      setText('tt-upkeep', fmtCount(sum[4]));
       setText('tt-time', dur(sum[5]));
     };
     form.addEventListener('input', recalc);

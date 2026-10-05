@@ -71,7 +71,7 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
     const u = TRIBES[tribe].units[o.unitSlot];
     const end = o.startAt + o.total * o.perUnitMs;
     return html`<tr><td>${unitIcon(tribe, o.unitSlot)} ${fmtNum(o.total - o.done)} ${u?.name ?? '?'}</td>
-      <td class="num">${timer(end, now)}</td><td class="num">${fmtClock(end).slice(0, 5)}</td>
+      <td class="num">${timer(end, now)}</td><td class="num">${fmtClock(end)}</td>
       ${csrf ? html`<td><form method="post" action="/shop/finish/train">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
         <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(end - now)}</button></form></td>` : ''}</tr>`;
   })}</tbody></table>`;
