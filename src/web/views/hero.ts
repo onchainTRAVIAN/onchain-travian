@@ -79,40 +79,53 @@ export function heroView(d: {
     { key: 'defBonus', label: 'Defence bonus', value: h.defBonus, effect: `+${(h.defBonus * HERO_BONUS_PER_POINT * 100).toFixed(1)}% defence for its army` },
     { key: 'regen', label: 'Regeneration', value: h.regen, effect: `${heroRegenPerDay(h.regen)}% health per day${config.WORLD_SPEED !== 1 ? ` (×${config.WORLD_SPEED})` : ''}` },
   ];
-  return html`<h1>${h.name} <span class="lvl">level ${h.level}</span></h1>
-    <div class="unitinfo">
-      <img class="unitbig" src="/static/img/units/big/${d.tribe}-${h.unitSlot + 1}.svg" width="120" height="140" alt="${unit.name}">
-      <div class="unitstats"><table><tbody>
-        <tr><th>Trained from</th><td>${unitIcon(d.tribe, h.unitSlot)} ${unit.name}</td></tr>
-        <tr><th>Status</th><td>${STATUS[h.status]}${d.locationName && h.status === 'away' ? ` in ${d.locationName}` : ''}</td></tr>
-        <tr><th>Home</th><td>${d.homeName}</td></tr>
-        <tr><th>Health</th><td>${Math.round(h.health)}% <span class="hp" aria-hidden="true"><i class="w${hp}"></i></span></td></tr>
-        <tr><th>Experience</th><td>${fmtNum(h.xp)} / ${fmtNum(nextXp)} <span class="bar" aria-hidden="true"><i class="w${Math.max(0, Math.min(100, xpPct))}"></i></span></td></tr>
-        <tr><th>Speed</th><td>${unit.speed} fields/hour</td></tr>
-      </tbody></table></div>
+  const meter = (pct: number, cls: string) => {
+    const w = Math.max(0, Math.min(100, pct));
+    return html`<svg class="meter ${cls}" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="8" rx="4" class="bg"></rect>${w > 0 ? html`<rect width="${w}" height="8" rx="4" class="fg"></rect>` : ''}</svg>`;
+  };
+  const healthCls = h.health >= 60 ? 'good' : h.health >= 25 ? 'mid' : 'low';
+  const where = h.status === 'away' && d.locationName ? `in ${d.locationName}` : h.status === 'home' ? `in ${d.homeName}` : '';
+  return html`<h1>Hero</h1>
+    <div class="spanel herocard">
+      <div class="portrait"><img src="/static/img/units/big/${d.tribe}-${h.unitSlot + 1}.svg" width="120" height="140" alt="${unit.name}"><span class="lvlbadge" title="Level">${h.level}</span></div>
+      <div class="hinfo">
+        <div class="hname"><b>${h.name}</b> <span class="muted">level ${h.level}</span></div>
+        <div class="hsub">${unitIcon(d.tribe, h.unitSlot, 16, false)} trained from ${unit.name} · ${TRIBES[d.tribe].name}</div>
+        <div class="hstatus st-${h.status}"><span class="dot"></span>${STATUS[h.status]} ${where}</div>
+        <div class="hrow"><span class="k">Health</span>${meter(h.health, 'hp ' + healthCls)}<span class="v">${Math.round(h.health)}%</span></div>
+        <div class="hrow"><span class="k">Experience</span>${meter(xpPct, 'xp')}<span class="v">${fmtNum(h.xp)} / ${fmtNum(nextXp)}</span></div>
+        <div class="hfoot small muted">Home: ${d.homeName} · speed ${unit.speed} fields/hour · regenerates ${heroRegenPerDay(h.regen)}% a day${config.WORLD_SPEED !== 1 ? ` (×${config.WORLD_SPEED})` : ''}</div>
+      </div>
+    </div>
+    <div class="hstats">
+      <div class="spanel tile"><span class="lbl">Attack</span><b>${fmtNum(stats.off)}</b></div>
+      <div class="spanel tile"><span class="lbl">Def. infantry</span><b>${fmtNum(stats.defInf)}</b></div>
+      <div class="spanel tile"><span class="lbl">Def. cavalry</span><b>${fmtNum(stats.defCav)}</b></div>
+      <div class="spanel tile"><span class="lbl">Army bonus</span><b>+${(h.offBonus * HERO_BONUS_PER_POINT * 100).toFixed(1)}% / +${(h.defBonus * HERO_BONUS_PER_POINT * 100).toFixed(1)}%</b></div>
     </div>
     ${h.status === 'dead'
-      ? html`<div class="card"><h3>Revive ${h.name} in ${d.homeName}</h3>${costLine(heroReviveCost(unit, h.level), d.homeHave)}
-          <form method="post" action="/hero/revive">${csrfField(d.csrf)}<button type="submit">Revive</button></form></div>
+      ? html`<div class="spanel heroact"><h3 class="sp-head">Revive ${h.name} in ${d.homeName}</h3><div class="pad">${costLine(heroReviveCost(unit, h.level), d.homeHave)}
+          <form method="post" action="/hero/revive">${csrfField(d.csrf)}<button type="submit">Revive</button></form></div></div>
         <p class="small muted">Or train a new hero instead:</p>${train}`
       : ''}
     ${h.status === 'reviving' && h.reviveAt ? html`<div class="note">Ready in ${timer(h.reviveAt, d.now)}.</div>` : ''}
-    <h2>Skills <span class="small muted">${used} of ${total} points used${free > 0 ? html` · <b class="c1">${free} free</b>` : ''}</span></h2>
-    <form method="post" action="/hero/skills">${csrfField(d.csrf)}
-      <table class="tb"><tbody>
+    ${h.status === 'home'
+      ? html`<p class="heroactions"><a class="btn" href="/troops/send">Send with troops</a> <a class="btn secondary" href="/simulator">Simulate a battle</a> <a class="btn secondary" href="/map">Find oases to capture</a></p>`
+      : ''}
+    <form method="post" action="/hero/skills" class="spanel skills">${csrfField(d.csrf)}
+      <h3 class="sp-head">Skills<span>${used} of ${total} points used${free > 0 ? html` · <b class="freept">${free} free</b>` : ''}</span></h3>
       ${skills.map(
-        (s) => html`<tr><td><label for="sk-${s.key}">${s.label}</label><br><span class="small muted">${s.effect}</span></td>
-          <td><input id="sk-${s.key}" type="number" name="${s.key}" value="${s.value}" min="${redistribute ? 0 : s.value}" max="${HERO_SKILL_MAX}" class="w30" inputmode="numeric"></td></tr>`,
+        (sk) => html`<div class="skill"><label for="sk-${sk.key}"><b>${sk.label}</b><span class="small muted">${sk.effect}</span></label>
+          ${meter((sk.value / HERO_SKILL_MAX) * 100, 'pts')}
+          <input id="sk-${sk.key}" type="number" name="${sk.key}" value="${sk.value}" min="${redistribute ? 0 : sk.value}" max="${HERO_SKILL_MAX}" class="w30" inputmode="numeric" aria-label="${sk.label} points"></div>`,
       )}
-      </tbody></table>
-      <p><button type="submit">Save points</button> <span class="small muted">${redistribute
+      <div class="skillfoot"><button type="submit">Save points</button> <span class="small muted">${redistribute
         ? 'At level 0 you can move points freely.'
-        : '5 new points every level. Points can no longer be moved once your hero has gained a level.'}</span></p>
+        : '5 new points every level, up to ' + HERO_SKILL_MAX + ' per skill. Points stay once your hero has gained a level.'}</span></div>
     </form>
-    <p class="small muted">Your hero earns experience equal to the crop upkeep of every enemy killed in battles it joins (defending heroes share it). Tick "Hero" when sending troops. Send it with an attack to capture oases.</p>
-    <h2>Name</h2>
-    <form method="post" action="/hero/rename" class="row">${csrfField(d.csrf)}
-      <div><label for="hn" class="sr">Hero name</label><input id="hn" type="text" name="name" value="${h.name}" required minlength="2" maxlength="20"></div>
-      <div><button type="submit" class="block">Rename</button></div>
+    <details class="spanel herohelp"><summary class="sp-head">How heroes work</summary>
+      <p class="small">Your hero earns experience equal to the crop upkeep of every enemy killed in battles it joins (defending heroes share it). Tick "Hero" when sending troops. Send it with an attack that clears an oasis to capture it (Hero's Mansion 10/15/20 for 1/2/3 oases). It dies when its army loses more than 90%; revive it in its home village.</p></details>
+    <form method="post" action="/hero/rename" class="renamebar">${csrfField(d.csrf)}
+      <label for="hn">Rename</label> <input id="hn" type="text" name="name" value="${h.name}" required minlength="2" maxlength="20"> <button type="submit" class="small secondary">Rename</button>
     </form>`;
 }

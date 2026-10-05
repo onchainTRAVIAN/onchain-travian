@@ -182,7 +182,6 @@ legend { font-weight: bold; padding: 0; margin-bottom: 4px; }
 
 /* ---------- dorf2: village centre ---------- */
 #vmap2 { position: relative; width: 540px; height: 448px; margin: 0 0 6px; }
-#vmap2 h1 { position: absolute; left: 25px; top: 0; z-index: 60; }
 #vmap2 .bg, #vmap2 .wall { position: absolute; left: 0; top: 0; width: 540px; height: 448px; }
 #vmap2 .bg { z-index: 1; }
 #vmap2 .wall { z-index: 2; pointer-events: none; }
@@ -658,3 +657,87 @@ table.upgtb td.cost img { width: 14px; height: 10px; }
 ul.perks { display: flex; flex-wrap: wrap; gap: 4px 6px; list-style: none; margin: 5px 0 0; padding: 0; }
 ul.perks li { font-size: 11px; padding: 1px 7px; border: 1px solid #dcd6c3; border-radius: 3px; background: #fbfaf5; white-space: nowrap; }
 ul.perks li b { color: #2b6a00; }
+/* ---------- Hero ---------- */
+.herocard { display: flex; gap: 14px; padding: 12px; align-items: stretch; }
+.herocard .portrait { position: relative; flex: none; width: 120px; height: 150px; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(ellipse at 50% 85%, #e4edcf 0, #f4f1e4 60%, #fbfaf5 100%); border: 1px solid #dcd6c3; border-radius: 6px; }
+.herocard .lvlbadge { position: absolute; top: -8px; left: -8px; width: 30px; height: 30px; line-height: 30px; text-align: center; border-radius: 50%; background: #c9a227; color: #fff; font-weight: bold; border: 2px solid #fff; box-shadow: 0 0 0 1px #b08a1c; }
+.herocard .hinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.herocard .hname { font-size: 18px; }
+.herocard .hsub { font-size: 12px; color: #6a6450; }
+.herocard .hsub img { vertical-align: -3px; }
+.hstatus { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.hstatus .dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; }
+.hstatus.st-home .dot { background: #71d000; }
+.hstatus.st-away .dot, .hstatus.st-moving .dot { background: #e0a000; }
+.hstatus.st-dead .dot { background: #c00; }
+.hstatus.st-reviving .dot { background: #3a7bd5; }
+.hrow { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.hrow .k { width: 74px; color: #6a6450; }
+.hrow .v { width: 96px; text-align: right; white-space: nowrap; }
+svg.meter { flex: 1; height: 8px; min-width: 60px; }
+svg.meter .bg { fill: #ece8da; }
+svg.meter.hp.good .fg { fill: #71d000; }
+svg.meter.hp.mid .fg { fill: #e0a000; }
+svg.meter.hp.low .fg { fill: #d33; }
+svg.meter.xp .fg { fill: #c9a227; }
+svg.meter.pts .fg { fill: #9ccc5a; }
+.hfoot { margin-top: auto; }
+.hstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 12px; }
+.hstats .tile { margin: 0; padding: 7px 8px; text-align: center; }
+.hstats .tile .lbl { display: block; font-size: 11px; color: #8a8266; }
+.hstats .tile b { font-size: 15px; color: #2f2a17; }
+.heroactions { margin: 0 0 12px; }
+.skills .skill { display: grid; grid-template-columns: 1fr 120px 52px; gap: 10px; align-items: center; padding: 6px 12px; border-bottom: 1px solid #ece8da; }
+.skills .skill label { display: flex; flex-direction: column; }
+.skills .skill svg.meter { width: 120px; }
+.skills .skillfoot { padding: 8px 12px; }
+.freept { color: #2b6a00; }
+.herohelp summary { cursor: pointer; list-style: none; }
+.herohelp p { margin: 8px 12px; }
+.heroact .pad { padding: 8px 12px; }
+.renamebar { font-size: 12px; margin: 0 0 12px; }
+@media (max-width: 600px) {
+  .herocard { flex-direction: column; align-items: center; }
+  .herocard .hinfo { width: 100%; }
+  .hstats { grid-template-columns: repeat(2, 1fr); }
+  .skills .skill { grid-template-columns: 1fr 52px; }
+  .skills .skill svg.meter { display: none; }
+}
+form.spanel, details.spanel { display: block; }
+.herohelp summary.sp-head { display: list-item; list-style: none; }
+.herohelp summary.sp-head::-webkit-details-marker { display: none; }
+/* Village name plaque (village overview and centre) */
+.vtitle { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 10px; padding: 0 0 6px; border-bottom: 1px solid #e3ddc8; }
+.vtitle h1 { margin: 0; font: bold 24px/1.15 Georgia, 'Times New Roman', serif; color: #2f2a17; letter-spacing: 0.2px; }
+.vtitle .vmeta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8a8266; }
+.vtitle .vmeta a { color: #8a8266; }
+.vtitle .vmeta a:hover { color: #2b6a00; }
+.vtitle .vpop { padding-left: 16px; background: url('img/res/pop.svg') no-repeat left center / 13px 13px; }
+.vtitle .vcap { padding: 0 6px; border: 1px solid #e3cf7a; border-radius: 3px; background: #fff8dc; color: #8a6d1d; font-size: 11px; }
+/* Player profile */
+.pcardx { display: flex; align-items: center; gap: 14px; padding: 12px; }
+.pcardx .pav { border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #dcd6c3, 0 2px 4px rgba(60, 50, 20, 0.15); flex: none; }
+.pcardx .pmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.pcardx .pnm { font: bold 22px/1.1 Georgia, 'Times New Roman', serif; color: #2f2a17; }
+.pcardx .pyou { font: bold 10px Verdana, sans-serif; color: #fff; background: #71d000; border-radius: 3px; padding: 1px 5px; vertical-align: 4px; }
+.pcardx .psub { font-size: 12px; color: #6a6450; }
+.pcardx .psub img { vertical-align: -3px; }
+.pchips { display: flex; flex-wrap: wrap; gap: 5px; }
+.pchips .chip { font-size: 11px; padding: 1px 7px; border: 1px solid #dcd6c3; border-radius: 3px; background: #fff; color: #555; }
+.pchips .chip img { vertical-align: -3px; }
+.pchips .chip.prot { border-color: #b9d18f; background: #f2f9e4; color: #2b6a00; }
+.pcardx .pacts { display: flex; flex-direction: column; gap: 5px; flex: none; }
+.pstats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 0 0 12px; }
+.pstats .tile, .hstats .tile { margin: 0; padding: 7px 6px; text-align: center; }
+.pstats .tile .lbl { display: block; font-size: 10px; color: #8a8266; }
+.pstats .tile b { font-size: 14px; color: #2f2a17; }
+.pabout .msgbody { padding: 8px 12px; }
+.medalgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; padding: 8px; }
+.medalgrid .medal { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 8px 6px; background: #fff; border: 1px solid #ece8da; border-radius: 5px; font-size: 12px; }
+.medalgrid .medal.r1 { background: #fffbea; border-color: #e3d39a; }
+.vcap { padding: 0 5px; border: 1px solid #e3cf7a; border-radius: 3px; background: #fff8dc; color: #8a6d1d; font-size: 10px; font-weight: normal; }
+@media (max-width: 600px) {
+  .pcardx { flex-wrap: wrap; }
+  .pcardx .pacts { flex-direction: row; width: 100%; }
+  .pstats { grid-template-columns: repeat(3, 1fr); }
+}

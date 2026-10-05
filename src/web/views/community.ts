@@ -156,7 +156,7 @@ export function chatLines(lines: ChatLine[], now: number, isAdmin: boolean, csrf
   )}`;
 }
 
-export function chatView(d: { channel: 'global' | 'alliance'; allianceTag: string | null; lines: ChatLine[]; isAdmin: boolean; csrf: string; now: number; muted: boolean }): SafeHtml {
+export function chatView(d: { channel: 'global' | 'alliance'; allianceTag: string | null; lines: ChatLine[]; isAdmin: boolean; csrf: string; now: number; muted: boolean; nextAt: number }): SafeHtml {
   return html`<h1>💬 Chat</h1>
     <nav class="tabs" aria-label="Chat channel">
       <a href="/chat" class="${d.channel === 'global' ? 'on' : ''}">🌍 World</a>
@@ -164,11 +164,12 @@ export function chatView(d: { channel: 'global' | 'alliance'; allianceTag: strin
     </nav>
     ${d.muted
       ? html`<p class="warn small">You are muted in chat for now.</p>`
-      : html`<form method="post" action="/chat" class="row" id="chatform">${csrfField(d.csrf)}
+      : html`<form method="post" action="/chat" class="row" id="chatform" data-next="${d.nextAt}">${csrfField(d.csrf)}
           <input type="hidden" name="c" value="${d.channel}">
           <div class="grow"><label for="cm" class="sr">Message</label><input id="cm" type="text" name="body" maxlength="300" required placeholder="Write a message…" autocomplete="off"></div>
-          <div class="shrink"><button type="submit">Send</button></div>
-        </form>`}
+          <div class="shrink"><button type="submit" id="chatsend"${d.nextAt > d.now ? html` disabled` : ''}>${d.nextAt > d.now ? html`wait <span data-ends="${d.nextAt}">${Math.ceil((d.nextAt - d.now) / 1000)}</span>` : 'Send'}</button></div>
+        </form>
+        <p class="small muted">One message every 30 seconds.</p>`}
     <ul class="chatlog" id="chatlog" data-feed="/chat/feed?c=${d.channel}" aria-live="polite">${chatLines(d.lines, d.now, d.isAdmin, d.csrf)}</ul>
     <p class="small muted">Be nice. Newest messages first; the chat refreshes by itself.</p>`;
 }

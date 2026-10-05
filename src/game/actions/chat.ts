@@ -6,7 +6,8 @@ import { membership } from './alliance.js';
 
 export const CHAT_MAX_LENGTH = 300;
 /** Minimum time between two messages from one player. */
-export const CHAT_COOLDOWN_MS = 3000;
+/** Wait between two chat messages (admins are exempt so they can moderate). */
+export const CHAT_COOLDOWN_MS = 30_000;
 
 export type Channel = { kind: 'global' } | { kind: 'alliance'; allianceId: number };
 
@@ -24,6 +25,17 @@ export function channelFor(q: Q, userId: number, requested: string | undefined):
   return { kind: 'global' };
 }
 
+/** Milliseconds until this player may post again (0 = now). */
+export function chatCooldownLeft(q: Q, userId: number, now: number): number {
+  const last = q
+    .select({ at: chatMessages.createdAt })
+    .from(chatMessages)
+    .where(and(eq(chatMessages.userId, userId), gt(chatMessages.createdAt, now - CHAT_COOLDOWN_MS)))
+    .orderBy(desc(chatMessages.createdAt))
+    .get();
+  return last ? last.at + CHAT_COOLDOWN_MS - now : 0;
+}
+
 export function postChat(db: DB, userId: number, channel: Channel, body: string, now: number): void {
   db.transaction((tx) => {
     const u = tx.select().from(users).where(eq(users.id, userId)).get();
@@ -32,12 +44,8 @@ export function postChat(db: DB, userId: number, channel: Channel, body: string,
     const text = body.replace(/\s+/g, ' ').trim();
     assertGame(text.length > 0, 'Write something first');
     assertGame(text.length <= CHAT_MAX_LENGTH, `Messages can be at most ${CHAT_MAX_LENGTH} characters`);
-    const last = tx
-      .select({ at: chatMessages.createdAt })
-      .from(chatMessages)
-      .where(and(eq(chatMessages.userId, userId), gt(chatMessages.createdAt, now - CHAT_COOLDOWN_MS)))
-      .get();
-    assertGame(!last, 'Slow down a little');
+    const wait = u.role === 'admin' ? 0 : chatCooldownLeft(tx, userId, now);
+    assertGame(wait <= 0, `Slow down a little — you can write again in ${Math.ceil(wait / 1000)} s`);
     tx.insert(chatMessages).values({ userId, allianceId: channel.kind === 'alliance' ? channel.allianceId : null, body: text, createdAt: now }).run();
   });
 }

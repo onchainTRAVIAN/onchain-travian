@@ -59,6 +59,19 @@
     }, 6000);
   }
 
+  // Chat cooldown: the Send button wakes up when the wait is over.
+  var chatForm = document.getElementById('chatform');
+  var chatSend = document.getElementById('chatsend');
+  if (chatForm && chatSend && chatSend.disabled) {
+    var chatNext = Number(chatForm.getAttribute('data-next')) || 0;
+    var chatWake = setInterval(function () {
+      if (now() < chatNext) return;
+      clearInterval(chatWake);
+      chatSend.disabled = false;
+      chatSend.textContent = 'Send';
+    }, 500);
+  }
+
   // Map: hover/focus a field to see its details; arrow keys move the map.
   var info = document.getElementById('mi-b');
   if (info) {

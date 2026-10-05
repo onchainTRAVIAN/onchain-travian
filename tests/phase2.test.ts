@@ -379,9 +379,13 @@ describe('alliances & chat', () => {
   });
 
   it('global and alliance chat with a cooldown', () => {
+    // A regular player (the very first account is the admin, who has no cooldown).
+    db.update(users).set({ role: 'player' }).where(eq(users.id, a.userId)).run();
     postChat(db, a.userId, channelFor(db, a.userId, 'global'), 'Hello world', clock.now());
     expect(() => postChat(db, a.userId, channelFor(db, a.userId, 'global'), 'again', clock.now())).toThrow(/Slow down/);
-    clock.advance(5000);
+    clock.advance(29_000);
+    expect(() => postChat(db, a.userId, channelFor(db, a.userId, 'global'), 'still too soon', clock.now())).toThrow(/again in 1 s/);
+    clock.advance(1_000);
     postChat(db, a.userId, channelFor(db, a.userId, 'alliance'), 'Secret plans', clock.now());
     expect(chatHistory(db, { kind: 'global' }).map((m) => m.body)).toContain('Hello world');
     expect(chatHistory(db, { kind: 'global' }).map((m) => m.body)).not.toContain('Secret plans');

@@ -85,6 +85,14 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
   </tbody></table>`;
 }
 
+/** Village name plaque above the village pictures: name, coordinates, population, capital. */
+function villageTitle(d: VillageViewData): SafeHtml {
+  const v = d.state.village;
+  return html`<div class="vtitle"><h1>${v.name}</h1>
+    <span class="vmeta"><a href="/map?x=${v.x}&amp;y=${v.y}" title="Show on the map">(${v.x}|${v.y})</a>
+      <span class="vpop" title="Population">${fmtNum(v.pop)}</span>${v.isCapital ? html`<span class="vcap">capital</span>` : ''}</span></div>`;
+}
+
 function productionTable(eco: Economy): SafeHtml {
   // Each row opens the breakdown: base from fields and every bonus on top.
   return html`<table id="production"><thead><tr><th colspan="4"><a href="/production" title="Where your production comes from">Production:</a></th></tr></thead><tbody>
@@ -118,7 +126,7 @@ export function fieldsView(d: VillageViewData & { layout: string }): SafeHtml {
   return html`
   ${incomingAlert(d.movements, d.now)}
   ${protectionNote(d.protectedUntil, d.now)}
-  <h1>${d.state.village.name}</h1>
+  ${villageTitle(d)}
   <div id="vmap1">
     <img class="bg" src="/static/img/scene/dorf1-${d.layout}.svg" width="300" height="264" alt="">
     ${fields.map((s) => {
@@ -165,8 +173,8 @@ export function townView(d: VillageViewData): SafeHtml {
   if (wall && wall.level > 0) levels.push(html`<span class="lv l40 ${badgeClass(d, WALL_SLOT, wall.level, 20)}">${wall.level}</span>`);
   return html`
   ${incomingAlert(d.movements, d.now)}
+  ${villageTitle(d)}
   <div id="vmap2">
-    <h1>${d.state.village.name}</h1>
     <img class="bg" src="/static/img/scene/dorf2.svg" width="540" height="448" alt="">
     ${wall?.building
       ? html`<img class="wall${wall.level > 0 ? '' : ' ghost'}" width="540" height="448" src="${wall.level > 0 ? wallImage(wallFile, wall.level) : `/static/img/walls/${wallFile}.svg`}" alt="">`

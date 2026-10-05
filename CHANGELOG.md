@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.6 — 2026-10-05
+- Hero page redesigned: portrait card with level badge, status, health and experience bars; combat stat tiles; skills as rows with point bars and free-points counter; quick actions (send, simulate, oases); help folded away.
+- Player profiles redesigned: header card (avatar, tribe, alliance, rank, medals, protection, actions), stat tiles, medal cabinet, "About" panel, villages with capital badge and population bars.
+- Village name shown as a title plaque above the village (coordinates, population, capital) instead of overlapping the picture.
+- Chat: one message every 30 seconds (admins exempt); the Send button counts down.
+
 ## 0.12.5 — 2026-10-05
 - Training "finish now" works like the queue reads: a row's button finishes that batch and every batch above it, for the time shown in its Duration column (prices grow down the list); a "Finish all" button finishes the whole queue. Batches behind move up.
 

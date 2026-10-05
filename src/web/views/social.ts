@@ -346,41 +346,45 @@ export function playerView(d: {
 }): SafeHtml {
   const t = TRIBES[d.user.tribe];
   const pop = d.villages.reduce((s, v) => s + v.pop, 0);
-  return html`<h1>Player profile</h1>
-    <div class="profile">
-      <div class="pcard">
-        ${avatarImg(d.user, 128, 'avatar big')}
-        <div class="pname">${d.user.username}</div>
-        <div class="ptribe"><img src="/static/img/units/${d.user.tribe}-1.svg" width="16" height="16" alt=""> ${t.name}</div>
+  const topPop = Math.max(1, ...d.villages.map((v) => v.pop));
+  const tile = (label: string, value: string, sub?: string) => html`<div class="spanel tile"><span class="lbl">${label}</span><b>${value}</b>${sub ? html`<span class="sub">${sub}</span>` : ''}</div>`;
+  const villages = [...d.villages].sort((a, b) => Number(b.isCapital) - Number(a.isCapital) || b.pop - a.pop);
+  return html`<div class="spanel pcardx">
+      <img class="pav" src="${avatarUrl(d.user)}" width="96" height="96" alt="">
+      <div class="pmain">
+        <div class="pnm">${d.user.username}${d.isMe ? html` <span class="pyou">you</span>` : ''}</div>
+        <div class="psub"><img src="/static/img/units/${d.user.tribe}-1.svg" width="16" height="16" alt=""> ${t.name}
+          ${d.alliance ? html` · <a href="/alliance/${d.alliance.id}" class="atag" title="${d.alliance.name}">${d.alliance.tag}</a> <span class="muted">${d.alliance.name}</span>` : html` · <span class="muted">no alliance</span>`}</div>
+        <div class="pchips"><span class="chip">Rank <b>${d.rank}.</b></span><span class="chip">Playing since ${fmtDateTime(d.user.createdAt).slice(0, 10)}</span>
+          ${d.user.protectedUntil > d.now ? html`<span class="chip prot">Protected ${timer(d.user.protectedUntil, d.now, false)}</span>` : ''}
+          ${d.medals.length ? html`<span class="chip">${medalImg(Math.min(...d.medals.map((m) => m.rank)), 14)} ${d.medals.length} medal${d.medals.length === 1 ? '' : 's'}</span>` : ''}</div>
       </div>
-      <table class="pdetails"><thead><tr><th colspan="2">Details</th></tr></thead><tbody>
-        <tr><th>Rank</th><td>${d.rank}.</td></tr>
-        <tr><th>Tribe</th><td>${t.name}</td></tr>
-        <tr><th>Alliance</th><td>${d.alliance ? html`<a href="/alliance/${d.alliance.id}">[${d.alliance.tag}] ${d.alliance.name}</a>` : html`<span class="none">-</span>`}</td></tr>
-        <tr><th>Villages</th><td>${d.villages.length}</td></tr>
-        <tr><th>Population</th><td>${fmtNum(pop)}</td></tr>
-        <tr><th>Attack points</th><td>${fmtNum(d.user.offPoints)}</td></tr>
-        <tr><th>Defence points</th><td>${fmtNum(d.user.defPoints)}</td></tr>
-        <tr><th>Resources raided</th><td>${fmtNum(d.user.lootTotal)}</td></tr>
-        ${d.heroLevel !== null ? html`<tr><th>Hero</th><td>level ${d.heroLevel}</td></tr>` : ''}
-        <tr><th>Playing since</th><td>${fmtDateTime(d.user.createdAt).slice(0, 10)}</td></tr>
-        ${d.user.protectedUntil > d.now ? html`<tr><th>Protection</th><td>${timer(d.user.protectedUntil, d.now, false)}</td></tr>` : ''}
-      </tbody></table>
+      <div class="pacts">${d.isMe
+        ? html`<a class="btn small secondary" href="/account">Edit profile</a>`
+        : html`<a class="btn small" href="/messages/new?to=${encodeURIComponent(d.user.username)}">Message</a>
+          <a class="btn small secondary" href="/shop?to=${encodeURIComponent(d.user.username)}#gold">Send Gold</a>`}</div>
     </div>
+    <div class="pstats">
+      ${tile('Population', fmtNum(pop))}
+      ${tile('Villages', String(d.villages.length))}
+      ${tile('Attack points', fmtNum(d.user.offPoints))}
+      ${tile('Defence points', fmtNum(d.user.defPoints))}
+      ${tile('Resources raided', fmtNum(d.user.lootTotal))}
+      ${tile('Hero', d.heroLevel !== null ? `level ${d.heroLevel}` : '-')}
+    </div>
+    ${d.user.bio ? html`<section class="spanel pabout"><h3 class="sp-head">About ${d.user.username}</h3><div class="msgbody">${d.user.bio}</div></section>` : ''}
     ${d.medals.length
-      ? html`<h2>Medals</h2><div class="tblwrap"><table><thead><tr><th></th><th>Title</th><th>Week</th><th class="num">Score</th></tr></thead><tbody>
+      ? html`<section class="spanel pmedals"><h3 class="sp-head">Medals<span>${d.medals.length}</span></h3><div class="medalgrid">
         ${d.medals.map(
-          (m) => html`<tr><td>${medalImg(m.rank, 24)}</td><td>${WEEKLY_LABEL[m.category].title} <span class="small muted">(place ${m.rank})</span></td>
-            <td>${new Date(m.weekStart).toISOString().slice(0, 10)}</td><td class="num">${fmtNum(m.value)}</td></tr>`,
-        )}</tbody></table></div>`
+          (m) => html`<div class="medal r${m.rank}">${medalImg(m.rank, 30)}<b>${WEEKLY_LABEL[m.category].title}</b>
+            <span class="small muted">place ${m.rank} · week of ${new Date(m.weekStart).toISOString().slice(0, 10)}</span><span class="small">${fmtNum(m.value)}</span></div>`,
+        )}</div></section>`
       : ''}
-    ${d.user.bio ? html`<div class="pbio"><b>About:</b><div class="msgbody">${d.user.bio}</div></div>` : ''}
-    <table><thead><tr><th>Villages</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>
-    ${d.villages.map(
-      (v) => html`<tr><td><a href="/map/tile?x=${v.x}&amp;y=${v.y}">${v.name}</a>${v.isCapital ? html` <span class="c2 small">(capital)</span>` : ''}</td>
-        <td class="num">${fmtNum(v.pop)}</td><td class="center">(${v.x}|${v.y})</td></tr>`,
-    )}</tbody></table>
-    <p>${d.isMe ? html`<a href="/account">» Edit profile</a>` : html`<a href="/messages/new?to=${encodeURIComponent(d.user.username)}">» Write message</a> | <a href="/shop?to=${encodeURIComponent(d.user.username)}#gold">» Send Gold</a>`}</p>`;
+    <table class="ranks"><thead><tr><th colspan="3">Villages</th></tr><tr><td>Village</td><td>Population</td><td>Coordinates</td></tr></thead><tbody>
+    ${villages.map(
+      (v) => html`<tr><td class="pla"><a href="/map/tile?x=${v.x}&amp;y=${v.y}">${v.name}</a>${v.isCapital ? html` <span class="vcap">capital</span>` : ''}</td>
+        <td class="val">${fmtNum(v.pop)}${vbar(v.pop, topPop)}</td><td class="center"><a href="/map?x=${v.x}&amp;y=${v.y}">(${v.x}|${v.y})</a></td></tr>`,
+    )}</tbody></table>`;
 }
 
 /* ---------- Account & help ---------- */

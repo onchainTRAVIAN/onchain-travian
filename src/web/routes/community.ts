@@ -25,7 +25,7 @@ import {
   type AllianceRankKind,
 } from '../../game/actions/alliance.js';
 import { allianceRankingView } from '../views/social.js';
-import { channelFor, chatHistory, postChat } from '../../game/actions/chat.js';
+import { channelFor, chatCooldownLeft, chatHistory, postChat } from '../../game/actions/chat.js';
 import { authed, requireAuth, setFlash } from '../session.js';
 import { allianceView, chatLines, chatView, noAllianceView } from '../views/community.js';
 import { formAction, intParam, loadGamePage, pageParam, sendPage } from './helpers.js';
@@ -257,6 +257,7 @@ communityRouter.get('/chat', requireAuth, (req, res) => {
       csrf: ctx.csrf,
       now: ctx.now,
       muted: page.chrome.user.mutedUntil > ctx.now,
+      nextAt: ctx.user.role === 'admin' ? 0 : ctx.now + chatCooldownLeft(db, ctx.user.id, ctx.now),
     }),
     { nav: 'chat', chrome: page.chrome },
   );
