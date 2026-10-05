@@ -142,7 +142,7 @@ export function backfillReportPlaces(q: Q, afterId: number, batch = 2000): numbe
 /** The viewer's most recent reports about a tile: as sender, target, or attacked from there. */
 export function reportsAt(q: Q, userId: number, x: number, y: number, limit = 10) {
   return q
-    .select({ id: reports.id, kind: reports.kind, title: reports.title, isRead: reports.isRead, outcome: reports.outcome, createdAt: reports.createdAt })
+    .select({ id: reports.id, kind: reports.kind, title: reports.title, isRead: reports.isRead, outcome: reports.outcome, data: reports.data, createdAt: reports.createdAt })
     .from(reports)
     .where(and(eq(reports.userId, userId), or(and(eq(reports.toX, x), eq(reports.toY, y)), and(eq(reports.fromX, x), eq(reports.fromY, y)))))
     .orderBy(desc(reports.createdAt), desc(reports.id))

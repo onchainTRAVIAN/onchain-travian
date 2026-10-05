@@ -193,8 +193,9 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
           buildings: state.slots
             .filter((sl) => sl.slot >= 19 && sl.building && sl.level > 0)
             .map((sl) => ({ slot: sl.slot, name: BUILDINGS[sl.building as BuildingId]?.name ?? sl.building ?? '', level: sl.level })),
-          busy: busy ? BUILDINGS[busy.building as BuildingId]?.name ?? busy.building : null,
+          busy: busy ? { order: busy, name: BUILDINGS[busy.building as BuildingId]?.name ?? busy.building } : null,
           csrf: ctx.csrf,
+          now: ctx.now,
         }),
       ];
     }

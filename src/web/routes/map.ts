@@ -4,7 +4,8 @@ import { eq, inArray } from 'drizzle-orm';
 import { movements, tiles, users, villages } from '../../db/schema.js';
 import { attackBlockedBy, friendlyUserIds } from '../../game/actions/alliance.js';
 import { oasisGarrison } from '../../game/engine/oasisTroops.js';
-import { reportsAt } from '../../game/engine/reports.js';
+import { parseReport, reportsAt } from '../../game/engine/reports.js';
+import { againLink } from '../views/reports.js';
 import { oasisAnimals, oasisStock, type TileRow } from '../../game/engine/oasis.js';
 import { config } from '../../config.js';
 import { troopsAt } from '../../game/engine/state.js';
@@ -192,7 +193,7 @@ mapRouter.get('/map/tile', (req, res) => {
               .filter((g) => g.owner.userId === ctx.user.id || (t.tile.villageId !== null && oasisOwnerInfo(t.tile)?.userId === ctx.user.id))
               .map((g) => ({ owner: g.owner.username, village: g.owner.name, tribe: g.owner.tribe, units: g.units }))
           : [],
-      reports: reportsAt(db, ctx.user.id, x, y, 10),
+      reports: reportsAt(db, ctx.user.id, x, y, 10).map(({ data, ...r }) => ({ ...r, again: againLink(parseReport(data), ctx.user.id) })),
       canReinforce: t.tile.kind === 'oasis' && t.tile.villageId !== null && (oasisOwnerInfo(t.tile)?.userId === ctx.user.id || (oasisOwnerInfo(t.tile)?.userId != null && attackBlockedBy(db, ctx.user.id, oasisOwnerInfo(t.tile)?.userId ?? null) !== null)),
       travel,
       tribe: page.state.tribe,

@@ -64,7 +64,6 @@ export function finishConstructionNow(db: DB, userId: number, orderId: number, n
     ownedVillage(tx, userId, o.villageId);
     assertGame(o.finishAt > now, 'Already finished');
     assertGame(o.building !== 'wonder', 'The World Wonder cannot be finished with Gold');
-    assertGame(!o.demolish, 'Demolitions cannot be finished with Gold');
     const price = instantPrice(workLeft(o.startAt, o.finishAt, now));
     spend(tx, userId, price, `Instant construction: ${o.building} level ${o.toLevel}`, now);
     tx.update(buildOrders).set({ finishAt: now }).where(eq(buildOrders.id, orderId)).run();

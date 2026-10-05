@@ -1,3 +1,4 @@
+import type { BuildOrderRow } from '../../game/actions/build.js';
 import type { ResearchOption, ResearchOrderRow } from '../../game/actions/research.js';
 import type { OfferView } from '../../game/actions/market.js';
 import type { CelebrationOption, CelebrationRow } from '../../game/actions/celebration.js';
@@ -5,7 +6,7 @@ import type { ExpansionCheck } from '../../game/engine/expansion.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, type ResourceKey, type Resources } from '../../game/rules/resources.js';
 import type { TribeId } from '../../game/rules/units.js';
-import { instantPrice } from '../../game/actions/credits.js';
+import { instantPrice, workLeft } from '../../game/actions/credits.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
@@ -199,10 +200,18 @@ export function trapperPanel(d: {
 }
 
 /** Main Building: demolish one level of a building (from level 10). */
-export function demolishPanel(d: { mainLevel: number; buildings: { slot: number; name: string; level: number }[]; busy: string | null; csrf: string }): SafeHtml {
+export function demolishPanel(d: { mainLevel: number; buildings: { slot: number; name: string; level: number }[]; busy: { order: BuildOrderRow; name: string } | null; csrf: string; now: number }): SafeHtml {
   if (d.mainLevel < 10) return html`<p class="small muted">From level 10 you can demolish buildings here, one level at a time.</p>`;
   return panel('Demolish a building', html`${d.busy
-      ? html`<p class="small">Demolishing ${d.busy}. Only one building can be demolished at a time.</p>`
+      ? html`<table class="tb"><tbody><tr>
+          <td><form method="post" action="/build/cancel" class="inline">${csrfField(d.csrf)}<input type="hidden" name="orderId" value="${d.busy.order.id}">
+            <button type="submit" class="small secondary" title="Cancel" aria-label="Cancel demolishing ${d.busy.name}">${icon('ui/del', 'cancel', 12)}</button></form></td>
+          <td>Demolishing <b>${d.busy.name}</b> to level ${d.busy.order.toLevel}</td>
+          <td class="num">in ${timer(d.busy.order.finishAt, d.now)}</td>
+          <td><form method="post" action="/shop/finish/build" class="inline">${csrfField(d.csrf)}<input type="hidden" name="orderId" value="${d.busy.order.id}">
+            <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(workLeft(d.busy.order.startAt, d.busy.order.finishAt, d.now))}</button></form></td>
+        </tr></tbody></table>
+        <p class="small muted">Only one building can be demolished at a time.</p>`
       : d.buildings.length === 0
         ? html`<p class="small muted">Nothing to demolish.</p>`
         : html`<form method="post" action="/build/demolish" class="block">${csrfField(d.csrf)}

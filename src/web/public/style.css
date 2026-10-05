@@ -1176,3 +1176,4 @@ a.gbtn { display: inline-flex; text-decoration: none; }
 .bgcard:hover { border-color: #9cc66a; background: #f6fbec; }
 .bgcard img { width: 56px; height: auto; }
 .mbpick { margin: 0 0 10px; }
+.ragain { width: 1%; white-space: nowrap; text-align: right; }

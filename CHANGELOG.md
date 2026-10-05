@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.3 — 2026-10-05
+- **Map villages grow** with population: new pictures at 300, 600, 1,000, 1,400 and 1,700 (a walled town and a grand city with a golden-domed palace for the biggest).
+- **Attack again:** your attack, raid and scout reports (on village/oasis pages and on the report itself) have an "Attack again" / "Scout again" button that opens Send troops with the same target, mission, troops and hero.
+- **Demolitions** can be finished with Gold, and the running demolition (cancel / finish now) is shown in the Main Building.
+
 ## 0.16.2 — 2026-10-05
 - **All levels of every building:** each building page has an "All levels" table — cost in each resource, build time with your Main Building, population and culture points added, and what the level gives (production, capacity, merchants, defence…) with the gain over the previous level. The game guide has a new **Buildings** tab with the same table for every building, and a Main Building level picker for build times.
 - **Your reports on every village and oasis:** open any village (player or Natar) or oasis and see your latest 10 reports about it — your attacks, raids and scouting there, and attacks that came from it. Older reports are included.

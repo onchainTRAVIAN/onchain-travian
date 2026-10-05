@@ -308,7 +308,7 @@ export interface TileViewData {
   garrison: { owner: string; village: string; tribe: TribeId; units: number[] }[];
   canReinforce: boolean;
   /** Your latest reports about this tile (sent from here or to here). */
-  reports: { id: number; kind: string; title: string; isRead: boolean; outcome: string | null; createdAt: number }[];
+  reports: { id: number; kind: string; title: string; isRead: boolean; outcome: string | null; createdAt: number; again: string | null }[];
   /** Travel time for your slowest and fastest unit types at home, for orientation. */
   travel: { slot: number; label: string; ms: number }[];
   /** Your tribe (for the travel-time unit icons). */
@@ -341,7 +341,8 @@ export function tileView(d: TileViewData): SafeHtml {
     ${d.reports.length
       ? panel('Your reports here', html`<table class="tb rlist"><tbody>${d.reports.map(
           (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td class="rico">${reportIcon(r.kind, r.outcome)}</td>
-            <td><a href="/reports/${r.id}">${r.title}</a>${r.isRead ? '' : html` <span class="rnew">new</span>`}</td><td class="nowrap rrecv">${fmtAgo(r.createdAt, d.now)}</td></tr>`,
+            <td><a href="/reports/${r.id}">${r.title}</a>${r.isRead ? '' : html` <span class="rnew">new</span>`}</td><td class="nowrap rrecv">${fmtAgo(r.createdAt, d.now)}</td>
+            <td class="ragain">${r.again ? html`<a class="btn small" href="${r.again}" title="Same troops and mission">${r.kind === 'scout' ? 'Scout again' : 'Attack again'}</a>` : ''}</td></tr>`,
         )}</tbody></table>`, { meta: `latest ${d.reports.length}`, pad: false })
       : ''}
     ${d.oasisStock

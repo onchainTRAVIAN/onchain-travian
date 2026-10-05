@@ -36,6 +36,19 @@ const OUTCOME: Record<'none' | 'some' | 'all', [string, string]> = {
   some: ['ui/rep-y', 'Some troops lost'],
   all: ['ui/rep-r', 'All troops lost'],
 };
+/** "Attack again": the send form prefilled with the same target, mission, troops and hero (your own attacks only). */
+export function againLink(r: ReportData | null, viewerId: number): string | null {
+  if (!r || r.type !== 'battle' || r.attacker.userId !== viewerId) return null;
+  const to = r.oasis ?? r.target ?? (r.defenders[0] ? { x: r.defenders[0].x, y: r.defenders[0].y } : null);
+  if (!to) return null;
+  const p = new URLSearchParams({ x: String(to.x), y: String(to.y), kind: r.mode });
+  r.attacker.units.forEach((n, i) => {
+    if (n > 0) p.set(`u${i}`, String(n));
+  });
+  if (r.heroes?.some((h) => h.side === 'attacker' && h.userId === viewerId)) p.set('hero', '1');
+  return `/troops/send?${p.toString()}`;
+}
+
 /** Report list icon: loss colour for battles, else the kind's icon. */
 export function reportIcon(kind: string, outcome: string | null): SafeHtml {
   return outcome === 'none' || outcome === 'some' || outcome === 'all' ? outcomeIcon(outcome) : kindIcon(kind);
@@ -230,7 +243,10 @@ export function reportView(d: { id: number; title: string; createdAt: number; da
   return html`<div class="spanel rephead">
       <span class="ricon">${outcome ? icon(`ui/rep-${outcome === 'none' ? 'g' : outcome === 'some' ? 'y' : 'r'}`, '', 28) : icon('ui/report', '', 28)}</span>
       <div class="rtitle"><h1>${d.title}</h1><span class="small muted">${fmtDateTime(d.createdAt)} UTC</span></div>
-      <div class="racts"><a class="btn small secondary" href="/reports">All reports</a>
+      <div class="racts">${(() => {
+        const again = againLink(r, d.viewerId);
+        return again ? html`<a class="btn small" href="${again}">${r && r.type === 'battle' && r.mode === 'scout' ? 'Scout again' : 'Attack again'}</a> ` : '';
+      })()}<a class="btn small secondary" href="/reports">All reports</a>
         <form method="post" action="/reports/${d.id}/delete" class="inline">${csrfField(d.csrf)}<button type="submit" class="small secondary">Delete</button></form></div>
     </div>
     ${body}`;

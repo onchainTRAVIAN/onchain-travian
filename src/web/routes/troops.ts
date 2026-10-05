@@ -124,12 +124,17 @@ troopsRouter.get('/troops/send', (req, res) => {
   const ctx = authed(req);
   const page = loadGamePage(req);
   const kindParsed = KIND.safeParse(req.query.kind);
+  const home = troopsAt(db, page.state.village.id, page.state.village.id);
+  // "Attack again" links prefill the troops (u0…u9) and the hero; never more than is at home.
+  const units = home.map((have, i) => Math.max(0, Math.min(have, intParam(req.query[`u${i}`], 0))));
   const values: Partial<SendInput> = {
     x: req.query.x !== undefined ? intParam(req.query.x, 0) : undefined,
     y: req.query.y !== undefined ? intParam(req.query.y, 0) : undefined,
     kind: kindParsed.success ? kindParsed.data : undefined,
+    ...(units.some((n) => n > 0) ? { units } : {}),
+    ...(req.query.hero === '1' ? { hero: true } : {}),
   };
-  sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home: troopsAt(db, page.state.village.id, page.state.village.id), values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry, rallyLevel: levelOf(page.state, 'rally'), places: placesOf(db, ctx.user.id), ownVillages: page.chrome.villages.filter((v) => v.id !== page.state.village.id) }), {
+  sendPage(req, res, 'Send troops', sendView({ tribe: page.state.tribe, home, values, csrf: ctx.csrf, heroHome: heroHome(req), carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry, rallyLevel: levelOf(page.state, 'rally'), places: placesOf(db, ctx.user.id), ownVillages: page.chrome.villages.filter((v) => v.id !== page.state.village.id) }), {
     nav: 'troops',
     chrome: page.chrome,
   });

@@ -211,3 +211,18 @@ describe('map village pictures', () => {
     expect(villageTier(1000)).toBe(4);
   });
 });
+
+describe('attack again', () => {
+  it('links your own attack reports to the send form with the same troops, and finishes demolitions with Gold', async () => {
+    const { againLink } = await import('../src/web/views/reports.js');
+    const side = (userId: number) => ({ userId, username: 'x', villageId: 1, villageName: 'v', x: 1, y: 2, tribe: 'romans' as const, units: [5, 0, 7, 0, 0, 0, 0, 0, 0, 0], losses: emptyUnits() });
+    const r = { type: 'battle' as const, mode: 'raid' as const, attacker: side(a.userId), defenders: [{ ...side(b.userId), x: 9, y: -4 }], attackerWon: true, defendersHidden: false, loot: { wood: 0, clay: 0, iron: 0, crop: 0 }, capacity: 0, attackPower: 1, defensePower: 1 };
+    expect(againLink(r, a.userId)).toBe('/troops/send?x=9&y=-4&kind=raid&u0=5&u2=7');
+    expect(againLink(r, b.userId)).toBeNull();
+    // demolitions can be finished with Gold
+    grantCredits(db, a.userId, 100, 'test', `audit-demo:${a.userId}`, clock.now());
+    db.insert(buildOrders).values({ villageId: a.villageId, slot: 29, building: 'warehouse', toLevel: 19, demolish: true, startAt: clock.now(), finishAt: clock.now() + 3_600_000 }).run();
+    const o = db.select().from(buildOrders).where(and(eq(buildOrders.villageId, a.villageId), eq(buildOrders.demolish, true))).get()!;
+    expect(finishConstructionNow(db, a.userId, o.id, clock.now())).toBeGreaterThan(0);
+  });
+});

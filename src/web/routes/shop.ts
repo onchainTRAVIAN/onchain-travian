@@ -105,9 +105,10 @@ shopRouter.post(
   '/shop/finish/build',
   formAction(orderId, (req, r, d) => {
     const ctx = authed(req);
-    const slot = db.select({ slot: buildOrders.slot }).from(buildOrders).where(eq(buildOrders.id, d.orderId)).get()?.slot;
+    const o = db.select({ slot: buildOrders.slot, demolish: buildOrders.demolish }).from(buildOrders).where(eq(buildOrders.id, d.orderId)).get();
+    const slot = o?.slot;
     const price = finishConstructionNow(db, ctx.user.id, d.orderId, ctx.now);
-    setFlash(r, 'ok', `Construction finished for ${price} Gold.`);
+    setFlash(r, 'ok', `${o?.demolish ? 'Demolition' : 'Construction'} finished for ${price} Gold.`);
     // Resource fields (slots 1–18) live on the village overview, buildings in the village centre.
     r.redirect(303, backUrl(req, slot !== undefined && slot <= 18 ? '/fields' : '/village'));
   }),
