@@ -505,3 +505,10 @@ a.uico:hover img { filter: drop-shadow(0 0 1.5px #71d000); }
 #vmap2.wallhov .wall.ghost { opacity: 0.85; }
 .w120 { width: 120px; }
 .places a.place { margin-right: 6px; }
+
+/* Resource bar icons open the production breakdown. */
+#res a.resl { display: inline-block; border-radius: 3px; }
+#res a.resl:hover, #res a.resl:focus-visible { background: rgba(113, 208, 0, 0.2); outline: 1px solid #71d000; }
+.prodtb th { text-align: left; background: #f3f3f3; }
+.prodtb tr.sum td { border-top: 2px solid #ccc; }
+.carry { white-space: nowrap; margin-left: 6px; color: #555; }

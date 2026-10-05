@@ -91,9 +91,9 @@ function resourceBar(v: VillageRow, eco: Economy, now: number, credits: number):
   return html`<div id="res"><table><tr>
     ${RESOURCE_KEYS.map((k) => {
       const full = eco.net[k] >= 0 && stock[k] >= eco.capacity[k];
-      return html`<td>${resIcon(k)}</td><td class="${full ? 'full' : ''}" title="${RESOURCE_LABEL[k]}: ${fmtNum(eco.net[k])} per hour"><span data-amount="${stock[k]}" data-rate="${eco.net[k]}" data-cap="${eco.capacity[k]}" data-at="${now}">${fmtNum(stock[k])}</span>/${fmtNum(eco.capacity[k])}</td>`;
+      return html`<td><a href="/production#${k}" class="resl" title="${RESOURCE_LABEL[k]}: where production comes from">${resIcon(k)}</a></td><td class="${full ? 'full' : ''}" title="${RESOURCE_LABEL[k]}: ${fmtNum(eco.net[k])} per hour"><span data-amount="${stock[k]}" data-rate="${eco.net[k]}" data-cap="${eco.capacity[k]}" data-at="${now}">${fmtNum(stock[k])}</span>/${fmtNum(eco.capacity[k])}</td>`;
     })}
-    <td>${icon('res/cropuse', 'Crop consumption', 18, 12)}</td><td class="${eco.net.crop < 0 ? 'neg' : ''}" title="Crop consumption / production">${fmtNum(eco.upkeep)}/${fmtNum(eco.gross.crop)}</td>
+    <td><a href="/production#crop" class="resl" title="Crop consumption: details">${icon('res/cropuse', 'Crop consumption', 18, 12)}</a></td><td class="${eco.net.crop < 0 ? 'neg' : ''}" title="Crop consumption / production">${fmtNum(eco.upkeep)}/${fmtNum(eco.gross.crop)}</td>
     <td>${icon('res/gold', 'Gold', 18, 12)}</td><td><a href="/shop">${fmtNum(credits)}</a></td>
   </tr></table></div>`;
 }

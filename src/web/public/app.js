@@ -185,19 +185,21 @@
   }
 
   // Send troops: live carry capacity of the selected units.
-  var carryEl = document.getElementById('carry-total');
-  if (carryEl) {
-    var sendForm = carryEl.closest('form');
+  // Live "Can carry" totals for every troop picker (send troops, farm list).
+  var carryEls = document.querySelectorAll('[data-carrytotal]');
+  Array.prototype.forEach.call(carryEls, function (carryEl) {
+    var carryForm = carryEl.closest('form');
+    if (!carryForm) return;
     var recarry = function () {
       var t = 0;
-      var ins = sendForm.querySelectorAll('.su-in');
+      var ins = carryForm.querySelectorAll('.su-in');
       for (var i = 0; i < ins.length; i++) t += Math.max(0, Math.floor(Number(ins[i].value) || 0)) * (Number(ins[i].getAttribute('data-carry')) || 0);
       carryEl.textContent = Math.floor(t).toLocaleString('en-US');
     };
-    sendForm.addEventListener('input', recarry);
-    sendForm.addEventListener('click', function () { setTimeout(recarry, 0); });
+    carryForm.addEventListener('input', recarry);
+    carryForm.addEventListener('click', function () { setTimeout(recarry, 0); });
     recarry();
-  }
+  });
 
   // Training: live total cost of everything entered in the training table.
   var tt = document.getElementById('train-total');
@@ -220,16 +222,17 @@
       return el;
     };
     var recalc = function () {
-      var sum = [0, 0, 0, 0, 0, 0];
+      var sum = [0, 0, 0, 0, 0, 0, 0];
       var ins = form.querySelectorAll('.tr-in');
       for (var i = 0; i < ins.length; i++) {
         var n = Math.max(0, Math.floor(Number(ins[i].value) || 0));
         var c = ins[i].getAttribute('data-cost').split(',').map(Number);
-        for (var j = 0; j < 6; j++) sum[j] += n * c[j];
+        for (var j = 0; j < 7; j++) sum[j] += n * (c[j] || 0);
       }
       for (var k = 0; k < 4; k++) setText('tt-' + keys[k], fmtCount(sum[k])).className = sum[k] > have[k] ? 'miss' : '';
       setText('tt-upkeep', fmtCount(sum[4]));
       setText('tt-time', dur(sum[5]));
+      if (document.getElementById('tt-carry')) setText('tt-carry', ' ' + fmtCount(sum[6]));
     };
     form.addEventListener('input', recalc);
     form.addEventListener('click', function () { setTimeout(recalc, 0); });
@@ -316,11 +319,11 @@
   });
 
   // Marketplace: count the merchants needed and keep each "(max)" within what the free merchants can still carry.
-  var sendForm = document.getElementById('sendform');
-  if (sendForm && sendForm.hasAttribute('data-cap')) {
-    var mCap = Number(sendForm.getAttribute('data-cap')) || 1;
-    var mFree = Number(sendForm.getAttribute('data-free')) || 0;
-    var mLinks = sendForm.querySelectorAll('[data-fill][data-stock]');
+  var mktForm = document.getElementById('sendform');
+  if (mktForm && mktForm.hasAttribute('data-cap')) {
+    var mCap = Number(mktForm.getAttribute('data-cap')) || 1;
+    var mFree = Number(mktForm.getAttribute('data-free')) || 0;
+    var mLinks = mktForm.querySelectorAll('[data-fill][data-stock]');
     var recount = function () {
       var vals = {}, sum = 0;
       for (var i = 0; i < mLinks.length; i++) {
@@ -342,8 +345,8 @@
         a.textContent = '(max ' + max.toLocaleString('en-US') + ')';
       }
     };
-    sendForm.addEventListener('input', recount);
-    sendForm.addEventListener('click', function () { setTimeout(recount, 0); });
+    mktForm.addEventListener('input', recount);
+    mktForm.addEventListener('click', function () { setTimeout(recount, 0); });
     recount();
   }
 

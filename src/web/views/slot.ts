@@ -74,11 +74,11 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
     ${t.options.map(
       (o) => html`<tr id="u${o.slot}">
         <td class="desc">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b> <span class="small muted" title="${UNIT_GUIDE[o.unit.id]?.use ?? ''}">${UNIT_GUIDE[o.unit.id]?.kind ?? ''}</span>
-          <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>`)}
+          <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>${o.unit.carry > 0 ? html`<span class="carry" title="Resources each one can carry home from a raid">carries ${fmtNum(o.unit.carry)}</span>` : ''}`)}
           ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>
         <td class="val">${o.available
           ? html`<label class="sr" for="t${o.slot}">How many ${o.unit.name}</label><input class="w30 tr-in" id="t${o.slot}" type="number" name="t${o.slot}" min="0" max="${o.maxAffordable}" inputmode="numeric" value="0"
-              data-cost="${o.cost.wood},${o.cost.clay},${o.cost.iron},${o.cost.crop},${o.unit.upkeep},${o.timeMs}">`
+              data-cost="${o.cost.wood},${o.cost.clay},${o.cost.iron},${o.cost.crop},${o.unit.upkeep},${o.timeMs},${o.unit.carry}">`
           : html`<span class="none">-</span>`}</td>
         <td class="max">${o.available ? html`<a href="#u${o.slot}" class="fill" data-fill="t${o.slot}" data-value="${o.maxAffordable}">(${fmtNum(o.maxAffordable)})</a>` : html`<span class="none">(0)</span>`}</td>
       </tr>`,
@@ -88,7 +88,7 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
       ? html`<div class="train-total" id="train-total" data-have="${Math.floor(have.wood)},${Math.floor(have.clay)},${Math.floor(have.iron)},${Math.floor(have.crop)}">
           <b>Total:</b>
           <span id="tt-wood">${resIcon('wood')}0</span><span id="tt-clay">${resIcon('clay')}0</span><span id="tt-iron">${resIcon('iron')}0</span><span id="tt-crop">${resIcon('crop')}0</span>
-          <span id="tt-upkeep">${icon('res/cropuse', 'Crop consumption', 18, 12)}0</span><span id="tt-time">${icon('res/clock', 'Duration', 18, 12)}0:00:00</span>
+          <span id="tt-upkeep">${icon('res/cropuse', 'Crop consumption', 18, 12)}0</span><span id="tt-time">${icon('res/clock', 'Duration', 18, 12)}0:00:00</span><span id="tt-carry" class="carry" title="Resources these troops can carry"><b>can carry</b> 0</span>
         </div>
         <p><button type="submit">train</button></p>`
       : ''}

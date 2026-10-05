@@ -21,6 +21,7 @@ import {
   GOLD_CLUB_PRICE,
 } from '../../game/actions/goldclub.js';
 import { placesOf } from '../../game/actions/places.js';
+import { getModifiers } from '../../game/modifiers.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
 import { res } from '../../game/rules/resources.js';
 import { emptyUnits } from '../../game/rules/units.js';
@@ -55,6 +56,7 @@ goldclubRouter.get('/troops/farmlist', (req, r) => {
     farmListView({
       tribe: page.state.tribe,
       member: hasGoldClub(db, ctx.user.id),
+      carryMult: getModifiers(db, ctx.user.id, ctx.now).troopCarry,
       villageName: page.state.village.name,
       isCapital: page.state.village.isCapital,
       evade: page.state.village.evade,

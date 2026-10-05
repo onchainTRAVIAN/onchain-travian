@@ -235,7 +235,7 @@ export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId): number 
   return total;
 }
 
-function heroUpkeep(q: Q, villageId: number): number {
+export function heroUpkeep(q: Q, villageId: number): number {
   const h = q.select({ status: heroes.status }).from(heroes).where(eq(heroes.homeVillageId, villageId)).get();
   return h && h.status !== 'dead' && h.status !== 'reviving' ? HERO_UPKEEP : 0;
 }

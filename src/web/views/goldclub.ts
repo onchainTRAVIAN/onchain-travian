@@ -1,7 +1,7 @@
 import { AUTO_MINUTES, GOLD_CLUB_PRICE, type Cropper, type FarmEntry, type FarmList, type TradeRoute } from '../../game/actions/goldclub.js';
 import { parseResources, parseUnits } from '../../game/engine/state.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL } from '../../game/rules/resources.js';
-import { TRIBES, type TribeId } from '../../game/rules/units.js';
+import { TRIBES, carryOf, type TribeId } from '../../game/rules/units.js';
 import { fmtAgo, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, resIcon } from './layout.js';
@@ -37,6 +37,7 @@ const RESULT: Record<string, { icon: string; label: string }> = {
 export function farmListView(d: {
   tribe: TribeId;
   member: boolean;
+  carryMult: number;
   villageName: string;
   isCapital: boolean;
   evade: boolean;
@@ -71,7 +72,7 @@ export function farmListView(d: {
                 const r = e.result ? RESULT[e.result.result] : undefined;
                 return html`<tr><td><label class="sr" for="fe${e.id}">select</label><input id="fe${e.id}" type="checkbox" name="e${e.id}" value="1" checked></td>
                   <td><a href="/map/tile?x=${e.x}&amp;y=${e.y}">${e.target}</a> <span class="small muted">(${e.x}|${e.y})</span></td>
-                  <td class="small">${unitsInline(d.tribe, parseUnits(e.units))}</td>
+                  <td class="small">${unitsInline(d.tribe, parseUnits(e.units))}<br><span class="muted">carries ${fmtNum(carryOf(d.tribe, parseUnits(e.units), d.carryMult))}</span></td>
                   <td class="small">${r && e.result
                     ? html`<img src="/static/img/${r.icon}.svg" width="16" height="16" alt="${r.label}" title="${r.label}"> ${fmtNum(e.result.loot)} loot`
                     : e.lastSentAt ? html`<span class="muted">on the way (${fmtAgo(e.lastSentAt, d.now)})</span>` : html`<span class="none">-</span>`}
@@ -92,8 +93,8 @@ export function farmListView(d: {
           <p class="small"><b>Add target:</b> x <input type="number" name="x" class="w30" inputmode="numeric"> y <input type="number" name="y" class="w30" inputmode="numeric">
             ${d.places.length ? html`<span class="places">${d.places.map((p) => html`<a href="#" class="place" data-x="${p.x}" data-y="${p.y}">${p.label}</a> `)}</span>` : ''}</p>
           <p class="small">${units.slice(0, 8).map(
-            (u, i) => html`<label class="nowrap">${unitIcon(d.tribe, i, 16, false)}<input type="number" name="t${i}" min="0" class="w30" inputmode="numeric" aria-label="${u.name}"></label> `,
-          )} <button type="submit" class="small">Add</button>
+            (u, i) => html`<label class="nowrap">${unitIcon(d.tribe, i, 16, false)}<input type="number" name="t${i}" min="0" class="w30 su-in" inputmode="numeric" aria-label="${u.name}" title="${u.name}: carries ${Math.floor(u.carry * d.carryMult)} each" data-carry="${Math.floor(u.carry * d.carryMult * 100) / 100}"></label> `,
+          )} <span class="small">Can carry: <b data-carrytotal>0</b></span> <button type="submit" class="small">Add</button>
           <button type="submit" formaction="/goldclub/oases" class="small secondary">Add all free oases</button>
           <label>within <select name="radius">${[5, 10, 15].map((r) => html`<option value="${r}">${r}</option>`)}</select> fields</label></p>
           <p class="small muted">Leave x and y empty for "Add all free oases": the troops above go to each of them.</p>

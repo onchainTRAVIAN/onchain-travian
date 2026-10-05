@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.3 — 2026-10-05
+- Resource icons in the top bar open a Production page: base production per field level, every bonus on top (oases, Sawmill/Brickyard/Iron Foundry/Grain Mill/Bakery, Gold boosts with end time, token perks, bonus limit) and crop consumption (population, troops, hero).
+- Carry capacity everywhere troops are picked: per unit and "can carry" total when training, live total on Send troops (fixed — a script clash had stopped it updating) and in the farm list form, plus per target.
+
 ## 0.10.2 — 2026-10-05
 - Troop movements are clickable: a detail page shows the exact troops (with names and hero), from/to, departure and arrival, and for returning troops the haul per resource with total and % of carry capacity. The movement list shows the haul inline and names the place troops return from. Incoming attacks stay secret.
 

@@ -79,7 +79,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
     if (!u) return html`<td></td>`;
     const have = d.home[i] ?? 0;
     const v = d.values.units?.[i];
-    return html`<td class="nowrap">${unitIcon(d.tribe, i)} <label class="sr" for="u${i}">${u.name}</label><input class="w30 su-in" id="u${i}" type="number" name="u${i}" min="0" max="${have}" value="${v && v > 0 ? v : ''}" inputmode="numeric" data-carry="${Math.floor(u.carry * d.carryMult * 100) / 100}"${have === 0 ? html` disabled` : ''}>
+    return html`<td class="nowrap">${unitIcon(d.tribe, i)} <label class="sr" for="u${i}">${u.name}</label><input class="w30 su-in" title="${u.name}: carries ${fmtNum(Math.floor(u.carry * d.carryMult))} each" id="u${i}" type="number" name="u${i}" min="0" max="${have}" value="${v && v > 0 ? v : ''}" inputmode="numeric" data-carry="${Math.floor(u.carry * d.carryMult * 100) / 100}"${have === 0 ? html` disabled` : ''}>
       ${have > 0 ? html`<a href="#u${i}" class="fill" data-fill="u${i}" data-value="${have}">(${fmtNum(have)})</a>` : html`<span class="none">(0)</span>`}</td>`;
   };
   return html`<h1>Send troops</h1>
@@ -90,7 +90,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
         ${d.heroHome ? html`<tr><td colspan="3"><label>${unitIcon(d.tribe, 10, 16, false)} <input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> Hero</label></td></tr>` : ''}
       </tbody></table>
       <p class="carryline"><a href="#troops" data-allunits="all">» Select all troops</a> · <a href="#troops" data-allunits="none">clear</a>
-        · ${icon('res/wood', 'Resources', 18, 12)} Can carry: <b id="carry-total">0</b> resources</p>
+        · ${icon('res/wood', 'Resources', 18, 12)} Can carry: <b id="carry-total" data-carrytotal>0</b> resources</p>
       <table class="plain"><tbody><tr>
         <td>${MISSIONS.map((m) => html`<label class="block"><input type="radio" name="kind" value="${m.kind}"${m.kind === kind ? html` checked` : ''}> ${m.label}</label>`)}</td>
         <td><b>x</b> <input type="text" name="x" value="${d.values.x ?? ''}" class="w30" required inputmode="numeric">
