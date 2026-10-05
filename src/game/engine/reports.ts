@@ -1,4 +1,4 @@
-import { eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, or } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
 import { reports } from '../../db/schema.js';
 import type { Resources } from '../rules/resources.js';
@@ -35,6 +35,8 @@ export interface BattleReportData {
   loyalty?: { from: number; to: number };
   conquered?: boolean;
   oasis?: { x: number; y: number; captured: boolean };
+  /** The scouted/attacked tile when no defender side is listed (scouting). */
+  target?: { x: number; y: number };
   notes?: string[];
   scout?: {
     success: boolean;
@@ -98,10 +100,54 @@ export type ReportKind =
   | 'settle'
   | 'starvation';
 
+type XY = { x: number; y: number };
+
+/** The sending village and the target tile of a report (either may be unknown). */
+export function reportPlaces(d: ReportData | null): { from: XY | null; to: XY | null } {
+  if (!d) return { from: null, to: null };
+  switch (d.type) {
+    case 'battle': {
+      const def = d.defenders[0];
+      return { from: { x: d.attacker.x, y: d.attacker.y }, to: d.oasis ?? d.target ?? (def ? { x: def.x, y: def.y } : null) };
+    }
+    case 'reinforce':
+      return { from: { x: d.from.x, y: d.from.y }, to: { x: d.to.x, y: d.to.y } };
+    case 'trade':
+      return { from: { x: d.fromX, y: d.fromY }, to: { x: d.toX, y: d.toY } };
+    case 'settle':
+      return { from: null, to: { x: d.x, y: d.y } };
+    default:
+      return { from: null, to: null };
+  }
+}
+
+function placeCols(d: ReportData | null) {
+  const p = reportPlaces(d);
+  return { fromX: p.from?.x ?? null, fromY: p.from?.y ?? null, toX: p.to?.x ?? null, toY: p.to?.y ?? null };
+}
+
 export function addReport(q: Q, userId: number | null, kind: ReportKind, title: string, data: ReportData, now: number): void {
   if (userId === null) return;
   const json = JSON.stringify(data);
-  q.insert(reports).values({ userId, kind, title, data: json, outcome: battleOutcome(json, userId) ?? '-', createdAt: now }).run();
+  q.insert(reports).values({ userId, kind, title, data: json, outcome: battleOutcome(json, userId) ?? '-', ...placeCols(data), createdAt: now }).run();
+}
+
+/** Fill the place columns of reports written before they existed (once, in id order, a batch at a time). */
+export function backfillReportPlaces(q: Q, afterId: number, batch = 2000): number {
+  const rows = q.select({ id: reports.id, data: reports.data }).from(reports).where(gt(reports.id, afterId)).orderBy(asc(reports.id)).limit(batch).all();
+  for (const r of rows) q.update(reports).set(placeCols(parseReport(r.data))).where(eq(reports.id, r.id)).run();
+  return rows.length ? (rows[rows.length - 1]?.id ?? afterId) : -1;
+}
+
+/** The viewer's most recent reports about a tile: as sender, target, or attacked from there. */
+export function reportsAt(q: Q, userId: number, x: number, y: number, limit = 10) {
+  return q
+    .select({ id: reports.id, kind: reports.kind, title: reports.title, isRead: reports.isRead, outcome: reports.outcome, createdAt: reports.createdAt })
+    .from(reports)
+    .where(and(eq(reports.userId, userId), or(and(eq(reports.toX, x), eq(reports.toY, y)), and(eq(reports.fromX, x), eq(reports.fromY, y)))))
+    .orderBy(desc(reports.createdAt), desc(reports.id))
+    .limit(limit)
+    .all();
 }
 
 /** Fill in `outcome` for reports written before it existed (a batch at a time). */

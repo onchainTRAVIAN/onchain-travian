@@ -36,6 +36,11 @@ const OUTCOME: Record<'none' | 'some' | 'all', [string, string]> = {
   some: ['ui/rep-y', 'Some troops lost'],
   all: ['ui/rep-r', 'All troops lost'],
 };
+/** Report list icon: loss colour for battles, else the kind's icon. */
+export function reportIcon(kind: string, outcome: string | null): SafeHtml {
+  return outcome === 'none' || outcome === 'some' || outcome === 'all' ? outcomeIcon(outcome) : kindIcon(kind);
+}
+
 function outcomeIcon(o: 'none' | 'some' | 'all'): SafeHtml {
   const [path, alt] = OUTCOME[o];
   return icon(path, alt, 16);

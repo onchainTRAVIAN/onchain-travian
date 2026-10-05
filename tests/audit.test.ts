@@ -181,3 +181,20 @@ describe('world settings', () => {
     (config as { MERCHANT_MULTIPLIER: number }).MERCHANT_MULTIPLIER = old;
   });
 });
+
+describe('reports on a tile', () => {
+  it('lists your reports about a village or oasis, for both attacker and defender', async () => {
+    const { reportsAt, reportPlaces } = await import('../src/game/engine/reports.js');
+    const av = vil(a.villageId);
+    const bv = vil(b.villageId);
+    db.update(users).set({ protectedUntil: 0 }).where(eq(users.id, b.userId)).run();
+    setTroopsAt(db, a.villageId, a.villageId, units(0, 30));
+    const mv = sendTroops(db, a.userId, a.villageId, { x: bv.x, y: bv.y, kind: 'raid', units: units(0, 30) }, clock.now());
+    arrive(mv);
+    // The attacker sees it on the target's tile, the defender on the attacker's tile.
+    expect(reportsAt(db, a.userId, bv.x, bv.y).some((r) => r.kind.startsWith('attack'))).toBe(true);
+    expect(reportsAt(db, b.userId, av.x, av.y).some((r) => r.kind.startsWith('defense'))).toBe(true);
+    expect(reportsAt(db, a.userId, bv.x + 1, bv.y)).toEqual([]);
+    expect(reportPlaces({ type: 'settle', success: true, x: 3, y: 4 }).to).toEqual({ x: 3, y: 4 });
+  });
+});

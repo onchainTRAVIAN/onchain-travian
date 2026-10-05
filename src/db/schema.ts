@@ -223,9 +223,18 @@ export const reports = sqliteTable(
     isRead: integer('is_read', { mode: 'boolean' }).notNull().default(false),
     /** For battles: how the recipient's own troops fared — 'none' | 'some' | 'all' lost; '-' otherwise. */
     outcome: text('outcome'),
+    /** Where it happened, for "your reports on this tile": the sending village and the target tile. */
+    fromX: integer('from_x'),
+    fromY: integer('from_y'),
+    toX: integer('to_x'),
+    toY: integer('to_y'),
     createdAt: integer('created_at').notNull(),
   },
-  (t) => [index('reports_user_idx').on(t.userId, t.createdAt)],
+  (t) => [
+    index('reports_user_idx').on(t.userId, t.createdAt),
+    index('reports_user_to_idx').on(t.userId, t.toX, t.toY),
+    index('reports_user_from_idx').on(t.userId, t.fromX, t.fromY),
+  ],
 );
 
 export const messages = sqliteTable(

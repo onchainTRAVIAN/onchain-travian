@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.16.2 — 2026-10-05
+- **Your reports on every village and oasis:** open any village (player or Natar) or oasis and see your latest 10 reports about it — your attacks, raids and scouting there, and attacks that came from it. Older reports are included.
 - **10× merchants** on this x100 world: each Marketplace level now gives 10 merchants (200 at level 20). World setting `MERCHANT_MULTIPLIER`.
 
 ## 0.16.1 — 2026-10-05

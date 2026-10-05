@@ -266,6 +266,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
       mode: 'scout',
       attacker: side(home, attackerUnits, losses),
       defenders: [],
+      target: { x: targetInfo.x, y: targetInfo.y },
       attackerWon: outcome.success,
       defendersHidden: !outcome.success,
       loot: res(),

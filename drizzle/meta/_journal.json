@@ -127,6 +127,13 @@
       "when": 1791186885455,
       "tag": "0017_oasis_troops",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1791239295384,
+      "tag": "0018_report_places",
+      "breakpoints": true
     }
   ]
 }

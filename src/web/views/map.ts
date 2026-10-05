@@ -5,10 +5,11 @@ import { config } from '../../config.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
 import { TRIBES, type TribeId } from '../../game/rules/units.js';
 import type { MapCell } from '../../game/queries.js';
-import { fmtDuration, fmtNum } from '../format.js';
+import { fmtAgo, fmtDuration, fmtNum } from '../format.js';
+import { reportIcon } from './reports.js';
 import { html, type SafeHtml } from '../html.js';
 import { timer } from './layout.js';
-import { panel, unitsTable } from './parts.js';
+import { panel, unitIcon, unitsTable } from './parts.js';
 
 export function cellImage(c: MapCell): string {
   if (c.village) {
@@ -299,8 +300,12 @@ export interface TileViewData {
   /** Armies standing in this oasis (shown to its holder and to their owners). */
   garrison: { owner: string; village: string; tribe: TribeId; units: number[] }[];
   canReinforce: boolean;
+  /** Your latest reports about this tile (sent from here or to here). */
+  reports: { id: number; kind: string; title: string; isRead: boolean; outcome: string | null; createdAt: number }[];
   /** Travel time for your slowest and fastest unit types at home, for orientation. */
-  travel: { label: string; ms: number }[];
+  travel: { slot: number; label: string; ms: number }[];
+  /** Your tribe (for the travel-time unit icons). */
+  tribe: TribeId;
   now: number;
 }
 
@@ -324,8 +329,14 @@ export function tileView(d: TileViewData): SafeHtml {
               <span class="sub">${d.oasisOwner ? html`Held by ${d.oasisOwner.name} (${d.oasisOwner.villageName})` : 'Unoccupied — wild animals live here'}</span></span></li>`
           : html`<li><span class="grow">Fields <span class="sub">${d.layout ?? '4-4-4-6'} (wood-clay-iron-crop) · free to settle</span></span></li>`}
       <li><span class="grow">Distance <span class="sub">${d.distance.toFixed(1)} fields</span></span></li>
-      ${d.travel.map((t) => html`<li><span class="grow">${t.label} <span class="sub">${fmtDuration(t.ms)} travel</span></span></li>`)}
+      ${d.travel.map((t) => html`<li>${unitIcon(d.tribe, t.slot, 16, false)}<span class="grow">${t.label} <span class="sub">${fmtDuration(t.ms)} travel</span></span></li>`)}
     </ul>`, { pad: false })}
+    ${d.reports.length
+      ? panel('Your reports here', html`<table class="tb rlist"><tbody>${d.reports.map(
+          (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td class="rico">${reportIcon(r.kind, r.outcome)}</td>
+            <td><a href="/reports/${r.id}">${r.title}</a>${r.isRead ? '' : html` <span class="rnew">new</span>`}</td><td class="nowrap rrecv">${fmtAgo(r.createdAt, d.now)}</td></tr>`,
+        )}</tbody></table>`, { meta: `latest ${d.reports.length}`, pad: false })
+      : ''}
     ${d.oasisStock
       ? panel('Resources in this oasis', html`<p class="cost">${RESOURCE_KEYS.filter((k) => (d.oasisStock?.[k] ?? 0) > 0).map((k) => html`<span>${resIcon(k)}${fmtNum(Math.floor(d.oasisStock?.[k] ?? 0))}</span>`)}</p>
         <p class="small muted">Unoccupied oases gather these over time. Win an attack or raid here and your troops carry home as much as they can.</p>`)

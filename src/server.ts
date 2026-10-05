@@ -1,12 +1,12 @@
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { clock } from './clock.js';
-import { ensureWorld } from './game/engine/world.js';
+import { ensureWorld, getMeta, setMeta } from './game/engine/world.js';
 import { processDue } from './game/engine/events.js';
 import { processWeek } from './game/actions/weekly.js';
 import { processEndgame } from './game/actions/endgame.js';
 import { processNatarAttacks } from './game/actions/natars.js';
-import { backfillReportOutcomes } from './game/engine/reports.js';
+import { backfillReportOutcomes, backfillReportPlaces } from './game/engine/reports.js';
 import { processFarmLists, processTradeRoutes } from './game/actions/goldclub.js';
 import { processOasisRaiders } from './game/actions/raider.js';
 import { createApp } from './app.js';
@@ -16,6 +16,14 @@ ensureWorld(db);
 // Older reports get their loss outcome (for the report filters).
 while (backfillReportOutcomes(db) > 0) {
   /* keep going */
+}
+// Older reports get their place columns (for "your reports on this tile"), once.
+if (getMeta(db, 'report_places_done') !== '1') {
+  let last = 0;
+  while ((last = backfillReportPlaces(db, last)) >= 0) {
+    /* keep going */
+  }
+  setMeta(db, 'report_places_done', '1');
 }
 
 // The world keeps moving even when nobody is online: finish builds and resolve battles every second.
