@@ -556,3 +556,44 @@ a.plain { color: inherit; font-weight: inherit; text-decoration: none; }
 a.plain:hover { text-decoration: underline; }
 #production tr.prodrow:hover td { background: #f3f9e6; }
 #production th a { color: inherit; }
+/* ---------- Statistics ---------- */
+.stattabs { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 10px; }
+.stattabs .grp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.stattabs .glabel { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #9a9277; margin-right: 2px; }
+.stattabs a { display: inline-block; padding: 3px 10px; border: 1px solid #d6dcc6; border-radius: 12px; background: #fafcf5; font-size: 12px; font-weight: bold; color: #4b7d00; text-decoration: none; }
+.stattabs a:hover { border-color: #71d000; background: #f0f8e0; }
+.stattabs a.on { background: #71d000; border-color: #5fb300; color: #fff; }
+.stattabs.sub { margin-top: -4px; }
+.statintro { color: #777; font-size: 12px; margin: 0 0 8px; }
+.mypos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 7px 10px; margin: 0 0 10px; border: 1px solid #d6dcc6; border-radius: 6px; background: linear-gradient(#fdfefb, #f2f7e7); }
+.mypos .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #8a8470; }
+.mypos .big { font-size: 18px; color: #2d5a00; }
+.mypos .sep { width: 1px; height: 18px; background: #d6dcc6; margin: 0 6px; }
+.mypos .btn { margin-left: auto; }
+.mypos .prizes img { vertical-align: -3px; }
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 6px 0 14px; }
+.podium .pod { position: relative; flex: 0 1 150px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px 0; border: 1px solid #e0dccb; border-radius: 8px 8px 0 0; background: #fffdf6; text-decoration: none; color: #333; overflow: hidden; }
+.podium .pod:hover { border-color: #71d000; }
+.podium .pod .avatar { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.podium .pn { font-weight: bold; color: #4b7d00; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podium .ps { color: #888; }
+.podium .pv { font-weight: bold; font-size: 13px; }
+.podium .step { align-self: stretch; text-align: center; margin-top: 6px; color: #fff; font-weight: bold; font-size: 16px; }
+.podium .p1 { padding-top: 10px; background: #fffbe8; border-color: #e6cf7a; }
+.podium .p1 .step { background: linear-gradient(#e9c74b, #c9a227); height: 46px; line-height: 46px; }
+.podium .p2 .step { background: linear-gradient(#c9ced6, #9aa1ab); height: 32px; line-height: 32px; }
+.podium .p3 .step { background: linear-gradient(#d9a36d, #b07a45); height: 22px; line-height: 22px; }
+.ranktb td { vertical-align: middle; }
+.ranktb td.pl { white-space: nowrap; }
+.ranktb td.pl .avatar { border-radius: 50%; vertical-align: middle; }
+.ranktb td.val { line-height: 1.2; }
+.ranktb tr.me td { background: #eef8dc; font-weight: bold; }
+.ranktb tr:hover td { background: #f8fbf1; }
+.rk { display: inline-block; min-width: 22px; text-align: center; color: #666; font-weight: bold; }
+.rk.top img { vertical-align: middle; }
+.sbar { display: inline-block; vertical-align: middle; }
+.sbar .bg { fill: #e8ecdf; }
+.sbar .fg { fill: #71d000; }
+.atag { font-size: 11px; color: #8a6d1d; }
+.tico { vertical-align: -2px; opacity: 0.85; }
+.lvlpill { display: inline-block; min-width: 20px; padding: 0 5px; border-radius: 9px; background: #e9f3d6; color: #2d5a00; font-weight: bold; }

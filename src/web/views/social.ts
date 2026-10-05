@@ -79,18 +79,46 @@ export function messageView(d: {
 
 /* ---------- Rankings ---------- */
 
-const RANK_TABS: { key: RankKind; label: string; col: string }[] = [
-  { key: 'population', label: 'Players', col: 'Population' },
-  { key: 'attack', label: 'Attackers', col: 'Points' },
-  { key: 'defense', label: 'Defenders', col: 'Points' },
-  { key: 'raid', label: 'Robbers', col: 'Resources robbed' },
+const RANK_TABS: { key: RankKind; label: string; col: string; intro: string }[] = [
+  { key: 'population', label: 'Players', col: 'Population', intro: 'Players ranked by the total population of all their villages.' },
+  { key: 'attack', label: 'Attackers', col: 'Attack points', intro: 'Points for enemy troops killed while attacking.' },
+  { key: 'defense', label: 'Defenders', col: 'Defence points', intro: 'Points for attackers killed while defending — your own villages or your allies\'.' },
+  { key: 'raid', label: 'Robbers', col: 'Resources robbed', intro: 'Total resources carried home from raids and attacks on villages and oases.' },
 ];
 
-const extraTabs = (on: string) =>
-  html`<a href="/stats/week" class="${on === 'week' ? 'on' : ''}">This week</a><a href="/endgame">Artifacts &amp; Wonders</a><a href="/stats/villages" class="${on === 'villages' ? 'on' : ''}">Villages</a><a href="/stats/heroes" class="${on === 'heroes' ? 'on' : ''}">Heroes</a><a href="/alliances">Alliances</a>`;
-
+/** Statistics navigation: rankings, other lists and events, as tidy pill groups. */
 function statsTabs(on: string): SafeHtml {
-  return html`<nav class="tabs" aria-label="Ranking type">${RANK_TABS.map((t) => html`<a href="/stats?k=${t.key}" class="${t.key === on ? 'on' : ''}">${t.label}</a>`)}${extraTabs(on)}</nav>`;
+  const pill = (href: string, key: string, label: string) => html`<a href="${href}" class="${key === on ? 'on' : ''}"${key === on ? html` aria-current="page"` : ''}>${label}</a>`;
+  return html`<nav class="stattabs" aria-label="Statistics">
+    <div class="grp"><span class="glabel">Players</span>${RANK_TABS.map((t) => pill(`/stats?k=${t.key}`, t.key, t.label))}</div>
+    <div class="grp"><span class="glabel">More</span>${pill('/stats/villages', 'villages', 'Villages')}${pill('/stats/heroes', 'heroes', 'Heroes')}${pill('/alliances', 'alliances', 'Alliances')}</div>
+    <div class="grp"><span class="glabel">Events</span>${pill('/stats/week', 'week', 'This week')}${pill('/endgame', 'endgame', 'Artifacts & Wonders')}</div>
+  </nav>`;
+}
+
+/** Small bar comparing a value to the leader's (SVG, so it works under the CSP). */
+function bar(value: number, top: number): SafeHtml {
+  const w = top > 0 ? Math.max(2, Math.round((value / top) * 80)) : 0;
+  return html`<svg class="sbar" width="80" height="6" viewBox="0 0 80 6" aria-hidden="true"><rect width="80" height="6" rx="3" class="bg"></rect>${w ? html`<rect width="${w}" height="6" rx="3" class="fg"></rect>` : ''}</svg>`;
+}
+
+function rankBadge(rank: number): SafeHtml {
+  return rank <= 3 ? html`<span class="rk top">${medalImg(rank, 18)}</span>` : html`<span class="rk">${rank}</span>`;
+}
+
+function tribeIcon(tribe: TribeId): SafeHtml {
+  return tribe === 'nature' ? html`` : html`<img src="/static/img/units/${tribe}-1.svg" width="14" height="14" alt="${TRIBES[tribe].name}" title="${TRIBES[tribe].name}" class="tico">`;
+}
+
+interface PodiumEntry { href: string; name: string; avatar: string; sub: SafeHtml | string; value: string }
+function podium(entries: PodiumEntry[]): SafeHtml {
+  if (entries.length === 0) return html``;
+  const order = [1, 0, 2].filter((i) => entries[i]);
+  return html`<div class="podium">${order.map((i) => {
+    const e = entries[i] as PodiumEntry;
+    return html`<a class="pod p${i + 1}" href="${e.href}">${medalImg(i + 1, 26)}<img class="avatar" src="${e.avatar}" width="${i === 0 ? 56 : 44}" height="${i === 0 ? 56 : 44}" alt="">
+      <span class="pn">${e.name}</span><span class="ps small">${e.sub}</span><span class="pv">${e.value}</span><span class="step">${i + 1}</span></a>`;
+  })}</div>`;
 }
 
 const MEDAL = ['gold', 'silver', 'bronze'] as const;
@@ -110,17 +138,19 @@ export function weeklyView(d: {
 }): SafeHtml {
   const end = d.weekStart + WEEK_MS;
   const lab = WEEKLY_LABEL[d.category];
+  const top = d.rows[0]?.value ?? 0;
   return html`<h1>Statistics</h1>${statsTabs('week')}
-    <p class="tabs">${WEEKLY_CATEGORIES.map((c) => html`<a href="/stats/week?c=${c}" class="${c === d.category ? 'on' : ''}">${WEEKLY_LABEL[c].tab}</a>`)}</p>
-    <p class="small">Week of ${new Date(d.weekStart).toISOString().slice(0, 10)} · ends in ${timer(end, d.now, false)} (Monday 00:00 UTC).
-      The top 3 of every category win a medal and ${medalImg(1, 14)} ${WEEKLY_PRIZES[0]} / ${medalImg(2, 14)} ${WEEKLY_PRIZES[1]} / ${medalImg(3, 14)} ${WEEKLY_PRIZES[2]} Gold.</p>
-    <div class="tblwrap"><table><thead><tr><th class="num">#</th><th>Player</th><th class="num">${lab.col}</th><th>Prize</th></tr></thead><tbody>
+    <nav class="stattabs sub" aria-label="Weekly category"><div class="grp">${WEEKLY_CATEGORIES.map((c) => html`<a href="/stats/week?c=${c}" class="${c === d.category ? 'on' : ''}">${WEEKLY_LABEL[c].tab}</a>`)}</div></nav>
+    <div class="mypos week"><span class="lbl">Week of ${new Date(d.weekStart).toISOString().slice(0, 10)}</span> <span>ends in <b>${timer(end, d.now, false)}</b> (Monday 00:00 UTC)</span>
+      <span class="sep"></span><span class="prizes">${medalImg(1, 16)} ${WEEKLY_PRIZES[0]} ${medalImg(2, 16)} ${WEEKLY_PRIZES[1]} ${medalImg(3, 16)} ${WEEKLY_PRIZES[2]} Gold</span></div>
+    ${podium(d.rows.slice(0, 3).map((r) => ({ href: `/player/${r.userId}`, name: r.username, avatar: avatarUrl({ id: r.userId, tribe: r.tribe, avatarAt: r.avatarAt }), sub: `${lab.col}`, value: fmtNum(r.value) })))}
+    <div class="tblwrap"><table class="tb ranktb"><thead><tr><th class="num">#</th><th>Player</th><th class="num">${lab.col}</th><th>Prize</th></tr></thead><tbody>
     ${d.rows.length === 0
       ? html`<tr><td colspan="4" class="none center">Nobody has scored this week yet. Be the first!</td></tr>`
       : d.rows.map(
-          (r, i) => html`<tr class="${r.userId === d.myId ? 'me' : ''}"><td class="num">${i + 1}</td>
-            <td><img class="avatar sm" src="${avatarUrl({ id: r.userId, tribe: r.tribe, avatarAt: r.avatarAt })}" width="20" height="20" alt=""> <a href="/player/${r.userId}">${r.username}</a></td>
-            <td class="num">${fmtNum(r.value)}</td>
+          (r, i) => html`<tr class="${r.userId === d.myId ? 'me' : ''}"><td class="num">${rankBadge(i + 1)}</td>
+            <td class="pl"><img class="avatar sm" src="${avatarUrl({ id: r.userId, tribe: r.tribe, avatarAt: r.avatarAt })}" width="24" height="24" alt=""> <a href="/player/${r.userId}">${r.username}</a></td>
+            <td class="num val">${fmtNum(r.value)}<br>${bar(r.value, top)}</td>
             <td>${i < 3 ? html`${medalImg(i + 1)} ${WEEKLY_PRIZES[i]} Gold` : ''}</td></tr>`,
         )}
     </tbody></table></div>
@@ -137,45 +167,71 @@ export function weeklyView(d: {
       : ''}`;
 }
 
-export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; hasMore: boolean }): SafeHtml {
+export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; hasMore: boolean; myId?: number | null }): SafeHtml {
+  const top = d.page === 1 ? (d.rows[0]?.pop ?? 0) : 0;
   return html`<h1>Statistics</h1>${statsTabs('villages')}
-    <table class="tb"><thead><tr><th class="num">#</th><th>Village</th><th>Player</th><th class="num">Population</th><th>Coordinates</th></tr></thead><tbody>
+    <p class="statintro">The biggest villages in the world by population.</p>
+    <div class="tblwrap"><table class="tb ranktb"><thead><tr><th class="num">#</th><th>Village</th><th>Player</th><th class="num">Population</th></tr></thead><tbody>
     ${d.rows.map(
-      (r, i) => html`<tr><td class="num">${d.offset + i + 1}.</td><td><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.name}</a></td>
-        <td>${r.ownerId ? html`<a href="/player/${r.ownerId}">${r.owner}</a>` : '-'}</td><td class="num">${fmtNum(r.pop)}</td><td>(${r.x}|${r.y})</td></tr>`,
-    )}</tbody></table>${paginate('/stats/villages', d.page, d.hasMore)}`;
+      (r, i) => html`<tr class="${r.ownerId !== null && r.ownerId === d.myId ? 'me' : ''}"><td class="num">${rankBadge(d.offset + i + 1)}</td>
+        <td class="pl"><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.name}</a> <span class="small muted">(${r.x}|${r.y})</span></td>
+        <td>${r.ownerId ? html`<a href="/player/${r.ownerId}">${r.owner}</a>` : '-'}</td><td class="num val">${fmtNum(r.pop)}${top ? html`<br>${bar(r.pop, top)}` : ''}</td></tr>`,
+    )}</tbody></table></div>${paginate('/stats/villages', d.page, d.hasMore)}`;
 }
 
-export function heroRankingView(d: { rows: { name: string; level: number; xp: number; owner: string; ownerId: number; tribe: TribeId }[]; offset: number; page: number; hasMore: boolean }): SafeHtml {
+export function heroRankingView(d: { rows: { name: string; level: number; xp: number; owner: string; ownerId: number; tribe: TribeId }[]; offset: number; page: number; hasMore: boolean; myId?: number | null }): SafeHtml {
+  const top = d.page === 1 ? (d.rows[0]?.xp ?? 0) : 0;
   return html`<h1>Statistics</h1>${statsTabs('heroes')}
-    <table class="tb"><thead><tr><th class="num">#</th><th>Hero</th><th>Player</th><th class="num">Level</th><th class="num">Experience</th></tr></thead><tbody>
-    ${d.rows.map(
-      (r, i) => html`<tr><td class="num">${d.offset + i + 1}.</td><td>${r.name}</td><td><a href="/player/${r.ownerId}">${r.owner}</a></td>
-        <td class="num">${r.level}</td><td class="num">${fmtNum(r.xp)}</td></tr>`,
-    )}</tbody></table>${paginate('/stats/heroes', d.page, d.hasMore)}`;
+    <p class="statintro">Heroes ranked by experience earned in battle.</p>
+    <div class="tblwrap"><table class="tb ranktb"><thead><tr><th class="num">#</th><th>Hero</th><th>Player</th><th class="num">Level</th><th class="num">Experience</th></tr></thead><tbody>
+    ${d.rows.length === 0
+      ? html`<tr><td colspan="5" class="none center">No heroes yet.</td></tr>`
+      : d.rows.map(
+          (r, i) => html`<tr class="${r.ownerId === d.myId ? 'me' : ''}"><td class="num">${rankBadge(d.offset + i + 1)}</td><td class="pl">${unitIconSmall(r.tribe)} ${r.name}</td>
+            <td><a href="/player/${r.ownerId}">${r.owner}</a></td><td class="num"><span class="lvlpill">${r.level}</span></td><td class="num val">${fmtNum(r.xp)}${top ? html`<br>${bar(r.xp, top)}` : ''}</td></tr>`,
+        )}</tbody></table></div>${paginate('/stats/heroes', d.page, d.hasMore)}`;
+}
+
+function unitIconSmall(tribe: TribeId): SafeHtml {
+  return html`<img src="/static/img/units/hero.svg" width="16" height="16" alt="" class="tico" data-tribe="${tribe}">`;
 }
 
 export function rankingView(d: {
   kind: RankKind;
-  rows: { id: number; username: string; tribe: TribeId; pop: number; villages: number; off: number; def: number; loot: number; avatarAt: number }[];
+  rows: { id: number; username: string; tribe: TribeId; pop: number; villages: number; off: number; def: number; loot: number; avatarAt: number; allianceId: number | null; allianceTag: string | null }[];
   offset: number;
   page: number;
   hasMore: boolean;
   myId: number | null;
+  me: { rank: number; value: number; total: number } | null;
+  top: number;
+  perPage: number;
 }): SafeHtml {
   const tab = RANK_TABS.find((t) => t.key === d.kind) ?? RANK_TABS[0];
   const value = (r: (typeof d.rows)[number]) => (d.kind === 'attack' ? r.off : d.kind === 'defense' ? r.def : d.kind === 'raid' ? r.loot : r.pop);
+  const myPage = d.me ? Math.ceil(d.me.rank / d.perPage) : 1;
+  const tag = (r: (typeof d.rows)[number]) => (r.allianceId && r.allianceTag ? html` <a href="/alliance/${r.allianceId}" class="atag">[${r.allianceTag}]</a>` : '');
   return html`<h1>Statistics</h1>
     ${statsTabs(d.kind)}
-    ${d.kind === 'raid' ? html`<p class="small muted">Total resources each player has carried home from raids and attacks on villages and oases.</p>` : ''}
-    <div class="tblwrap"><table>
-      <tr><th class="num">#</th><th>Player</th><th class="num">Villages</th><th class="num">${tab?.col ?? ''}</th></tr>
-      ${d.rows.map(
-        (r, i) => html`<tr class="${r.id === d.myId ? 'me' : ''}"><td class="num">${d.offset + i + 1}</td>
-          <td><img class="avatar sm" src="${avatarUrl({ id: r.id, tribe: r.tribe, avatarAt: r.avatarAt })}" width="20" height="20" alt=""> <a href="/player/${r.id}">${r.username}</a> <span class="muted small">${TRIBES[r.tribe].name}</span></td>
-          <td class="num">${r.villages}</td><td class="num">${fmtNum(value(r))}</td></tr>`,
-      )}
-    </table></div>
+    <p class="statintro">${tab?.intro ?? ''}</p>
+    ${d.me
+      ? html`<div class="mypos"><span class="lbl">Your position</span> <b class="big">#${fmtNum(d.me.rank)}</b> <span class="muted">of ${fmtNum(d.me.total)}</span>
+          <span class="sep"></span><span class="lbl">${tab?.col}</span> <b>${fmtNum(d.me.value)}</b>
+          ${d.page !== myPage ? html`<a class="btn small secondary" href="/stats?k=${d.kind}&amp;page=${myPage}#me">Show me</a>` : ''}</div>`
+      : ''}
+    ${d.page === 1
+      ? podium(d.rows.slice(0, 3).map((r) => ({ href: `/player/${r.id}`, name: r.username, avatar: avatarUrl({ id: r.id, tribe: r.tribe, avatarAt: r.avatarAt }), sub: html`${tribeIcon(r.tribe)} ${TRIBES[r.tribe].name}${r.allianceTag ? ` · [${r.allianceTag}]` : ''}`, value: `${fmtNum(value(r))} ${tab?.col.toLowerCase() ?? ''}` })))
+      : ''}
+    <div class="tblwrap"><table class="tb ranktb">
+      <thead><tr><th class="num">#</th><th>Player</th><th class="num">Villages</th><th class="num">${tab?.col ?? ''}</th></tr></thead><tbody>
+      ${d.rows.length === 0
+        ? html`<tr><td colspan="4" class="none center">No players yet.</td></tr>`
+        : d.rows.map(
+            (r, i) => html`<tr class="${r.id === d.myId ? 'me' : ''}"${r.id === d.myId ? html` id="me"` : ''}><td class="num">${rankBadge(d.offset + i + 1)}</td>
+              <td class="pl"><img class="avatar sm" src="${avatarUrl({ id: r.id, tribe: r.tribe, avatarAt: r.avatarAt })}" width="24" height="24" alt=""> <a href="/player/${r.id}">${r.username}</a>${tag(r)} ${tribeIcon(r.tribe)}</td>
+              <td class="num">${r.villages}</td><td class="num val">${fmtNum(value(r))}<br>${bar(value(r), d.top)}</td></tr>`,
+          )}
+    </tbody></table></div>
     ${paginate(`/stats?k=${d.kind}`, d.page, d.hasMore)}`;
 }
 

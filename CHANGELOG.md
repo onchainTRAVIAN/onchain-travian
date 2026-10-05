@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.2 — 2026-10-05
+- Statistics redesigned: grouped pill tabs (Players / More / Events), a short explanation per ranking, a "Your position" card with "Show me", a podium for the top 3, rank medals, avatars, tribe icons, alliance tags and bars comparing everyone to the leader; same style for Villages, Heroes and This week. Natars get their own avatar.
+
 ## 0.11.1 — 2026-10-05
 - Oasis Raider spreads troops over many oases by default (each raid gets a fair share of the free troops, never more than its loot needs; guarded oases may take more to win). The old behaviour is the "Richest first" option.
 

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import type { Q } from '../db/index.js';
-import { heroes, messages, movements, reports, tiles, troops, users, villages } from '../db/schema.js';
+import { allianceMembers, alliances, heroes, messages, movements, reports, tiles, troops, users, villages } from '../db/schema.js';
 import { config } from '../config.js';
 import { distance, wrapCoord } from './rules/map.js';
 import type { TribeId, UnitCounts } from './rules/units.js';
@@ -160,8 +160,12 @@ export function rankings(q: Q, kind: RankKind, limit: number, offset: number) {
       def: users.defPoints,
       loot: users.lootTotal,
       avatarAt: users.avatarAt,
+      allianceId: alliances.id,
+      allianceTag: alliances.tag,
     })
     .from(users)
+    .leftJoin(allianceMembers, eq(allianceMembers.userId, users.id))
+    .leftJoin(alliances, eq(alliances.id, allianceMembers.allianceId))
     .where(eq(users.banned, false))
     .orderBy(desc(orderCol), asc(users.id))
     .limit(limit)
@@ -175,6 +179,17 @@ export function playerCount(q: Q): number {
 
 export function onlineCount(q: Q, now: number): number {
   return q.select({ n: sql<number>`count(*)` }).from(users).where(sql`${users.lastSeenAt} > ${now - 15 * 60_000}`).get()?.n ?? 0;
+}
+
+/** A player's position in any ranking (same order as `rankings`). */
+export function rankOf(q: Q, kind: RankKind, userId: number): { rank: number; value: number; total: number } {
+  const valueSql =
+    kind === 'attack' ? sql`u.off_points` : kind === 'defense' ? sql`u.def_points` : kind === 'raid' ? sql`u.loot_total` : sql`coalesce((select sum(v.pop) from villages v where v.user_id = u.id), 0)`;
+  const me = q.get<{ v: number }>(sql`select ${valueSql} as v from users u where u.id = ${userId}`);
+  const mine = me?.v ?? 0;
+  const better = q.get<{ n: number }>(sql`select count(*) as n from users u where u.banned = 0 and ((${valueSql}) > ${mine} or ((${valueSql}) = ${mine} and u.id < ${userId}))`);
+  const total = q.get<{ n: number }>(sql`select count(*) as n from users u where u.banned = 0`);
+  return { rank: (better?.n ?? 0) + 1, value: mine, total: total?.n ?? 0 };
 }
 
 export function playerRank(q: Q, userId: number): number {

@@ -20,7 +20,7 @@ import { endgameView } from '../views/endgame.js';
 import { WEEKLY_CATEGORIES, lastWinners, medalsOf, weekStart, weeklyStandings } from '../../game/actions/weekly.js';
 import { deleteMessage, deleteMessages, inbox, markMessagesRead, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
 import { parseReport } from '../../game/engine/reports.js';
-import { heroRankings, playerProfile, playerRank, rankings, reportList, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
+import { heroRankings, playerProfile, playerRank, rankOf, rankings, reportList, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
 import { authed, setFlash } from '../session.js';
 import { reportListView, reportView } from '../views/reports.js';
 import { accountView, heroRankingView, helpView, inboxView, messageView, playerView, rankingView, villageRankingView, weeklyView, writeView } from '../views/social.js';
@@ -243,7 +243,21 @@ socialRouter.get('/stats', (req, res) => {
     req,
     res,
     'Rankings',
-    rankingView({ kind, rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE, myId: req.ctx.user?.id ?? null }),
+    rankingView({
+      kind,
+      rows: rows.slice(0, PAGE),
+      offset: (p - 1) * PAGE,
+      page: p,
+      hasMore: rows.length > PAGE,
+      myId: req.ctx.user?.id ?? null,
+      me: req.ctx.user ? rankOf(db, kind, req.ctx.user.id) : null,
+      top: (() => {
+        const first = rankings(db, kind, 1, 0)[0];
+        if (!first) return 0;
+        return kind === 'attack' ? first.off : kind === 'defense' ? first.def : kind === 'raid' ? first.loot : first.pop;
+      })(),
+      perPage: PAGE,
+    }),
     { nav: 'stats', chrome },
   );
 });
@@ -252,14 +266,14 @@ socialRouter.get('/stats/villages', (req, res) => {
   const p = pageParam(req.query.page);
   const rows = villageRankings(db, PAGE + 1, (p - 1) * PAGE);
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
-  sendPage(req, res, 'Statistics', villageRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE }), { nav: 'stats', chrome });
+  sendPage(req, res, 'Statistics', villageRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE, myId: req.ctx.user?.id ?? null }), { nav: 'stats', chrome });
 });
 
 socialRouter.get('/stats/heroes', (req, res) => {
   const p = pageParam(req.query.page);
   const rows = heroRankings(db, PAGE + 1, (p - 1) * PAGE);
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
-  sendPage(req, res, 'Statistics', heroRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE }), { nav: 'stats', chrome });
+  sendPage(req, res, 'Statistics', heroRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE, myId: req.ctx.user?.id ?? null }), { nav: 'stats', chrome });
 });
 
 socialRouter.get('/player/:id', (req, res) => {
