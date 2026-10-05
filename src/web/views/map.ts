@@ -1,6 +1,6 @@
 import { RESOURCE_KEYS, type Resources } from '../../game/rules/resources.js';
 import { icon, resIcon } from './layout.js';
-import { assetUrl } from '../assets.js';
+import { assetUrl, hasAsset } from '../assets.js';
 import { config } from '../../config.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
 import { TRIBES, type TribeId } from '../../game/rules/units.js';
@@ -11,11 +11,18 @@ import { html, type SafeHtml } from '../html.js';
 import { timer } from './layout.js';
 import { panel, unitIcon, unitsTable } from './parts.js';
 
+/** Village population steps where the map picture grows (a single village tops out near 1,800). */
+export const VILLAGE_TIERS = [300, 600, 1000, 1400, 1700] as const;
+
+/** Map picture tier 1–6 for a village's population (falls back to the biggest picture that exists). */
+export function villageTier(pop: number): number {
+  let tier = 1 + VILLAGE_TIERS.filter((t) => pop >= t).length;
+  while (tier > 1 && !hasAsset(`img/map/flat/village-${tier}.svg`)) tier--;
+  return tier;
+}
+
 export function cellImage(c: MapCell): string {
-  if (c.village) {
-    const p = c.village.pop;
-    return `village-${p >= 500 ? 4 : p >= 250 ? 3 : p >= 100 ? 2 : 1}`;
-  }
+  if (c.village) return `village-${villageTier(c.village.pop)}`;
   if (c.kind === 'oasis') {
     const o = (c.oasis ?? 'wood') as OasisType;
     if (o.startsWith('wood')) return 'oasis-wood';

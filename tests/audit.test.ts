@@ -198,3 +198,16 @@ describe('reports on a tile', () => {
     expect(reportPlaces({ type: 'settle', success: true, x: 3, y: 4 }).to).toEqual({ x: 3, y: 4 });
   });
 });
+
+describe('map village pictures', () => {
+  it('grow at 300, 600, 1,000, 1,400 and 1,700 population', async () => {
+    const { VILLAGE_TIERS } = await import('../src/web/views/map.js');
+    expect([...VILLAGE_TIERS]).toEqual([300, 600, 1000, 1400, 1700]);
+    const { villageTier } = await import('../src/web/views/map.js');
+    expect(villageTier(50)).toBe(1);
+    expect(villageTier(299)).toBe(1);
+    expect(villageTier(300)).toBe(2);
+    expect(villageTier(999)).toBe(3);
+    expect(villageTier(1000)).toBe(4);
+  });
+});
