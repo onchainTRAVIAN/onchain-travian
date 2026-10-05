@@ -44,6 +44,8 @@ export function farmListView(d: {
   lists: (FarmList & { villageName: string; entries: (FarmEntry & { target: string; result: { result: string; loot: number } | null; oasis: { stock: number; animals: number } | null })[] })[];
   places: { x: number; y: number; label: string }[];
   raider?: SafeHtml;
+  /** The list shown opened (from ?list=). */
+  openListId?: number | null;
   csrf: string;
   now: number;
 }): SafeHtml {
@@ -59,58 +61,94 @@ export function farmListView(d: {
           <span class="small muted">Your capital's own troops leave when an attack or raid arrives and come back afterwards.</span></p></form>`
       : ''}
     ${d.raider ?? ''}
-    <h2 class="customlists">Custom farm lists <span class="small muted">— your own targets (villages, chosen oases), sent with one click</span></h2>
-    <form method="post" action="/goldclub/list" class="row">${csrfField(d.csrf)}
-      <div><label for="fl" class="sr">New list</label><input id="fl" type="text" name="name" maxlength="30" placeholder="New farm list name"></div>
-      <div><button type="submit" class="block">Create list (from ${d.villageName})</button></div>
-    </form>
-    ${d.lists.length === 0 ? html`<p class="none">No farm lists yet.</p>` : ''}
-    ${d.lists.map(
-      (l) => html`<details class="customlist"${l.entries.length <= 8 ? html` open` : ''}><summary><b>${l.name}</b> <span class="small muted">from ${l.villageName} · ${l.entries.length} targets${l.autoMinutes ? ` · auto every ${l.autoMinutes} min` : ''}</span></summary>
-        <form method="post" action="/goldclub/raid">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
-          <div class="mvscroll"><table class="tb"><thead><tr><th></th><th>Target</th><th>Troops</th><th>Last raid</th><th></th></tr></thead><tbody>
-          ${l.entries.length === 0
-            ? html`<tr><td colspan="5" class="none center">No targets yet — add some below.</td></tr>`
-            : l.entries.map((e) => {
-                const r = e.result ? RESULT[e.result.result] : undefined;
-                return html`<tr><td><label class="sr" for="fe${e.id}">select</label><input id="fe${e.id}" type="checkbox" name="e${e.id}" value="1" checked></td>
-                  <td><a href="/map/tile?x=${e.x}&amp;y=${e.y}">${e.target}</a> <span class="small muted">(${e.x}|${e.y})</span>
-                    ${e.oasis ? html`<br><span class="small" title="Resources lying in the oasis now">${resIcon('wood')}${fmtNum(e.oasis.stock)} to loot</span>${e.oasis.animals > 0 ? html` <span class="small bad" title="Wild animals defend it">· ${fmtNum(e.oasis.animals)} animals</span>` : html` <span class="small good">· no animals</span>`}` : ''}</td>
-                  <td class="small">${unitsInline(d.tribe, parseUnits(e.units))}<br><span class="muted">carries ${fmtNum(carryOf(d.tribe, parseUnits(e.units), d.carryMult))}</span></td>
-                  <td class="small">${r && e.result
-                    ? html`<img src="/static/img/${r.icon}.svg" width="16" height="16" alt="${r.label}" title="${r.label}"> ${fmtNum(e.result.loot)} loot`
-                    : e.lastSentAt ? html`<span class="muted">on the way (${fmtAgo(e.lastSentAt, d.now)})</span>` : html`<span class="none">-</span>`}
-                    ${e.lastNote ? html`<br><span class="bad">${e.lastNote}</span>` : ''}</td>
-                  <td><button type="submit" form="del${e.id}" class="lnk small" aria-label="Remove target">✕</button></td></tr>`;
-              })}
+    ${customLists(d)}`;
+}
+
+type ListsData = Parameters<typeof farmListView>[0];
+
+/** Custom farm lists: an overview of all lists and one opened list in three simple steps. */
+function customLists(d: ListsData): SafeHtml {
+  const units = TRIBES[d.tribe].units;
+  const open = d.lists.find((l) => l.id === d.openListId) ?? (d.lists.length === 1 ? d.lists[0] : undefined);
+  const lastRaid = (l: ListsData['lists'][number]) => {
+    const t = Math.max(0, ...l.entries.map((e) => e.lastSentAt ?? 0));
+    return t > 0 ? fmtAgo(t, d.now) : '-';
+  };
+  const createForm = html`<form method="post" action="/goldclub/list" class="fl-new">${csrfField(d.csrf)}
+      <label for="fl" class="sr">New list name</label><input id="fl" type="text" name="name" maxlength="30" placeholder="Name, e.g. Oases north" required>
+      <button type="submit" class="small">+ New list</button></form>`;
+  const overview = html`<section class="spanel" id="lists"><h3 class="sp-head">Custom farm lists<span>your own targets, sent with one click</span></h3>
+    ${d.lists.length === 0
+      ? html`<div class="pad fl-empty"><p><b>No lists yet.</b> A farm list is a saved set of targets (enemy villages or oases) with the troops to send to each. Create one, add targets, then press <b>Raid all</b> whenever your troops are home — or let it repeat by itself.</p>${createForm}</div>`
+      : html`<table class="tb fl-table"><thead><tr><th>List</th><th class="num">Targets</th><th>Auto</th><th>Last raid</th><th></th></tr></thead><tbody>
+          ${d.lists.map(
+            (l) => html`<tr class="${open?.id === l.id ? 'hl' : ''}"><td><a href="/troops/farmlist?list=${l.id}#list"><b>${l.name}</b></a><br><span class="small muted">from ${l.villageName}</span></td>
+              <td class="num">${l.entries.length}</td>
+              <td>${l.autoMinutes ? html`<span class="pill on">every ${l.autoMinutes} min</span>` : html`<span class="pill">off</span>`}</td>
+              <td class="small">${lastRaid(l)}</td>
+              <td class="nowrap"><form method="post" action="/goldclub/raid" class="inline">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}"><button type="submit" name="all" value="1" class="small"${l.entries.length === 0 ? html` disabled` : ''}>Raid all</button></form>
+                <a class="btn small secondary" href="/troops/farmlist?list=${l.id}#list">${open?.id === l.id ? 'Opened' : 'Open'}</a></td></tr>`,
+          )}</tbody></table>
+          <div class="pad">${createForm}</div>`}
+    </section>`;
+  if (!open) return overview;
+  const l = open;
+  const troopPicker = html`<div class="fl-troops"><span class="lbl">Troops per raid</span>${units.slice(0, 8).map(
+    (u, i) => html`<label class="fl-unit" title="${u.name}: carries ${Math.floor(u.carry * d.carryMult)} each">${unitIcon(d.tribe, i, 18, false)}<input type="number" name="t${i}" min="0" class="su-in" inputmode="numeric" placeholder="0" aria-label="${u.name}" data-carry="${Math.floor(u.carry * d.carryMult * 100) / 100}"></label>`,
+  )}<span class="small fl-carry">carries <b data-carrytotal>0</b></span></div>`;
+  return html`${overview}
+    <section class="spanel fl-open" id="list"><h3 class="sp-head">${l.name}<span>from ${l.villageName} · ${l.entries.length} target${l.entries.length === 1 ? '' : 's'}</span></h3>
+      <div class="pad">
+      <h4 class="fl-step"><span>1</span> Targets</h4>
+      ${l.entries.length === 0
+        ? html`<p class="fl-empty small">This list is empty. Add targets in step 2 — one village or oasis by its coordinates, or all free oases near ${l.villageName} at once.</p>`
+        : html`<form method="post" action="/goldclub/raid">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
+          <div class="mvscroll"><table class="tb"><thead><tr><th class="chk"><input type="checkbox" data-checkall title="Select all" checked aria-label="Select all"></th><th>Target</th><th>Troops</th><th>Last raid</th><th></th></tr></thead><tbody>
+          ${l.entries.map((e) => {
+            const r = e.result ? RESULT[e.result.result] : undefined;
+            return html`<tr><td class="chk"><label class="sr" for="fe${e.id}">select</label><input id="fe${e.id}" type="checkbox" name="ids" value="${e.id}" checked></td>
+              <td><a href="/map/tile?x=${e.x}&amp;y=${e.y}">${e.target}</a> <span class="small muted">(${e.x}|${e.y})</span>
+                ${e.oasis ? html`<br><span class="small">${resIcon('wood')}${fmtNum(e.oasis.stock)} to loot</span>${e.oasis.animals > 0 ? html` <span class="small bad">· ${fmtNum(e.oasis.animals)} animals</span>` : html` <span class="small good">· no animals</span>`}` : ''}</td>
+              <td class="small">${unitsInline(d.tribe, parseUnits(e.units))}<br><span class="muted">carries ${fmtNum(carryOf(d.tribe, parseUnits(e.units), d.carryMult))}</span></td>
+              <td class="small">${r && e.result
+                ? html`<img src="/static/img/${r.icon}.svg" width="16" height="16" alt="${r.label}" title="${r.label}"> ${fmtNum(e.result.loot)} loot`
+                : e.lastSentAt ? html`<span class="muted">on the way (${fmtAgo(e.lastSentAt, d.now)})</span>` : html`<span class="none">not raided yet</span>`}
+                ${e.lastNote ? html`<br><span class="bad">${e.lastNote}</span>` : ''}</td>
+              <td><button type="submit" form="del${e.id}" class="lnk small" aria-label="Remove target" title="Remove from list">✕</button></td></tr>`;
+          })}
           </tbody></table></div>
-          <p><button type="submit" name="all" value="1">Raid all</button> <button type="submit" class="secondary">Raid selected</button></p>
+          <p class="fl-actions"><button type="submit" name="all" value="1">Raid all</button> <button type="submit" class="secondary">Raid selected</button>
+            <span class="small muted">Targets whose troops aren't home are skipped and marked.</span></p>
         </form>
-        ${l.entries.map((e) => html`<form id="del${e.id}" method="post" action="/goldclub/entry/delete" hidden>${csrfField(d.csrf)}<input type="hidden" name="id" value="${e.id}"></form>`)}
-        <form method="post" action="/goldclub/auto" class="block">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
-          <label>Auto-repeat: <select name="minutes"><option value="">off</option>${AUTO_MINUTES.map(
+        ${l.entries.map((e) => html`<form id="del${e.id}" method="post" action="/goldclub/entry/delete" hidden>${csrfField(d.csrf)}<input type="hidden" name="id" value="${e.id}"></form>`)}`}
+
+      <h4 class="fl-step"><span>2</span> Add targets</h4>
+      <form method="post" action="/goldclub/entry" class="block">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
+        ${troopPicker}
+        <div class="fl-ways">
+          <div class="fl-way"><b>One target</b><p class="small muted">A village or an oasis by its coordinates.</p>
+            <p>x <input type="number" name="x" class="w30" inputmode="numeric"> y <input type="number" name="y" class="w30" inputmode="numeric"> <button type="submit" class="small">Add target</button></p>
+            ${d.places.length ? html`<p class="small places">Saved: ${d.places.map((p) => html`<a href="#" class="place" data-x="${p.x}" data-y="${p.y}">${p.label}</a> `)}</p>` : ''}</div>
+          <div class="fl-way"><b>Free oases nearby</b><p class="small muted">Every free oasis around ${l.villageName} that isn't on the list yet.</p>
+            <p>within <input type="number" name="radius" min="1" max="${FARM_RADIUS_MAX}" value="10" class="w30" inputmode="numeric"> fields, at least <input type="number" name="minRes" min="0" class="w60" inputmode="numeric" placeholder="0"> loot
+            <button type="submit" formaction="/goldclub/oases" class="small">Add oases</button></p></div>
+        </div>
+      </form>
+
+      <h4 class="fl-step"><span>3</span> Settings</h4>
+      <div class="fl-settings">
+        <form method="post" action="/goldclub/auto" class="inline">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
+          <label>Raid automatically <select name="minutes"><option value="">never (only when I click)</option>${AUTO_MINUTES.map(
             (m) => html`<option value="${m}"${l.autoMinutes === m ? html` selected` : ''}>every ${m} minutes</option>`,
-          )}</select></label> <button type="submit" class="small secondary">Save</button>
-          <span class="small muted">${l.autoMinutes ? `Raids are sent automatically every ${l.autoMinutes} minutes when the troops are home.` : 'Raids only go when you click.'}</span>
-        </form>
-        <form method="post" action="/goldclub/entry" class="block">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
-          <p class="small"><b>Add target:</b> x <input type="number" name="x" class="w30" inputmode="numeric"> y <input type="number" name="y" class="w30" inputmode="numeric">
-            ${d.places.length ? html`<span class="places">${d.places.map((p) => html`<a href="#" class="place" data-x="${p.x}" data-y="${p.y}">${p.label}</a> `)}</span>` : ''}</p>
-          <p class="small">${units.slice(0, 8).map(
-            (u, i) => html`<label class="nowrap">${unitIcon(d.tribe, i, 16, false)}<input type="number" name="t${i}" min="0" class="w30 su-in" inputmode="numeric" aria-label="${u.name}" title="${u.name}: carries ${Math.floor(u.carry * d.carryMult)} each" data-carry="${Math.floor(u.carry * d.carryMult * 100) / 100}"></label> `,
-          )} <span class="small">Can carry: <b data-carrytotal>0</b></span> <button type="submit" class="small">Add</button>
-          <button type="submit" formaction="/goldclub/oases" class="small secondary">Add all free oases</button>
-          <label>within <input type="number" name="radius" min="1" max="${FARM_RADIUS_MAX}" value="10" class="w30" inputmode="numeric"> fields (up to ${FARM_RADIUS_MAX})</label>
-          <label>with at least <input type="number" name="minRes" min="0" class="w60" inputmode="numeric" placeholder="0"> resources</label></p>
-          <p class="small muted">Leave x and y empty for "Add all free oases": the troops above go to each of them.</p>
-        </form>
+          )}</select></label> <button type="submit" class="small secondary">Save</button></form>
         ${l.entries.some((e) => e.oasis)
-          ? html`<form method="post" action="/goldclub/oases/prune" class="block">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
-              <p class="small"><label>Remove oases with less than <input type="number" name="minRes" min="1" required class="w60" inputmode="numeric"> resources</label>
-              <button type="submit" class="small secondary">Remove</button></p></form>`
+          ? html`<form method="post" action="/goldclub/oases/prune" class="inline">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
+              <label>Remove oases with less than <input type="number" name="minRes" min="1" required class="w60" inputmode="numeric"> loot</label> <button type="submit" class="small secondary">Remove</button></form>`
           : ''}
-        <form method="post" action="/goldclub/list/delete" class="inline">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}"><button type="submit" class="small secondary" data-confirm="Delete the list ${l.name}?">Delete this list</button></form></details>`,
-    )}`;
+        <form method="post" action="/goldclub/list/delete" class="inline fl-del">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}"><button type="submit" class="small secondary" data-confirm="Delete the list ${l.name} and its ${l.entries.length} targets?">Delete this list</button></form>
+      </div>
+      </div>
+    </section>`;
 }
 
 export function tradeRoutesPanel(d: {

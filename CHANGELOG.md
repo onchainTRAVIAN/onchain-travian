@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.3 — 2026-10-05
+- Custom farm lists redesigned: an overview of all lists (targets, auto status, last raid, Raid all / Open) and one opened list in three steps — Targets, Add targets (troops per raid once; "One target" or "Free oases nearby"), Settings (auto-repeat, remove poor oases, delete). Empty states explain what to do; every action returns to the open list.
+- Training shows how many of each unit the village has in total (at home + away + on the move); the at-home count is in the tooltip.
+
 ## 0.13.2 — 2026-10-05
 - Oases held by other players can really be taken now: their loyalty regrows 2 per hour per Hero's Mansion level (not multiplied by world speed), so a few hero attacks in a row break the hold.
 - Alliance treaties have teeth: members of the same alliance, and of alliances in a confederacy or non-aggression pact, can't attack, raid or scout each other (reinforcing and trade still work). War stays a public statement.

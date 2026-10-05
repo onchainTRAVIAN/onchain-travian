@@ -18,7 +18,7 @@ export interface TrainGroup {
 }
 
 /** Every unit this village can train, from all its training buildings, in one form. */
-export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Resources; home: UnitCounts; csrf: string; now: number }): SafeHtml {
+export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Resources; home: UnitCounts; owned: UnitCounts; csrf: string; now: number }): SafeHtml {
   const any = d.groups.some((g) => g.options.some((o) => o.available));
   const head = html`<div class="vtitle"><h1>Train troops</h1><span class="vmeta">all training buildings of this village in one place</span></div>`;
   if (d.groups.length === 0) {
@@ -32,7 +32,7 @@ export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Re
           ? html`<p class="pad small muted">No units researched for this building yet — research them in the <a href="/build?b=academy">Academy</a>.</p>`
           : html`<table class="build_details tall"><tbody>${g.options.map(
               (o) => html`<tr>
-                <td class="desc">${unitIcon(d.tribe, o.slot)} <b>${o.unit.name}</b> <span class="avail">(Available: ${fmtNum(d.home[o.slot] ?? 0)})</span>
+                <td class="desc">${unitIcon(d.tribe, o.slot)} <b>${o.unit.name}</b> <span class="avail" title="${fmtNum(d.home[o.slot] ?? 0)} at home now · ${fmtNum(d.owned[o.slot] ?? 0)} in total (incl. away and on the move)">(You have: ${fmtNum(d.owned[o.slot] ?? 0)})</span>
                   <span class="small muted" title="${UNIT_GUIDE[o.unit.id]?.use ?? ''}">${UNIT_GUIDE[o.unit.id]?.kind ?? ''}</span>
                   <div class="details">${costLine(o.cost, d.have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>${o.unit.carry > 0 ? html`<span class="carry">carries ${fmtNum(o.unit.carry)}</span>` : ''}`)}
                   ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>

@@ -274,7 +274,7 @@ villageRouter.get('/troops/train', (req, res) => {
     req,
     res,
     'Train troops',
-    trainAllView({ tribe: state.tribe, groups, have: stockOf(state.village), home: troopsAt(db, state.village.id, state.village.id), csrf: ctx.csrf, now: ctx.now }),
+    trainAllView({ tribe: state.tribe, groups, have: stockOf(state.village), home: troopsAt(db, state.village.id, state.village.id), owned: ownedTroopTotals(db, state.village.id), csrf: ctx.csrf, now: ctx.now }),
     { nav: 'train', chrome: page.chrome },
   );
 });

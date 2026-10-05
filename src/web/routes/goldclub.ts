@@ -83,6 +83,7 @@ goldclubRouter.get('/troops/farmlist', (req, r) => {
           .map((e) => ({ ...e, target: targetName(e.x, e.y), result: lastRaidResult(db, ctx.user.id, e), oasis: oasisInfo(e.x, e.y, ctx.now) })),
       })),
       places: placesOf(db, ctx.user.id),
+      openListId: intParam(req.query.list, 0) || null,
       raider: hasGoldClub(db, ctx.user.id) ? raiderSection(page.state.village.id, ctx.user.id, page.state.tribe, ctx.csrf, ctx.now) : undefined,
       csrf: ctx.csrf,
       now: ctx.now,
@@ -214,9 +215,9 @@ goldclubRouter.post(
   '/goldclub/list',
   formAction(z.object({ name: z.string().max(30).default('') }), (req, r, d) => {
     const ctx = authed(req);
-    createFarmList(db, ctx.user.id, ctx.villageId, d.name, ctx.now);
-    setFlash(r, 'ok', 'Farm list created.');
-    r.redirect(303, '/troops/farmlist');
+    const listId = createFarmList(db, ctx.user.id, ctx.villageId, d.name, ctx.now);
+    setFlash(r, 'ok', 'Farm list created — now add targets in step 2.');
+    r.redirect(303, `/troops/farmlist?list=${listId}#list`);
   }, '/troops/farmlist'),
 );
 
@@ -238,7 +239,7 @@ goldclubRouter.post(
       [d.t0, d.t1, d.t2, d.t3, d.t4, d.t5, d.t6, d.t7].forEach((n, i) => (units[i] = n));
       addFarmEntry(db, authed(req).user.id, d.listId, d.x, d.y, units);
       setFlash(r, 'ok', `Target (${d.x}|${d.y}) added.`);
-      r.redirect(303, '/troops/farmlist');
+      r.redirect(303, `/troops/farmlist?list=${d.listId}#list`);
     },
     '/troops/farmlist',
   ),
@@ -253,7 +254,7 @@ goldclubRouter.post(
       [d.t0, d.t1, d.t2, d.t3, d.t4, d.t5, d.t6, d.t7].forEach((n, i) => (units[i] = n));
       const n = addNearbyOases(db, authed(req).user.id, d.listId, d.radius, units, d.minRes, authed(req).now);
       setFlash(r, 'ok', n ? `${n} free oases added.` : `No new free oases in range${d.minRes ? ` with at least ${d.minRes} resources` : ''}.`);
-      r.redirect(303, '/troops/farmlist');
+      r.redirect(303, `/troops/farmlist?list=${d.listId}#list`);
     },
     '/troops/farmlist',
   ),
@@ -265,7 +266,7 @@ goldclubRouter.post(
     const ctx = authed(req);
     const n = removeLowOases(db, ctx.user.id, d.listId, d.minRes, ctx.now);
     setFlash(r, 'ok', n ? `${n} oases with less than ${d.minRes} resources removed.` : `Every oasis on the list has at least ${d.minRes} resources.`);
-    r.redirect(303, '/troops/farmlist');
+    r.redirect(303, `/troops/farmlist?list=${d.listId}#list`);
   }, '/troops/farmlist'),
 );
 
@@ -273,19 +274,20 @@ goldclubRouter.post(
   '/goldclub/entry/delete',
   formAction(z.object({ id }), (req, r, d) => {
     removeFarmEntry(db, authed(req).user.id, d.id);
-    r.redirect(303, '/troops/farmlist');
+    r.redirect(303, backUrl(req, '/troops/farmlist') + '#list');
   }, '/troops/farmlist'),
 );
 
 goldclubRouter.post('/goldclub/raid', (req, r, next) => {
-  // Checkbox names are e<entryId>; "Raid all" ignores the selection.
+  // Ticked targets come as "ids" (once or many times); "Raid all" ignores the selection.
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const selected = Object.keys(body).filter((k) => /^e\d+$/.test(k)).map((k) => Number(k.slice(1)));
+  const rawIds = body.ids === undefined ? [] : Array.isArray(body.ids) ? body.ids : [body.ids];
+  const selected = rawIds.map((v) => Number(v)).filter((n) => Number.isInteger(n) && n > 0);
   return formAction(z.object({ listId: id, all: z.string().optional() }), (rq, rs, d) => {
     const ctx = authed(rq);
     const out = raidFarmList(db, ctx.user.id, d.listId, ctx.now, d.all ? undefined : selected);
     setFlash(rs, out.sent > 0 ? 'ok' : 'error', `${out.sent} raids sent${out.skipped ? `, ${out.skipped} skipped (see the list)` : ''}.`);
-    rs.redirect(303, '/troops/farmlist');
+    rs.redirect(303, `/troops/farmlist?list=${d.listId}#list`);
   }, '/troops/farmlist')(req, r, next);
 });
 
@@ -295,7 +297,7 @@ goldclubRouter.post(
     const ctx = authed(req);
     setFarmAuto(db, ctx.user.id, d.listId, d.minutes, ctx.now);
     setFlash(r, 'ok', d.minutes ? `Auto-raids every ${d.minutes} minutes.` : 'Auto-raids off.');
-    r.redirect(303, '/troops/farmlist');
+    r.redirect(303, `/troops/farmlist?list=${d.listId}#list`);
   }, '/troops/farmlist'),
 );
 
