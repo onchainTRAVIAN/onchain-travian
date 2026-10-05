@@ -5,12 +5,17 @@ import { ensureWorld } from './game/engine/world.js';
 import { processDue } from './game/engine/events.js';
 import { processWeek } from './game/actions/weekly.js';
 import { processEndgame } from './game/actions/endgame.js';
+import { backfillReportOutcomes } from './game/engine/reports.js';
 import { processFarmLists, processTradeRoutes } from './game/actions/goldclub.js';
 import { processOasisRaiders } from './game/actions/raider.js';
 import { createApp } from './app.js';
 import { startCryptoWorkers } from './crypto/worker.js';
 
 ensureWorld(db);
+// Older reports get their loss outcome (for the report filters).
+while (backfillReportOutcomes(db) > 0) {
+  /* keep going */
+}
 
 // The world keeps moving even when nobody is online: finish builds and resolve battles every second.
 const worker = setInterval(() => {

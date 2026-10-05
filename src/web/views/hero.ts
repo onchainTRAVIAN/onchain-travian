@@ -8,6 +8,11 @@ import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, timer } from './layout.js';
 import { unitIcon } from './parts.js';
 
+/** The hero's portrait gets a grander backdrop and frame every 5 levels (stages 1–5). */
+export function heroStage(level: number): number {
+  return Math.min(5, Math.floor(Math.max(0, level) / 5) + 1);
+}
+
 const STATUS: Record<HeroRow['status'], string> = {
   home: 'At home',
   away: 'Reinforcing another village',
@@ -87,7 +92,9 @@ export function heroView(d: {
   const where = h.status === 'away' && d.locationName ? `in ${d.locationName}` : h.status === 'home' ? `in ${d.homeName}` : '';
   return html`<h1>Hero</h1>
     <div class="spanel herocard">
-      <div class="portrait"><img src="/static/img/units/big/${d.tribe}-${h.unitSlot + 1}.svg" width="120" height="140" alt="${unit.name}"><span class="lvlbadge" title="Level">${h.level}</span></div>
+      <div class="portrait"><img class="bd" src="/static/img/hero/backdrop-${heroStage(h.level)}.svg" width="120" height="150" alt="">
+        <img class="fig" src="/static/img/units/big/${d.tribe}-${h.unitSlot + 1}.svg" width="120" height="140" alt="${unit.name}">
+        <img class="fr" src="/static/img/hero/frame-${heroStage(h.level)}.svg" width="120" height="150" alt=""><span class="lvlbadge" title="Level">${h.level}</span></div>
       <div class="hinfo">
         <div class="hname"><b>${h.name}</b> <span class="muted">level ${h.level}</span></div>
         <div class="hsub">${unitIcon(d.tribe, h.unitSlot, 16, false)} trained from ${unit.name} · ${TRIBES[d.tribe].name}</div>

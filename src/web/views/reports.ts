@@ -52,6 +52,7 @@ const FILTERS: { key: ReportFilter; label: string }[] = [
 export function reportListView(d: {
   rows: { id: number; kind: string; title: string; isRead: boolean; createdAt: number; outcome?: 'none' | 'some' | 'all' | null }[];
   filter: ReportFilter;
+  outcome?: 'none' | 'some' | 'all' | null;
   page: number;
   hasMore: boolean;
   now: number;
@@ -59,10 +60,18 @@ export function reportListView(d: {
 }): SafeHtml {
   return html`<h1>📜 Reports</h1>
     <nav class="tabs" aria-label="Report filter">${FILTERS.map(
-      (f) => html`<a href="/reports?f=${f.key}" class="${f.key === d.filter ? 'on' : ''}">${f.label}</a>`,
+      (f) => html`<a href="/reports?f=${f.key}${d.outcome ? `&o=${d.outcome}` : ''}" class="${f.key === d.filter ? 'on' : ''}">${f.label}</a>`,
     )}</nav>
+    <p class="routc small">Losses: ${[
+      { key: null, label: 'any', ico: '' },
+      { key: 'none', label: 'none', ico: 'ui/rep-g' },
+      { key: 'some', label: 'some', ico: 'ui/rep-y' },
+      { key: 'all', label: 'all troops', ico: 'ui/rep-r' },
+    ].map(
+      (o) => html`<a href="/reports?f=${d.filter}${o.key ? `&o=${o.key}` : ''}" class="${(d.outcome ?? null) === o.key ? 'on' : ''}">${o.ico ? icon(o.ico, '', 14) : ''} ${o.label}</a>`,
+    )}</p>
     ${d.rows.length === 0
-      ? html`<p class="muted">No reports yet. Battles, scouting and reinforcements show up here.</p>`
+      ? html`<p class="muted">${d.outcome ? 'No reports match this filter.' : 'No reports yet. Battles, scouting and reinforcements show up here.'}</p>`
       : html`<form method="post" action="/reports/bulk" class="bulk">${csrfField(d.csrf)}<input type="hidden" name="f" value="${d.filter}">
         <table class="tb"><thead><tr><th class="chk"><label class="sr" for="chkall">Select all</label><input type="checkbox" id="chkall" data-checkall title="Select all"></th><th></th><th>Subject:</th><th>Sent:</th></tr></thead><tbody>${d.rows.map(
           (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td class="chk"><label class="sr" for="r${r.id}">Select</label><input type="checkbox" id="r${r.id}" name="ids" value="${r.id}"></td><td>${r.outcome ? outcomeIcon(r.outcome) : kindIcon(r.kind)}</td>
@@ -74,7 +83,7 @@ export function reportListView(d: {
           <button type="submit" name="act" value="readall" class="small secondary">Mark all as read</button>
           <button type="submit" name="act" value="deleteall" class="small secondary" data-confirm="Delete all ${d.filter === 'all' ? '' : 'these '}reports? This can't be undone.">Delete all${d.filter === 'all' ? '' : ' in this tab'}</button></p>
         </form>`}
-    ${paginate(`/reports?f=${d.filter}`, d.page, d.hasMore)}`;
+    ${paginate(`/reports?f=${d.filter}${d.outcome ? `&o=${d.outcome}` : ''}`, d.page, d.hasMore)}`;
 }
 
 type HeroLine = NonNullable<BattleReportData['heroes']>[number];

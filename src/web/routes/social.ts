@@ -39,9 +39,10 @@ socialRouter.get('/reports', requireAuth, (req, res) => {
   const page = loadGamePage(req);
   const f = typeof req.query.f === 'string' && req.query.f in REPORT_FILTERS ? (req.query.f as ReportFilter) : 'all';
   const p = pageParam(req.query.page);
-  const rows = reportList(db, ctx.user.id, f, PAGE + 1, (p - 1) * PAGE);
+  const o = (['none', 'some', 'all'] as const).find((x) => x === req.query.o) ?? null;
+  const rows = reportList(db, ctx.user.id, f, PAGE + 1, (p - 1) * PAGE, o);
   const listed = rows.slice(0, PAGE).map(({ data, ...r }) => ({ ...r, outcome: battleOutcome(data, ctx.user.id) }));
-  sendPage(req, res, 'Reports', reportListView({ rows: listed, filter: f, page: p, hasMore: rows.length > PAGE, now: ctx.now, csrf: ctx.csrf }), {
+  sendPage(req, res, 'Reports', reportListView({ rows: listed, outcome: o, filter: f, page: p, hasMore: rows.length > PAGE, now: ctx.now, csrf: ctx.csrf }), {
     nav: 'reports',
     chrome: page.chrome,
   });

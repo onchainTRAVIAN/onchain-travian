@@ -1,7 +1,9 @@
 # Changelog
 
 ## 0.13.4 — 2026-10-05
-- Top menu buttons can show a colour version on hover and for the open page (art arriving).
+- Top menu buttons light up in colour on hover and for the page you're on (like classic Travian).
+- Reports can be filtered by losses — none (green), some (yellow), all troops (red) — together with the type tabs.
+- The hero's portrait gets a grander backdrop and frame every 5 levels: wood, bronze, silver with banners, gold with laurels, jewelled gold with a crown.
 
 ## 0.13.3 — 2026-10-05
 - Custom farm lists redesigned: an overview of all lists (targets, auto status, last raid, Raid all / Open) and one opened list in three steps — Targets, Add targets (troops per raid once; "One target" or "Free oases nearby"), Settings (auto-repeat, remove poor oases, delete). Empty states explain what to do; every action returns to the open list.

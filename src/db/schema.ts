@@ -204,6 +204,8 @@ export const reports = sqliteTable(
     title: text('title').notNull(),
     data: text('data').notNull(),
     isRead: integer('is_read', { mode: 'boolean' }).notNull().default(false),
+    /** For battles: how the recipient's own troops fared — 'none' | 'some' | 'all' lost; '-' otherwise. */
+    outcome: text('outcome'),
     createdAt: integer('created_at').notNull(),
   },
   (t) => [index('reports_user_idx').on(t.userId, t.createdAt)],

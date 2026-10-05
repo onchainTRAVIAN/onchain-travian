@@ -1,3 +1,4 @@
+import { eq, isNull } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
 import { reports } from '../../db/schema.js';
 import type { Resources } from '../rules/resources.js';
@@ -99,7 +100,15 @@ export type ReportKind =
 
 export function addReport(q: Q, userId: number | null, kind: ReportKind, title: string, data: ReportData, now: number): void {
   if (userId === null) return;
-  q.insert(reports).values({ userId, kind, title, data: JSON.stringify(data), createdAt: now }).run();
+  const json = JSON.stringify(data);
+  q.insert(reports).values({ userId, kind, title, data: json, outcome: battleOutcome(json, userId) ?? '-', createdAt: now }).run();
+}
+
+/** Fill in `outcome` for reports written before it existed (a batch at a time). */
+export function backfillReportOutcomes(q: Q, batch = 2000): number {
+  const rows = q.select({ id: reports.id, userId: reports.userId, data: reports.data }).from(reports).where(isNull(reports.outcome)).limit(batch).all();
+  for (const r of rows) q.update(reports).set({ outcome: battleOutcome(r.data, r.userId) ?? '-' }).where(eq(reports.id, r.id)).run();
+  return rows.length;
 }
 
 export function parseReport(json: string): ReportData | null {

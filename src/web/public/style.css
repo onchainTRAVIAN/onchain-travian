@@ -915,3 +915,14 @@ input.tickerin { width: 100%; box-sizing: border-box; font-size: 14px; padding: 
 #mtop a img.c { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity 0.15s; }
 #mtop a:hover img.c, #mtop a:focus-visible img.c, #mtop a.on img.c { opacity: 1; }
 #mtop a:hover img.g { filter: none; }
+.routc { margin: -4px 0 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #8a8266; }
+.routc a { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border: 1px solid #dcd6c3; border-radius: 3px; background: #fbfaf5; }
+.routc a.on { background: #71d000; border-color: #5fb300; color: #fff; }
+.routc a img { width: 14px; height: 14px; }
+/* Hero portrait: backdrop and frame grow grander every 5 levels */
+.herocard .portrait { background: none; border: 0; border-radius: 1px; width: 120px; height: 150px; padding: 0; }
+.herocard .portrait img { position: absolute; left: 0; }
+.herocard .portrait img.bd, .herocard .portrait img.fr { top: 0; width: 120px; height: 150px; }
+.herocard .portrait img.fig { top: 10px; width: 120px; height: 140px; }
+.herocard .portrait img.fr { pointer-events: none; }
+.herocard .lvlbadge { z-index: 2; }

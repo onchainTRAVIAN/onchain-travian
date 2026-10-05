@@ -276,9 +276,15 @@ export const REPORT_FILTERS = {
 } as const;
 export type ReportFilter = keyof typeof REPORT_FILTERS;
 
-export function reportList(q: Q, userId: number, filter: ReportFilter, limit: number, offset: number) {
+export type ReportOutcomeFilter = 'none' | 'some' | 'all';
+
+export function reportList(q: Q, userId: number, filter: ReportFilter, limit: number, offset: number, outcome?: ReportOutcomeFilter | null) {
   const kinds = REPORT_FILTERS[filter];
-  const cond = kinds.length > 0 ? and(eq(reports.userId, userId), inArray(reports.kind, [...kinds])) : eq(reports.userId, userId);
+  const cond = and(
+    eq(reports.userId, userId),
+    kinds.length > 0 ? inArray(reports.kind, [...kinds]) : undefined,
+    outcome ? eq(reports.outcome, outcome) : undefined,
+  );
   return q
     .select({ id: reports.id, kind: reports.kind, title: reports.title, isRead: reports.isRead, createdAt: reports.createdAt, data: reports.data })
     .from(reports)
