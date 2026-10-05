@@ -157,3 +157,28 @@ describe('Gold Club farm targets', () => {
     expect(() => addFarmEntry(db, r.userId, list, empty.x, empty.y, units(2, 3))).toThrow(/village or oasis/);
   });
 });
+
+describe('Gold Club oasis filters', () => {
+  it('adds only oases holding enough resources and removes poor ones', async () => {
+    const { addNearbyOases, removeLowOases } = await import('../src/game/actions/goldclub.js');
+    const { oasisStock, setOasisStock } = await import('../src/game/engine/oasis.js');
+    const list = createFarmList(db, r.userId, r.villageId, 'Rich', clock.now());
+    const free = db.select().from(tiles).where(and(eq(tiles.kind, 'oasis'), isNull(tiles.villageId))).all().slice(0, 40);
+    // Make one oasis rich and the rest empty.
+    for (const o of free) setOasisStock(db, o.x, o.y, { wood: 0, clay: 0, iron: 0, crop: 0 }, clock.now());
+    const rich = free[0]!;
+    setOasisStock(db, rich.x, rich.y, { wood: 900, clay: 900, iron: 0, crop: 0 }, clock.now());
+    const added = addNearbyOases(db, r.userId, list, 35, units(2, 3), 1500, clock.now());
+    const entries = () => db.select().from(farmEntries).where(eq(farmEntries.listId, list)).all();
+    expect(entries().every((e) => {
+      const t = db.select().from(tiles).where(and(eq(tiles.x, e.x), eq(tiles.y, e.y))).get()!;
+      return oasisStock(db, t, clock.now()).wood + oasisStock(db, t, clock.now()).clay + oasisStock(db, t, clock.now()).iron + oasisStock(db, t, clock.now()).crop >= 1500;
+    })).toBe(true);
+    expect(added).toBe(entries().length);
+    addNearbyOases(db, r.userId, list, 35, units(2, 3), 0, clock.now());
+    const before = entries().length;
+    const removed = removeLowOases(db, r.userId, list, 1500, clock.now());
+    expect(removed).toBeGreaterThan(0);
+    expect(entries().length).toBe(before - removed);
+  });
+});

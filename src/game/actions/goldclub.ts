@@ -11,6 +11,7 @@ import { ownedVillage } from './build.js';
 import { spend } from './credits.js';
 import { sendResources } from './market.js';
 import { sendTroops } from './troops.js';
+import { oasisStock } from '../engine/oasis.js';
 
 /** Gold Club: bought once per world. */
 export const GOLD_CLUB_PRICE = 500;
@@ -86,7 +87,7 @@ export function addFarmEntry(db: DB, userId: number, listId: number, x: number, 
 }
 
 /** Add every unoccupied oasis within `radius` fields of the list's village that isn't on the list yet. */
-export function addNearbyOases(db: DB, userId: number, listId: number, radius: number, units: UnitCounts): number {
+export function addNearbyOases(db: DB, userId: number, listId: number, radius: number, units: UnitCounts, minRes = 0, now = 0): number {
   return db.transaction((tx) => {
     requireClub(tx, userId);
     const list = ownList(tx, userId, listId);
@@ -98,16 +99,36 @@ export function addNearbyOases(db: DB, userId: number, listId: number, radius: n
     const have = new Set(tx.select({ x: farmEntries.x, y: farmEntries.y }).from(farmEntries).where(eq(farmEntries.listId, listId)).all().map((e) => `${e.x}|${e.y}`));
     const R = config.MAP_RADIUS;
     const free = tx
-      .select({ x: tiles.x, y: tiles.y })
+      .select()
       .from(tiles)
       .where(and(eq(tiles.kind, 'oasis'), isNull(tiles.villageId)))
       .all()
       .map((o) => ({ ...o, d: distance(home.x, home.y, o.x, o.y, R) }))
       .filter((o) => o.d <= radius && !have.has(`${o.x}|${o.y}`))
+      .filter((o) => minRes <= 0 || sumRes(oasisStock(tx, o, now)) >= minRes)
       .sort((a, b) => a.d - b.d)
       .slice(0, FARM_ENTRIES_MAX - have.size);
     for (const o of free) tx.insert(farmEntries).values({ listId, x: o.x, y: o.y, units: JSON.stringify(clean) }).run();
     return free.length;
+  });
+}
+
+/** Drop every oasis target of a list that holds fewer than `minRes` resources right now. */
+export function removeLowOases(db: DB, userId: number, listId: number, minRes: number, now: number): number {
+  return db.transaction((tx) => {
+    requireClub(tx, userId);
+    ownList(tx, userId, listId);
+    assertGame(Number.isFinite(minRes) && minRes > 0, 'Enter how many resources an oasis must have');
+    let n = 0;
+    for (const e of tx.select().from(farmEntries).where(eq(farmEntries.listId, listId)).all()) {
+      const t = tx.select().from(tiles).where(and(eq(tiles.x, e.x), eq(tiles.y, e.y))).get();
+      if (!t || t.kind !== 'oasis') continue;
+      if (sumRes(oasisStock(tx, t, now)) < minRes) {
+        tx.delete(farmEntries).where(eq(farmEntries.id, e.id)).run();
+        n++;
+      }
+    }
+    return n;
   });
 }
 

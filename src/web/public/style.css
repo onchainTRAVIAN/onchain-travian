@@ -528,3 +528,4 @@ a.uico:hover img { filter: drop-shadow(0 0 1.5px #71d000); }
 .bulkbar { margin: 6px 0; }
 .bulkbar .sep { display: inline-block; width: 12px; }
 .build_details .avail { font-size: 11px; color: #333; white-space: nowrap; }
+input.w60 { width: 60px; }

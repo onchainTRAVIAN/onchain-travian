@@ -41,7 +41,7 @@ export function farmListView(d: {
   villageName: string;
   isCapital: boolean;
   evade: boolean;
-  lists: (FarmList & { villageName: string; entries: (FarmEntry & { target: string; result: { result: string; loot: number } | null })[] })[];
+  lists: (FarmList & { villageName: string; entries: (FarmEntry & { target: string; result: { result: string; loot: number } | null; oasis: { stock: number; animals: number } | null })[] })[];
   places: { x: number; y: number; label: string }[];
   csrf: string;
   now: number;
@@ -71,7 +71,8 @@ export function farmListView(d: {
             : l.entries.map((e) => {
                 const r = e.result ? RESULT[e.result.result] : undefined;
                 return html`<tr><td><label class="sr" for="fe${e.id}">select</label><input id="fe${e.id}" type="checkbox" name="e${e.id}" value="1" checked></td>
-                  <td><a href="/map/tile?x=${e.x}&amp;y=${e.y}">${e.target}</a> <span class="small muted">(${e.x}|${e.y})</span></td>
+                  <td><a href="/map/tile?x=${e.x}&amp;y=${e.y}">${e.target}</a> <span class="small muted">(${e.x}|${e.y})</span>
+                    ${e.oasis ? html`<br><span class="small" title="Resources lying in the oasis now">${resIcon('wood')}${fmtNum(e.oasis.stock)} to loot</span>${e.oasis.animals > 0 ? html` <span class="small bad" title="Wild animals defend it">· ${fmtNum(e.oasis.animals)} animals</span>` : html` <span class="small good">· no animals</span>`}` : ''}</td>
                   <td class="small">${unitsInline(d.tribe, parseUnits(e.units))}<br><span class="muted">carries ${fmtNum(carryOf(d.tribe, parseUnits(e.units), d.carryMult))}</span></td>
                   <td class="small">${r && e.result
                     ? html`<img src="/static/img/${r.icon}.svg" width="16" height="16" alt="${r.label}" title="${r.label}"> ${fmtNum(e.result.loot)} loot`
@@ -96,9 +97,15 @@ export function farmListView(d: {
             (u, i) => html`<label class="nowrap">${unitIcon(d.tribe, i, 16, false)}<input type="number" name="t${i}" min="0" class="w30 su-in" inputmode="numeric" aria-label="${u.name}" title="${u.name}: carries ${Math.floor(u.carry * d.carryMult)} each" data-carry="${Math.floor(u.carry * d.carryMult * 100) / 100}"></label> `,
           )} <span class="small">Can carry: <b data-carrytotal>0</b></span> <button type="submit" class="small">Add</button>
           <button type="submit" formaction="/goldclub/oases" class="small secondary">Add all free oases</button>
-          <label>within <input type="number" name="radius" min="1" max="${FARM_RADIUS_MAX}" value="10" class="w30" inputmode="numeric"> fields (up to ${FARM_RADIUS_MAX})</label></p>
+          <label>within <input type="number" name="radius" min="1" max="${FARM_RADIUS_MAX}" value="10" class="w30" inputmode="numeric"> fields (up to ${FARM_RADIUS_MAX})</label>
+          <label>with at least <input type="number" name="minRes" min="0" class="w60" inputmode="numeric" placeholder="0"> resources</label></p>
           <p class="small muted">Leave x and y empty for "Add all free oases": the troops above go to each of them.</p>
         </form>
+        ${l.entries.some((e) => e.oasis)
+          ? html`<form method="post" action="/goldclub/oases/prune" class="block">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
+              <p class="small"><label>Remove oases with less than <input type="number" name="minRes" min="1" required class="w60" inputmode="numeric"> resources</label>
+              <button type="submit" class="small secondary">Remove</button></p></form>`
+          : ''}
         <form method="post" action="/goldclub/list/delete" class="inline">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}"><button type="submit" class="small secondary">Delete this list</button></form>`,
     )}`;
 }

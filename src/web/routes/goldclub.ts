@@ -16,16 +16,19 @@ import {
   lastRaidResult,
   raidFarmList,
   removeFarmEntry,
+  removeLowOases,
   setEvasion,
   setFarmAuto,
   GOLD_CLUB_PRICE,
   FARM_RADIUS_MAX,
 } from '../../game/actions/goldclub.js';
 import { placesOf } from '../../game/actions/places.js';
+import { oasisAnimals, oasisStock } from '../../game/engine/oasis.js';
+import { sumRes } from '../../game/rules/resources.js';
 import { getModifiers } from '../../game/modifiers.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
 import { res } from '../../game/rules/resources.js';
-import { emptyUnits } from '../../game/rules/units.js';
+import { emptyUnits, totalUnits } from '../../game/rules/units.js';
 import { authed, setFlash } from '../session.js';
 import { cropperView, farmListView } from '../views/goldclub.js';
 import { backUrl, formAction, intParam, loadGamePage, sendPage } from './helpers.js';
@@ -35,6 +38,13 @@ export const goldclubRouter = Router();
 const id = z.coerce.number().int().positive();
 const coord = z.preprocess((v) => (v === '' ? undefined : v), z.coerce.number({ message: 'Enter the x and y coordinates' }).int());
 const count = z.preprocess((v) => (v === '' || v === undefined ? 0 : v), z.coerce.number().int().min(0).max(1_000_000));
+
+/** Current loot and animals at an oasis target (null for villages). */
+function oasisInfo(x: number, y: number, now: number): { stock: number; animals: number } | null {
+  const t = db.select().from(tiles).where(and(eq(tiles.x, x), eq(tiles.y, y))).get();
+  if (!t || t.kind !== 'oasis') return null;
+  return { stock: Math.floor(sumRes(oasisStock(db, t, now))), animals: t.villageId === null ? totalUnits(oasisAnimals(db, t, now)) : 0 };
+}
 
 function targetName(x: number, y: number): string {
   const t = db.select().from(tiles).where(and(eq(tiles.x, x), eq(tiles.y, y))).get();
@@ -66,7 +76,7 @@ goldclubRouter.get('/troops/farmlist', (req, r) => {
         villageName: vname(l.villageId),
         entries: entries
           .filter((e) => e.listId === l.id)
-          .map((e) => ({ ...e, target: targetName(e.x, e.y), result: lastRaidResult(db, ctx.user.id, e) })),
+          .map((e) => ({ ...e, target: targetName(e.x, e.y), result: lastRaidResult(db, ctx.user.id, e), oasis: oasisInfo(e.x, e.y, ctx.now) })),
       })),
       places: placesOf(db, ctx.user.id),
       csrf: ctx.csrf,
@@ -134,16 +144,26 @@ goldclubRouter.post(
 goldclubRouter.post(
   '/goldclub/oases',
   formAction(
-    z.object({ listId: id, radius: z.coerce.number({ message: 'Enter a distance' }).int().min(1, 'Distance must be at least 1 field').max(FARM_RADIUS_MAX, `At most ${FARM_RADIUS_MAX} fields`), t0: count, t1: count, t2: count, t3: count, t4: count, t5: count, t6: count, t7: count }),
+    z.object({ listId: id, minRes: count, radius: z.coerce.number({ message: 'Enter a distance' }).int().min(1, 'Distance must be at least 1 field').max(FARM_RADIUS_MAX, `At most ${FARM_RADIUS_MAX} fields`), t0: count, t1: count, t2: count, t3: count, t4: count, t5: count, t6: count, t7: count }),
     (req, r, d) => {
       const units = emptyUnits();
       [d.t0, d.t1, d.t2, d.t3, d.t4, d.t5, d.t6, d.t7].forEach((n, i) => (units[i] = n));
-      const n = addNearbyOases(db, authed(req).user.id, d.listId, d.radius, units);
-      setFlash(r, 'ok', n ? `${n} free oases added.` : 'No new free oases in range.');
+      const n = addNearbyOases(db, authed(req).user.id, d.listId, d.radius, units, d.minRes, authed(req).now);
+      setFlash(r, 'ok', n ? `${n} free oases added.` : `No new free oases in range${d.minRes ? ` with at least ${d.minRes} resources` : ''}.`);
       r.redirect(303, '/troops/farmlist');
     },
     '/troops/farmlist',
   ),
+);
+
+goldclubRouter.post(
+  '/goldclub/oases/prune',
+  formAction(z.object({ listId: id, minRes: z.coerce.number({ message: 'Enter an amount' }).int().min(1, 'Enter an amount above 0').max(10_000_000) }), (req, r, d) => {
+    const ctx = authed(req);
+    const n = removeLowOases(db, ctx.user.id, d.listId, d.minRes, ctx.now);
+    setFlash(r, 'ok', n ? `${n} oases with less than ${d.minRes} resources removed.` : `Every oasis on the list has at least ${d.minRes} resources.`);
+    r.redirect(303, '/troops/farmlist');
+  }, '/troops/farmlist'),
 );
 
 goldclubRouter.post(

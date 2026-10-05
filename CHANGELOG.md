@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.8 — 2026-10-05
+- Farm list: oasis targets show the resources lying there and how many animals guard them; "Add all free oases" takes a minimum amount of resources; "Remove oases with less than N resources" cleans a list.
+
 ## 0.10.7 — 2026-10-05
 - Training buildings (Barracks, Stable, Workshop, Great Barracks/Stable, Residence/Palace): each unit shows "(Available: N)" in the village, plus "of M" when some are away or on the move.
 
