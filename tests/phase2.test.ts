@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
 import { heroes, movements, reports, slots, tiles, users, villages } from '../src/db/schema.js';
 import { clock } from '../src/clock.js';
@@ -246,7 +246,8 @@ describe('oases', () => {
     const later = db.transaction((tx) => oasisStock(tx, tile(), clock.now()));
     expect(later.wood + later.clay + later.iron + later.crop).toBeGreaterThan(first.wood + first.clay + first.iron + first.crop);
     // Clear the animals so a small raid wins, then send it.
-    db.update(tiles).set({ animals: JSON.stringify(emptyUnits()), animalsAt: clock.now() }).where(and(eq(tiles.x, oasis.x), eq(tiles.y, oasis.y))).run();
+    // (animalsAt in the future: no new animals grow back while the raid travels.)
+    db.update(tiles).set({ animals: JSON.stringify(emptyUnits()), animalsAt: clock.now() + 7 * 24 * HOUR }).where(and(eq(tiles.x, oasis.x), eq(tiles.y, oasis.y))).run();
     db.update(villages).set({ wood: 0, clay: 0, iron: 0, crop: 1000, resAt: clock.now() }).where(eq(villages.id, c.villageId)).run();
     const units = emptyUnits();
     units[0] = 100;
@@ -254,7 +255,7 @@ describe('oases', () => {
     const before = db.transaction((tx) => oasisStock(tx, tile(), clock.now()));
     const mv = sendTroops(db, c.userId, c.villageId, { x: oasis.x, y: oasis.y, kind: 'raid', units }, clock.now());
     advance(mv.arriveAt - clock.now() + 1);
-    const rep = db.select().from(reports).where(eq(reports.userId, c.userId)).all().at(-1);
+    const rep = db.select().from(reports).where(eq(reports.userId, c.userId)).orderBy(desc(reports.id)).get();
     const data = JSON.parse(rep?.data ?? '{}') as { loot?: { wood: number; clay: number; iron: number; crop: number } };
     const got = (data.loot?.wood ?? 0) + (data.loot?.clay ?? 0) + (data.loot?.iron ?? 0) + (data.loot?.crop ?? 0);
     expect(got).toBeGreaterThan(0);
