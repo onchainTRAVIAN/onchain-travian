@@ -1,5 +1,5 @@
 import type { OasisType } from './map.js';
-import { emptyUnits, type UnitCounts } from './units.js';
+import { TRIBES, emptyUnits, type UnitCounts } from './units.js';
 import { mulberry32 } from './map.js';
 
 /** Animal mix per oasis type: slot index (nature tribe) -> max count. */
@@ -26,14 +26,45 @@ export function initialAnimals(type: OasisType, x: number, y: number): UnitCount
   return maxAnimals(type).map((n) => Math.round(n * (0.5 + rnd() * 0.5)));
 }
 
-/** Animals regrow ~10% of max per day (per type), never above max. Only unoccupied oases regrow. */
-export function regrowAnimals(type: OasisType, current: UnitCounts, hours: number): UnitCounts {
-  const max = maxAnimals(type);
-  return current.map((n, i) => {
-    const cap = max[i] ?? 0;
-    if (n >= cap) return n;
-    return Math.min(cap, Math.floor(n + (cap * 0.1 * hours) / 24 + 1e-9));
-  });
+/** Animal growth in a free oasis: this much power per real day, up to the cap. */
+export const ANIMAL_POWER_PER_DAY = 350;
+export const ANIMAL_POWER_CAP = 8000;
+
+/** An animal's power: its average defence against infantry and cavalry. */
+function animalPower(slot: number): number {
+  const u = TRIBES.nature.units[slot];
+  return u ? (u.defInf + u.defCav) / 2 : 0;
+}
+
+export function oasisAnimalPower(animals: UnitCounts): number {
+  return animals.reduce((s, n, i) => s + n * animalPower(i), 0);
+}
+
+/**
+ * Free oases slowly gain animals: up to ANIMAL_POWER_PER_DAY power per day, until the oasis holds
+ * ANIMAL_POWER_CAP. Whole animals are added one by one, keeping the oasis's usual species mix
+ * (by its typical head count); `used` is the power actually added, so the caller can carry the rest over.
+ */
+export function regrowAnimals(type: OasisType, current: UnitCounts, hours: number): { animals: UnitCounts; used: number } {
+  const have = oasisAnimalPower(current);
+  const budget = Math.min(Math.max(0, ANIMAL_POWER_CAP - have), (ANIMAL_POWER_PER_DAY * hours) / 24);
+  const species = Object.entries(BASE[type]).map(([slot, w]) => ({ slot: Number(slot), w: w ?? 0, added: 0 })).filter((x) => x.w > 0 && animalPower(x.slot) > 0);
+  const out = [...current];
+  let used = 0;
+  // Credit from earlier growth: animals already there count towards their species' share.
+  for (const x of species) x.added = current[x.slot] ?? 0;
+  for (;;) {
+    // The species furthest behind its share gets the next animal; if it doesn't fit yet, growth
+    // waits (the time carries over) instead of filling up with small animals.
+    const next = [...species].sort((a, b) => a.added / a.w - b.added / b.w || animalPower(a.slot) - animalPower(b.slot))[0];
+    if (!next) break;
+    const pw = animalPower(next.slot);
+    if (pw > budget - used + 1e-9) break;
+    out[next.slot] = (out[next.slot] ?? 0) + 1;
+    next.added++;
+    used += pw;
+  }
+  return { animals: out, used };
 }
 
 /** Resources an unoccupied oasis gathers per hour for each 25% of bonus (before world speed). */

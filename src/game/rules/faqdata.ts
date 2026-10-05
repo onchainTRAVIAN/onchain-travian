@@ -135,7 +135,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
             ['Culture points, celebrations, loyalty and hero health regrowth', '100 times faster'],
             ['Crop eaten by population, troops and hero', '**Not** changed (normal amount)'],
             ['Beginner protection, Gold boosts, week end, farm-list timers', 'Real time (not changed)'],
-            ['Wild animals regrowing in oases', 'Real time: about 10% per day'],
+            ['Wild animals growing in free oases', 'Real time: 350 power per day, up to 8,000'],
           ],
         },
       },
@@ -1510,7 +1510,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     category: 'oases',
     title: 'Which animals live in oases?',
     keywords: ['animals', 'nature', 'oasis animals', 'rat', 'spider', 'snake', 'bat', 'wild boar', 'wolf', 'bear', 'crocodile', 'tiger', 'elephant', 'beasts'],
-    summary: 'Free oases are guarded by animals that only defend. Each oasis type has its own mix; animals regrow about 10% of the maximum per real day while nobody holds the oasis.',
+    summary: 'Free oases are guarded by animals that only defend. Each oasis type has its own mix; new animals appear while nobody holds the oasis — 350 defence power per real day, up to 8,000 power per oasis.',
     body: [
       {
         table: {
@@ -1545,7 +1545,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
         },
       },
       { p: 'A new oasis starts with 50-100% of these numbers.' },
-      { p: 'Animal regrowth uses real time, not world speed. A cleared oasis stays empty for days.' },
+      { p: 'Animal growth uses real time, not world speed: about **350 power per day** (power = an animal\'s average defence), in the oasis\'s usual species mix, until the oasis holds **8,000 power**. A cleared oasis is safe to raid for a while; an untouched one keeps getting stronger.' },
       { p: 'Scout an oasis or click it on the [Map](/map) to see its animals.' },
     ],
     related: ['oasis-raiding', 'capture-oasis', 'hero-experience'],

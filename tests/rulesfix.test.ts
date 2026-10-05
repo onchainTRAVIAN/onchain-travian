@@ -70,3 +70,32 @@ describe('player name change', () => {
     expect(creditBalance(db, a.userId)).toBe(bal - NAME_CHANGE_PRICE);
   });
 });
+
+describe('oasis animal growth', () => {
+  it('adds about 350 power a day, keeps the species mix, and stops at 8,000', async () => {
+    const { regrowAnimals, oasisAnimalPower, ANIMAL_POWER_CAP } = await import('../src/game/rules/oasis.js');
+    const start = emptyUnits();
+    const day = regrowAnimals('crop2', start, 24);
+    expect(day.used).toBeGreaterThan(250);
+    expect(day.used).toBeLessThanOrEqual(350);
+    // Over a few days every species of the mix appears, big ones included.
+    // A month, carrying unused time over like the game does: every species appears, elephants too.
+    let animals = start;
+    let carry = 0;
+    for (let d = 0; d < 30; d++) {
+      const hours = 24 + carry;
+      const r = regrowAnimals('crop2', animals, hours);
+      animals = r.animals;
+      carry = hours - (r.used / 350) * 24;
+    }
+    expect(animals[9]).toBeGreaterThan(0); // elephants
+    expect(animals[0]).toBeGreaterThan(0); // rats
+    const power = oasisAnimalPower(animals);
+    expect(power).toBeGreaterThan(7400); // reached the 8,000 cap (minus less than one animal)
+    // Near the cap nothing pushes it over.
+    const big = emptyUnits();
+    big[9] = 16; // 16 elephants = 7,680 power
+    const capped = regrowAnimals('crop2', big, 24 * 30);
+    expect(oasisAnimalPower(capped.animals)).toBeLessThanOrEqual(ANIMAL_POWER_CAP);
+  });
+});

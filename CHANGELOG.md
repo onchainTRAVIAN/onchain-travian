@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.13.5 — 2026-10-05
+- Oasis animals grow slowly in free oases: 350 defence power per real day, in the oasis's usual species mix, up to 8,000 power per oasis (instead of refilling to a small fixed maximum).
+
 ## 0.13.4 — 2026-10-05
 - Top menu buttons light up in colour on hover and for the page you're on (like classic Travian).
 - Reports can be filtered by losses — none (green), some (yellow), all troops (red) — together with the type tabs.

@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
 import { slots, tiles, villages } from '../../db/schema.js';
 import type { OasisType } from '../rules/map.js';
-import { initialAnimals, OASIS_RES_CAP, OASIS_RES_CAP_MAX, OASIS_RES_PER_25, regrowAnimals } from '../rules/oasis.js';
+import { ANIMAL_POWER_CAP, ANIMAL_POWER_PER_DAY, initialAnimals, oasisAnimalPower, OASIS_RES_CAP, OASIS_RES_CAP_MAX, OASIS_RES_PER_25, regrowAnimals } from '../rules/oasis.js';
 import { oasisBonus } from '../rules/map.js';
 import { RESOURCE_KEYS, res, type Resources } from '../rules/resources.js';
 import { config } from '../../config.js';
@@ -28,9 +28,13 @@ export function oasisAnimals(q: Q, tile: TileRow, now: number): UnitCounts {
   if (tile.villageId === null && now > tile.animalsAt) {
     const hours = (now - tile.animalsAt) / 3_600_000;
     const grown = regrowAnimals(type, animals, hours);
-    // Only move the clock forward once at least one animal has regrown, so slow regrowth isn't lost to rounding.
-    if (grown.some((n, i) => n !== animals[i])) {
-      animals = grown;
+    if (grown.used > 0) {
+      animals = grown.animals;
+      // Move the clock only by the time that growth "paid for", so nothing is lost to rounding.
+      const usedMs = Math.round((grown.used / ANIMAL_POWER_PER_DAY) * 86_400_000);
+      const full = oasisAnimalPower(animals) >= ANIMAL_POWER_CAP - 1e-9;
+      setOasisAnimals(q, tile.x, tile.y, animals, full ? now : Math.min(now, tile.animalsAt + usedMs));
+    } else if (oasisAnimalPower(animals) >= ANIMAL_POWER_CAP) {
       setOasisAnimals(q, tile.x, tile.y, animals, now);
     }
   }
