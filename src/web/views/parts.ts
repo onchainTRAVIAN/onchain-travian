@@ -229,6 +229,35 @@ export function hasTroops(c: UnitCounts): boolean {
 }
 
 /** Numbered pages like « ‹ 1 … 8 9 10 … 40 › ». `base` gets &page=N. */
+export interface Tab { href: string; label: SafeHtml | string; on?: boolean }
+
+/** Wooden folder tabs (shop, reports, statistics, rally point…); pair with `<div class="woodbody">`. */
+export function woodTabs(tabs: Tab[], label: string): SafeHtml {
+  return html`<nav class="woodtabs" aria-label="${label}">${tabs.map((t) => html`<a href="${t.href}" class="${t.on ? 'on' : ''}"${t.on ? html` aria-current="page"` : ''}>${t.label}</a>`)}</nav>`;
+}
+
+/** A parchment panel with a serif head: the standard section box. */
+export function panel(title: SafeHtml | string, body: SafeHtml, o: { meta?: SafeHtml | string; id?: string; cls?: string; pad?: boolean } = {}): SafeHtml {
+  return html`<section class="spanel${o.cls ? ` ${o.cls}` : ''}"${o.id ? html` id="${o.id}"` : ''}><h3 class="sp-head">${title}${o.meta !== undefined ? html`<span>${o.meta}</span>` : ''}</h3>${o.pad === false ? body : html`<div class="pad">${body}</div>`}</section>`;
+}
+
+/** Thin progress/comparison bar (SVG, so it works under the CSP). `cls` picks the colours (hp, xp, pts, tprog…). */
+export function svgBar(pct: number, cls = '', h = 6): SafeHtml {
+  const w = Math.max(0, Math.min(100, Math.round(pct)));
+  return html`<svg class="meter ${cls}" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="${h}" rx="${h / 2}" class="bg"></rect>${w > 0 ? html`<rect width="${w}" height="${h}" rx="${h / 2}" class="fg"></rect>` : ''}</svg>`;
+}
+
+/** Small tribe helmet (nature has none: shows its first animal). */
+export function tribeMark(tribe: TribeId, size = 20): SafeHtml {
+  const src = tribe === 'nature' ? '/static/img/units/nature-1.svg' : `/static/img/tribe/${tribe}.svg`;
+  return html`<img src="${src}" width="${size}" height="${size}" alt="${TRIBES[tribe].name}" title="${TRIBES[tribe].name}" class="helm">`;
+}
+
+/** Gold-priced action button: label + coin + price; greyed when the player can't afford it. */
+export function goldBtn(label: string, price: number, enough: boolean, attrs: SafeHtml | '' = ''): SafeHtml {
+  return html`<button type="submit" class="gbtn${enough ? '' : ' secondary'}"${attrs}>${label} <span class="gcoin"><img src="/static/img/res/gold.svg" width="15" height="10" alt="Gold">${price.toLocaleString('en-US')}</span></button>`;
+}
+
 export function pager(base: string, page: number, pages: number): SafeHtml {
   if (pages <= 1) return html``;
   const sep = base.includes('?') ? '&' : '?';
@@ -243,11 +272,3 @@ export function pager(base: string, page: number, pages: number): SafeHtml {
   return html`<nav class="pager" aria-label="Pages">${page > 1 ? html`<a href="${href(1)}" title="First page">«</a><a href="${href(page - 1)}" title="Previous page">‹</a>` : html`<span class="off">«</span><span class="off">‹</span>`}${out}${page < pages ? html`<a href="${href(page + 1)}" title="Next page">›</a><a href="${href(pages)}" title="Last page">»</a>` : html`<span class="off">›</span><span class="off">»</span>`}</nav>`;
 }
 
-export function paginate(base: string, page: number, hasMore: boolean): SafeHtml {
-  if (page <= 1 && !hasMore) return html``;
-  const sep = base.includes('?') ? '&' : '?';
-  return html`<div class="actions">
-    ${page > 1 ? html`<a class="btn secondary small" href="${base}${sep}page=${page - 1}">« back</a>` : ''}
-    ${hasMore ? html`<a class="btn secondary small" href="${base}${sep}page=${page + 1}">forward »</a>` : ''}
-  </div>`;
-}

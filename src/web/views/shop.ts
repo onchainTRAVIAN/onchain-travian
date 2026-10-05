@@ -5,6 +5,7 @@ import { GOLD_CLUB_PRICE } from '../../game/actions/goldclub.js';
 import { NAME_CHANGE_PRICE } from '../../game/actions/account.js';
 import { ETH_ASSET, GOLD_PACKAGES, formatUnitsShort, weiForUsd } from '../../crypto/pricing.js';
 import { hasAsset } from '../assets.js';
+import { goldBtn } from './parts.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
@@ -31,9 +32,7 @@ function art(name: string, alt = ''): SafeHtml {
     : html`<img class="sart" src="/static/img/res/gold.svg" width="40" height="27" alt="${alt}">`;
 }
 
-function goldPrice(price: number, enough: boolean, label: string): SafeHtml {
-  return html`<button type="submit" class="gbtn${enough ? '' : ' secondary'}">${label} <span class="gcoin">${icon('res/gold', 'Gold', 15, 10)}${fmtNum(price)}</span></button>`;
-}
+const goldPrice = (price: number, enough: boolean, label: string): SafeHtml => goldBtn(label, price, enough);
 
 function shopTabs(tab: ShopTab): SafeHtml {
   const t = (id: ShopTab, label: string) => html`<a href="/shop?tab=${id}" class="${tab === id ? 'on' : ''}"${tab === id ? html` aria-current="page"` : ''}>${label}</a>`;
@@ -171,7 +170,7 @@ function specialsTab(d: {
       <div class="pad"><p class="small">Put your message on the scrolling news line at the top of every player's screen.</p><a class="btn" href="/shop/ticker">Book a time slot</a></div></section>
     <section class="spanel special"><h3 class="sp-head">Finish immediately</h3>
       <div class="pad"><p class="small">Tap the <span class="btn gold small">⚡</span> button next to any construction, training or research to finish it now. The price follows the time left: ${config.WORLD_SPEED !== 1 ? `on this x${config.WORLD_SPEED} world about 1 Gold per ${Math.max(1, Math.round(100 / config.WORLD_SPEED))} minute${Math.round(100 / config.WORLD_SPEED) === 1 ? '' : 's'} left` : '1 Gold per 100 minutes left'}, at least 2. A training row also finishes the batches above it.</p>
-      <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold. » <a href="/profile">Change your player name</a> (${fmtNum(NAME_CHANGE_PRICE)} Gold).</p></div></section>`;
+      <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold. » <a href="/account">Change your player name</a> (${fmtNum(NAME_CHANGE_PRICE)} Gold).</p></div></section>`;
 }
 
 function historyTab(d: { history: { amount: number; reason: string; createdAt: number }[]; deposits: { id: string; asset: string; amount: string; credits: number; createdAt: number }[] }): SafeHtml {

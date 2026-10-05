@@ -9,7 +9,6 @@ import { pager as numPager } from './parts.js';
 import { csrfField, timer } from './layout.js';
 import { avatarUrl } from '../../game/actions/avatar.js';
 import { WEEK_MS, WEEKLY_CATEGORIES, WEEKLY_LABEL, WEEKLY_PRIZES, type MedalView, type WeeklyCategory, type WeeklyRow } from '../../game/actions/weekly.js';
-import { paginate } from './parts.js';
 
 /* ---------- Messages ---------- */
 
@@ -17,11 +16,11 @@ export function inboxView(d: {
   box: 'in' | 'out';
   rows: { id: number; subject: string; other: string; isRead: boolean; createdAt: number }[];
   page: number;
-  hasMore: boolean;
+  pages: number;
   now: number;
   csrf: string;
 }): SafeHtml {
-  return html`<h1>✉️ Messages</h1>
+  return html`<h1>Messages</h1>
     <nav class="tabs" aria-label="Mailbox">
       <a href="/messages" class="${d.box === 'in' ? 'on' : ''}">Inbox</a>
       <a href="/messages?box=out" class="${d.box === 'out' ? 'on' : ''}">Sent</a>
@@ -40,7 +39,7 @@ export function inboxView(d: {
               <span class="sep"></span><button type="submit" name="act" value="readall" class="small secondary">Mark all as read</button>`
             : ''}</p>
         </form>`}
-    ${paginate(d.box === 'out' ? '/messages?box=out' : '/messages', d.page, d.hasMore)}`;
+    ${numPager(d.box === 'out' ? '/messages?box=out' : '/messages', d.page, d.pages)}`;
 }
 
 export function writeView(d: { to: string; subject: string; body: string; csrf: string }): SafeHtml {

@@ -39,6 +39,11 @@ export function inbox(db: DB, userId: number, limit = 50, offset = 0) {
     .all();
 }
 
+export function messageCount(db: DB, userId: number, box: 'in' | 'out'): number {
+  const cond = box === 'in' ? and(eq(messages.toUserId, userId), eq(messages.deletedByRecipient, false)) : and(eq(messages.fromUserId, userId), eq(messages.deletedBySender, false));
+  return db.select({ id: messages.id }).from(messages).where(cond).all().length;
+}
+
 export function outbox(db: DB, userId: number, limit = 50, offset = 0) {
   return db
     .select({ m: messages, to: users.username })

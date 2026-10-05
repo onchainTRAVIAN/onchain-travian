@@ -18,7 +18,7 @@ import { unitInfoView, unitsIndexView } from '../views/units.js';
 import { endgameOverview } from '../../game/actions/endgame.js';
 import { endgameView } from '../views/endgame.js';
 import { WEEKLY_CATEGORIES, lastWinners, medalsOf, weekStart, weeklyStandings } from '../../game/actions/weekly.js';
-import { deleteMessage, deleteMessages, inbox, markMessagesRead, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
+import { deleteMessage, deleteMessages, inbox, markMessagesRead, outbox, readMessage, sendMessage, messageCount } from '../../game/actions/messages.js';
 import { battleOutcome, parseReport } from '../../game/engine/reports.js';
 import { heroRankings, playerProfile, playerRank, rankOf, rankings, reportList,
   reportCount,
@@ -165,7 +165,7 @@ socialRouter.get('/messages', requireAuth, (req, res) => {
     box === 'in'
       ? inbox(db, ctx.user.id, PAGE + 1, (p - 1) * PAGE).map((r) => ({ id: r.m.id, subject: r.m.subject, other: r.from ?? 'System', isRead: r.m.isRead, createdAt: r.m.createdAt }))
       : outbox(db, ctx.user.id, PAGE + 1, (p - 1) * PAGE).map((r) => ({ id: r.m.id, subject: r.m.subject, other: r.to ?? '?', isRead: true, createdAt: r.m.createdAt }));
-  sendPage(req, res, 'Messages', inboxView({ box, rows: rows.slice(0, PAGE), page: p, hasMore: rows.length > PAGE, now: ctx.now, csrf: ctx.csrf }), {
+  sendPage(req, res, 'Messages', inboxView({ box, rows: rows.slice(0, PAGE), page: p, pages: Math.max(1, Math.ceil(messageCount(db, ctx.user.id, box) / PAGE)), now: ctx.now, csrf: ctx.csrf }), {
     nav: 'messages',
     chrome: page.chrome,
   });
