@@ -10,7 +10,7 @@ function allianceTagFull(userId: number): { id: number; tag: string; name: strin
   const m = membership(db, userId);
   return m ? { id: m.a.id, tag: m.a.tag, name: m.a.name } : null;
 }
-import { renameVillage } from '../../game/actions/account.js';
+import { NAME_CHANGE_PRICE, renamePlayer, renameVillage } from '../../game/actions/account.js';
 import { AVATAR_MAX_UPLOAD, avatarUrl, avatarPath, hasAvatar, removeAvatar, saveAvatar, setBio } from '../../game/actions/avatar.js';
 import { GameError } from '../../game/errors.js';
 import { TRIBES } from '../../game/rules/units.js';
@@ -347,6 +347,17 @@ socialRouter.get('/account', requireAuth, (req, res) => {
     { nav: 'account', chrome: page.chrome },
   );
 });
+
+socialRouter.post(
+  '/account/name',
+  requireAuth,
+  formAction(z.object({ name: z.string().max(40) }), (req, res, data) => {
+    const ctx = authed(req);
+    renamePlayer(db, ctx.user.id, data.name, ctx.now);
+    setFlash(res, 'ok', `Your name is now ${data.name.trim()} (${NAME_CHANGE_PRICE} Gold).`);
+    res.redirect(303, '/account');
+  }, '/account'),
+);
 
 socialRouter.post(
   '/account/rename',

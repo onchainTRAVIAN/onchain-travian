@@ -15,6 +15,7 @@ import { heroAtHome } from '../engine/hero.js';
 import { canExpand } from '../engine/expansion.js';
 import { oasisOwner, tileAt } from '../engine/oasis.js';
 import { ownedVillage } from './build.js';
+import { attackBlockedBy } from './alliance.js';
 
 export type MissionKind = 'attack' | 'raid' | 'reinforce' | 'scout' | 'settle';
 export type MovementRow = typeof movements.$inferSelect;
@@ -111,6 +112,8 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
     assertGame(input.kind === 'attack' || input.kind === 'raid' || input.kind === 'scout', 'You can only attack, raid or scout an oasis');
     const owner = oasisOwner(q, tile);
     assertGame(!owner || owner.userId !== userId, 'This oasis is already yours');
+    const oasisBlock = owner ? attackBlockedBy(q, userId, owner.userId) : null;
+    assertGame(!oasisBlock, oasisBlock ?? '');
     targetName = `Oasis (${x}|${y})`;
     targetOwner = owner ? (q.select({ u: users.username }).from(users).where(eq(users.id, owner.userId ?? 0)).get()?.u ?? 'Nature') : 'Nature';
     targetKind = 'oasis';
@@ -131,6 +134,9 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
     if (input.kind !== 'reinforce') {
       assertGame(target.userId !== userId, 'You cannot attack your own village');
       assertGame(target.protectedUntil === null || target.protectedUntil <= now, `${target.username ?? 'This player'} is under beginner protection`);
+      // Alliance members and allies (confederacy, non-aggression pact) can't be attacked.
+      const blocked = attackBlockedBy(q, userId, target.userId);
+      assertGame(!blocked, blocked ?? '');
     }
     targetVillageId = target.id;
     targetName = target.name;

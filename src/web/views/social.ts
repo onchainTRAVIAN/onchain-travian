@@ -1,3 +1,4 @@
+import { NAME_CHANGE_PRICE } from '../../game/actions/account.js';
 import type { AllianceRankKind } from '../../game/actions/alliance.js';
 import { config } from '../../config.js';
 import { TRIBES, type TribeId } from '../../game/rules/units.js';
@@ -367,9 +368,9 @@ export function playerView(d: {
     <div class="pstats">
       ${tile('Population', fmtNum(pop))}
       ${tile('Villages', String(d.villages.length))}
-      ${tile('Attack points', fmtNum(d.user.offPoints))}
-      ${tile('Defence points', fmtNum(d.user.defPoints))}
-      ${tile('Resources raided', fmtNum(d.user.lootTotal))}
+      ${tile('Attack', fmtNum(d.user.offPoints))}
+      ${tile('Defence', fmtNum(d.user.defPoints))}
+      ${tile('Raided', fmtNum(d.user.lootTotal))}
       ${tile('Hero', d.heroLevel !== null ? `level ${d.heroLevel}` : '-')}
     </div>
     ${d.user.bio ? html`<section class="spanel pabout"><h3 class="sp-head">About ${d.user.username}</h3><div class="msgbody">${d.user.bio}</div></section>` : ''}
@@ -425,6 +426,12 @@ export function accountView(d: {
     <form method="post" action="/account/bio" class="block">${csrfField(d.csrf)}
       <textarea name="bio" maxlength="500" rows="5" aria-label="About me">${d.bio}</textarea>
       <p><button type="submit">Save</button> <span class="small muted">Shown on your public profile (max 500 characters).</span></p>
+    </form>
+    <h2>Change your player name</h2>
+    <form method="post" action="/account/name" class="block">${csrfField(d.csrf)}
+      <input type="text" name="name" value="${d.username}" required minlength="3" maxlength="20" aria-label="New player name">
+      <button type="submit" class="gold" data-confirm="Change your name for ${NAME_CHANGE_PRICE} Gold?">Change for ${NAME_CHANGE_PRICE} Gold</button>
+      <p class="small muted">Your new name shows everywhere (rankings, reports, chat). Letters, numbers, spaces, dots, dashes and underscores, 3–20 characters.</p>
     </form>
     <h2>Rename village</h2>
     <form method="post" action="/account/rename" class="block">${csrfField(d.csrf)}

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.2 — 2026-10-05
+- Oases held by other players can really be taken now: their loyalty regrows 2 per hour per Hero's Mansion level (not multiplied by world speed), so a few hero attacks in a row break the hold.
+- Alliance treaties have teeth: members of the same alliance, and of alliances in a confederacy or non-aggression pact, can't attack, raid or scout each other (reinforcing and trade still work). War stays a public statement.
+- Teuton Brewery no longer makes catapults hit at random (still +1% attack per level, chiefs at half strength).
+- Change your player name on the Profile page for 1,000 Gold (unique, reserved names refused).
+- Links panel no longer repeats left-menu entries (now: Send troops, Farm list, Simulator, Production, Troop guide, News ticker).
+- Profile stat tiles: three per row so large numbers fit.
+- Guide updated for these rules.
+
 ## 0.13.1 — 2026-10-05
 - **Game guide** with 120 topics in 16 categories (getting started, resources, buildings, troops, combat, defence, hero, oases, expansion, market, alliance, Gold, endgame, statistics, account, strategy), checked against the game code; search box with live suggestions, category pages, related topics and links into the game.
 - New Gold service **Storage expansion**: +50% warehouse and granary in a chosen village, permanently, 150 Gold, once per village.

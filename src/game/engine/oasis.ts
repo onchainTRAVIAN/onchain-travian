@@ -106,8 +106,14 @@ export function oasisLoyaltyNow(q: Q, tile: TileRow, now: number): number {
   const at = tile.oasisLoyaltyAt ?? now;
   const mansion =
     q.select({ l: slots.level }).from(slots).where(and(eq(slots.villageId, tile.villageId), eq(slots.building, 'heromansion'))).get()?.l ?? 0;
-  return Math.min(100, tile.oasisLoyalty + ((now - at) / 3_600_000) * mansion * config.WORLD_SPEED);
+  return Math.min(100, tile.oasisLoyalty + ((now - at) / 3_600_000) * mansion * OASIS_LOYALTY_REGEN_PER_LEVEL);
 }
+
+/**
+ * Oasis loyalty regained per hour per Hero's Mansion level of the owner. Not scaled by world
+ * speed, so a few hero attacks in a row can break an owner's hold (level 10: 20 per hour).
+ */
+export const OASIS_LOYALTY_REGEN_PER_LEVEL = 2;
 
 /** Loyalty lost per successful hero attack: ⌊100 / min(3, 4 − owner's oasis count)⌋. */
 export function oasisLoyaltyHit(ownerOases: number): number {

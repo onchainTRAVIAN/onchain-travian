@@ -159,10 +159,9 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
       ${c.villages.length > 1 ? html`<p class="sp-total small">Total population: <b>${fmtNum(c.villages.reduce((a, v) => a + v.pop, 0))}</b></p>` : ''}</section>
     <section class="sp"><h3 class="sp-head">Links</h3>
       <div class="sp-tiles">
-        ${tile('/troops/send', 'send', 'Send troops')}${tile('/troops/train', menuIcon('train', 'rally'), 'Train troops')}
-        ${tile('/troops/farmlist', menuIcon('farm', 'rally'), 'Farm list')}${tile('/simulator', menuIcon('simulator', 'send'), 'Simulator')}
-        ${tile('/goldmarket', 'market', 'Gold market')}${tile('/units', menuIcon('units', 'hero'), 'Troop guide')}
-        ${tile('/shop/ticker', 'news', 'News ticker')}${tile('/help', menuIcon('guide', 'help'), 'Game guide')}
+        ${tile('/troops/send', 'send', 'Send troops')}${tile('/troops/farmlist', menuIcon('farm', 'rally'), 'Farm list')}
+        ${tile('/simulator', menuIcon('simulator', 'send'), 'Simulator')}${tile('/production', 'stats', 'Production')}
+        ${tile('/units', menuIcon('units', 'hero'), 'Troop guide')}${tile('/shop/ticker', 'news', 'News ticker')}
       </div></section>
   </div>`;
 }

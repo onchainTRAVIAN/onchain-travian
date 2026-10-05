@@ -884,3 +884,7 @@ input.tickerin { width: 100%; box-sizing: border-box; font-size: 14px; padding: 
 /* Menu items stay on one line; the active one is marked by colour and the bar, not bold text. */
 #side_navi .sp-body a, #side_navi .sp-body button.lnk { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #side_navi .sp-body a.on { font-weight: normal; text-shadow: 0 0 0.01px #1f4d00; }
+/* Profile stat tiles: three per row so big numbers fit */
+.pstats { grid-template-columns: repeat(3, 1fr); }
+.pstats .tile .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pstats .tile b { font-size: 15px; white-space: nowrap; }

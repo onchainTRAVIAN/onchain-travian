@@ -7,7 +7,7 @@ import type { PlayableTribeId } from '../rules/units.js';
 import { GameError, assertGame } from '../errors.js';
 import { createVillage, findSpawnTile } from '../engine/world.js';
 import { ensureHero } from '../engine/hero.js';
-import { starterCredits } from './credits.js';
+import { spend, starterCredits } from './credits.js';
 
 // Argon2id with OWASP-recommended parameters.
 const ARGON = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
@@ -95,4 +95,23 @@ export function renameVillage(db: DB, userId: number, villageId: number, name: s
     .where(and(eq(villages.id, villageId), eq(villages.userId, userId)))
     .run();
   assertGame(res.changes > 0, 'Village not found');
+}
+
+/** Changing the player name costs Gold (it's how everyone knows you). */
+export const NAME_CHANGE_PRICE = 1000;
+
+export function renamePlayer(db: DB, userId: number, newName: string, now: number): void {
+  const name = newName.trim();
+  if (name.length < 3 || name.length > 20) throw new GameError('Name must be 3 to 20 characters');
+  if (!/^[A-Za-z0-9_ .-]+$/.test(name) || /\s{2,}/.test(name)) throw new GameError('Name can only use letters, numbers, spaces, dots, dashes and underscores');
+  if (isReservedName(name)) throw new GameError('That name is reserved');
+  db.transaction((tx) => {
+    const me = tx.select().from(users).where(eq(users.id, userId)).get();
+    if (!me) throw new GameError('Player not found');
+    if (me.username === name) throw new GameError('That is already your name');
+    const taken = tx.select({ id: users.id }).from(users).where(eq(users.usernameLower, name.toLowerCase())).get();
+    if (taken && taken.id !== userId) throw new GameError('That name is already taken');
+    spend(tx, userId, NAME_CHANGE_PRICE, `Name change: ${me.username} → ${name}`, now);
+    tx.update(users).set({ username: name, usernameLower: name.toLowerCase() }).where(eq(users.id, userId)).run();
+  });
 }

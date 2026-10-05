@@ -257,3 +257,28 @@ export function diplomacyOf(q: Q, allianceId: number) {
     return { ...d, otherId, otherTag: other?.tag ?? '?', otherName: other?.name ?? '?', incoming: d.toId === allianceId };
   });
 }
+
+/**
+ * Why `userId` may not attack `targetUserId` (same alliance, or a confederacy or non-aggression
+ * pact between their alliances), or null when the attack is allowed.
+ */
+export function attackBlockedBy(q: Q, userId: number, targetUserId: number | null): string | null {
+  if (targetUserId === null || targetUserId === userId) return null;
+  const mine = membership(q, userId)?.a.id;
+  const theirs = membership(q, targetUserId)?.a.id;
+  if (mine === undefined || theirs === undefined) return null;
+  if (mine === theirs) return 'You cannot attack a member of your own alliance';
+  const pact = q
+    .select({ kind: allianceDiplomacy.kind })
+    .from(allianceDiplomacy)
+    .where(
+      and(
+        eq(allianceDiplomacy.status, 'active'),
+        or(and(eq(allianceDiplomacy.fromId, mine), eq(allianceDiplomacy.toId, theirs)), and(eq(allianceDiplomacy.fromId, theirs), eq(allianceDiplomacy.toId, mine))),
+      ),
+    )
+    .all()
+    .find((d) => d.kind === 'confed' || d.kind === 'nap');
+  if (!pact) return null;
+  return pact.kind === 'confed' ? 'Your alliances are in a confederacy — allies cannot attack each other' : 'Your alliances have a non-aggression pact';
+}

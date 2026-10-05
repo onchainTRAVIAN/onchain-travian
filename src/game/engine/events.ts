@@ -118,7 +118,7 @@ function breweryLevel(q: Q, userId: number | null): number {
   );
 }
 
-/** Teuton Brewery: +1% attack per level (and, elsewhere, random catapults and weaker chiefs). */
+/** Teuton Brewery: +1% attack per level (and, elsewhere, weaker chiefs). */
 function breweryBonus(q: Q, home: VillageInfo): number {
   if (home.tribe !== 'teutons') return 1;
   return 1 + 0.01 * breweryLevel(q, home.userId);
@@ -388,8 +388,8 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     if (catas > 0) {
       const homeState = loadVillage(q, home.id);
       const rally = homeState ? levelOf(homeState, 'rally') : 0;
-      // Drunk (Brewery) catapults aim randomly, and so does everyone against a Rivals' confusion holder.
-      const random = (home.tribe === 'teutons' && breweryLevel(q, home.userId) > 0) || artifactValue(q, targetId, 'confusion', t) > 1;
+      // Everyone's catapults aim randomly against a Rivals' confusion holder.
+      const random = artifactValue(q, targetId, 'confusion', t) > 1;
       const wanted = (mv.catapultTarget ?? '').split(',').filter(Boolean);
       const volleys = wanted.length >= 2 && canAimTwice(rally, catas) ? [wanted[0] ?? null, wanted[1] ?? null] : [wanted[0] ?? null];
       const morale = cataMorale(attackerPop, defenderPop);
