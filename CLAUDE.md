@@ -31,6 +31,7 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Combat simulator: `src/game/rules/simulate.ts` (pure, wraps `resolveBattle` exactly like `handleCombat`; keep them in sync — `tests/simulator.test.ts` compares with a real fight); `/simulator` GET form, `partial=1` returns the result panel for app.js live updates; `?mine=1` prefills your troops.
 - Game guide: content in `src/game/rules/faqdata.ts` (typed by `faq.ts`, search `searchFaq`), views `src/web/views/help.ts`; keep its numbers in sync when rules change.
 - Train troops page `/troops/train` (all training buildings, POST `/train/all`); never nest forms (queues render outside the training form).
+- Treaties: `attackBlockedBy` (alliance.ts) blocks attack/raid/scout between same alliance / confed / NAP; checked in `previewSend`. Oasis loyalty regen `OASIS_LOYALTY_REGEN_PER_LEVEL` (2/h per Mansion level, not speed-scaled). Player rename `renamePlayer` (1000 Gold).
 - Storage expansion: `villages.storage_boost` → `storageOf` ×1.5 (`STORAGE_BOOST_PRICE` 150).
 - Production breakdown: `src/game/engine/breakdown.ts` (`/production`) must mirror `grossProduction`/`economyOf` — update both together.
 - `app.js` is one IIFE: never reuse a `var` name across feature blocks (hoisting made blocks clobber each other twice).
