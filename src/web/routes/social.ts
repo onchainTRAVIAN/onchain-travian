@@ -11,7 +11,7 @@ function allianceTagFull(userId: number): { id: number; tag: string; name: strin
   return m ? { id: m.a.id, tag: m.a.tag, name: m.a.name } : null;
 }
 import { renameVillage } from '../../game/actions/account.js';
-import { AVATAR_MAX_UPLOAD, avatarPath, hasAvatar, removeAvatar, saveAvatar, setBio } from '../../game/actions/avatar.js';
+import { AVATAR_MAX_UPLOAD, avatarUrl, avatarPath, hasAvatar, removeAvatar, saveAvatar, setBio } from '../../game/actions/avatar.js';
 import { GameError } from '../../game/errors.js';
 import { TRIBES } from '../../game/rules/units.js';
 import { unitInfoView, unitsIndexView } from '../views/units.js';
@@ -260,7 +260,22 @@ socialRouter.get('/stats', (req, res) => {
     req,
     res,
     'Statistics',
-    rankingView({ kind, rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE, myId: me, findId }),
+    rankingView({
+      kind,
+      rows: rows.slice(0, PAGE),
+      offset: (p - 1) * PAGE,
+      page: p,
+      hasMore: rows.length > PAGE,
+      myId: me,
+      findId,
+      leaders: rankings(db, kind, 3, 0),
+      me: (() => {
+        if (me === null || !req.ctx.user) return null;
+        const r = rankOf(db, kind, me);
+        const u = db.select({ username: users.username, tribe: users.tribe, avatarAt: users.avatarAt }).from(users).where(eq(users.id, me)).get();
+        return { ...r, page: Math.ceil(r.rank / PAGE), username: u?.username ?? '', avatar: avatarUrl({ id: me, tribe: u?.tribe ?? 'romans', avatarAt: u?.avatarAt ?? 0 }) };
+      })(),
+    }),
     { nav: 'stats', chrome },
   );
 });

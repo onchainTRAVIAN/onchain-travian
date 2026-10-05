@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.12.3 — 2026-10-05
+- Statistics restyled in the game's own look: folder tabs with player sub-tabs, a hall of fame for the top 3 on beige plaques (medal, avatar, tribe, alliance, score), a "You are N. of M" bar, ranking rows with medals, avatars, tribe marks, alliance tags and a fine bar under each value; Top 10 as panels in the side-panel style with avatars and medals; last week's medals below. Still opens at your own place, with Rank/Name search.
+
 ## 0.12.2 — 2026-10-05
 - Every troop's info page lists its stats at all Blacksmith/Armoury levels 0–20 (attack with % gain, defence vs infantry and cavalry) with the cost and time of each upgrade.
 - Level-20 walls are stone for every tribe: Teutons get a grey fieldstone fortress with timber-roofed towers and blue banners, Gauls a sandstone wall with round thatched towers and green-and-yellow banners (Romans keep the marble wall).

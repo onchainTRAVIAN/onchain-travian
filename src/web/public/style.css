@@ -556,20 +556,69 @@ a.plain { color: inherit; font-weight: inherit; text-decoration: none; }
 a.plain:hover { text-decoration: underline; }
 #production tr.prodrow:hover td { background: #f3f9e6; }
 #production th a { color: inherit; }
-/* ---------- Statistics (classic T3 look) ---------- */
-.subtabs { margin-top: -6px; font-size: 12px; }
-table.ranks thead td, table.top10 thead td { font-weight: bold; color: #333; }
-table.ranks td.ra, table.top10 td.ra { width: 1%; text-align: right; white-space: nowrap; color: #555; }
-table.ranks td.pla, table.top10 td.pla { white-space: nowrap; }
-table.ranks td.al { width: 15%; text-align: center; }
-table.ranks td.lbl { width: 35%; background: #f3f3f3; }
-table.ranks tr.hl td, table.top10 tr.hl td { background: #f2f9e4; font-weight: bold; }
+/* ---------- Statistics (game style: folder tabs, plaques, beige panels) ---------- */
+.ftabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid #c9c2a8; margin: 6px 0 0; padding-left: 4px; }
+.ftabs a { padding: 5px 12px 4px; margin-bottom: -1px; border: 1px solid #d8d1b8; border-bottom-color: #c9c2a8; border-radius: 5px 5px 0 0; background: #f1ede0; color: #5a5233; font-size: 12px; font-weight: bold; }
+.ftabs a:hover { background: #f8f6ee; color: #2b6a00; }
+.ftabs a.on { background: #fff; color: #222; border-color: #c9c2a8; border-bottom-color: #fff; border-top: 2px solid #71d000; padding-top: 4px; }
+.fsub { min-height: 6px; padding: 5px 8px; margin: 0 0 12px; background: #fff; border: 1px solid #c9c2a8; border-top: 0; font-size: 12px; }
+.fsub.empty { min-height: 0; padding: 0; height: 0; border-left: 0; border-right: 0; }
+.spanel { background: #fbfaf5; border: 1px solid #dcd6c3; border-radius: 6px; box-shadow: 0 1px 2px rgba(60, 50, 20, 0.08); overflow: hidden; margin-bottom: 12px; }
+.fsub a { margin-right: 4px; padding-right: 8px; border-right: 1px solid #ddd; }
+.fsub a:last-child { border-right: 0; }
+.fsub a.on { color: #000; font-weight: bold; }
+.fame { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 0 0 12px; }
+.plaque { flex: 0 1 160px; position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 18px 8px 10px; background: #fbfaf5; border: 1px solid #dcd6c3; border-radius: 6px; box-shadow: 0 1px 2px rgba(60, 50, 20, 0.1); color: #333; text-align: center; }
+.plaque:hover { border-color: #b9d18f; background: #fdfdf8; }
+.plaque.r1 { padding-top: 22px; padding-bottom: 16px; background: #fffbea; border-color: #e3d39a; }
+.plaque .medal { position: absolute; top: -12px; }
+.plaque .av { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #dcd6c3; margin-bottom: 4px; }
+.plaque .nm { color: #2b6a00; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plaque .sb { font-size: 11px; color: #8a8266; }
+.plaque .vl { font-size: 11px; color: #555; margin-top: 3px; }
+.plaque .vl b { font-size: 13px; color: #222; }
+.fame + .mebar, .mebar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; margin: 0 0 10px; font-size: 12px; }
+.mebar .av { border-radius: 50%; }
+.mebar a { margin-left: auto; }
+table.ranks thead td { font-weight: bold; color: #333; }
+table.ranks td { vertical-align: middle; }
+table.ranks td.ra { width: 1%; text-align: right; white-space: nowrap; color: #666; }
+table.ranks td.ra.top { text-align: center; padding: 1px 4px; }
+table.ranks td.ra img { vertical-align: middle; }
+table.ranks td.pla { white-space: nowrap; }
+table.ranks td.pla .av { border-radius: 50%; vertical-align: middle; margin-right: 2px; }
+table.ranks td.al { width: 14%; text-align: center; }
+table.ranks td.val { text-align: right; white-space: nowrap; line-height: 1.1; padding-bottom: 3px; }
+table.ranks td .co { color: #999; font-size: 11px; }
+table.ranks tr.hl td { background: #f2f9e4; font-weight: bold; }
 table.ranks tr.found td { background: #fff7d6; }
-.rankfoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin: -6px 0 12px; font-size: 12px; }
+table.ranks tbody tr:hover td { background: #f8fbf1; }
+table.ranks tr.hl:hover td { background: #eaf5d8; }
+.vbar { display: block; width: 100%; height: 3px; margin-top: 3px; }
+.vbar .bg { fill: #ece8da; }
+.vbar .fg { fill: #9ccc5a; }
+.tmark { vertical-align: -2px; opacity: 0.8; }
+.atag { font-size: 11px; font-weight: bold; color: #8a6d1d; }
+.rankfoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin: -6px 0 12px; padding: 6px 8px; background: #fbfaf5; border: 1px solid #dcd6c3; border-top: 0; font-size: 12px; }
+.rankfoot:empty { display: none; }
 .ranksearch label { margin-right: 6px; }
 .pager .none { color: #c0c0c0; }
-.top10grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0 10px; }
-.top10grid table { margin-bottom: 10px; }
+.weekbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 7px 10px; font-size: 12px; }
+.weekbar img { vertical-align: -3px; }
+.topgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0 10px; }
+.topbox { margin-bottom: 10px; }
+.toplist { list-style: none; margin: 0; padding: 4px 0; }
+.toplist li { display: flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: 12px; }
+.toplist li:nth-child(even) { background: #f7f5ec; }
+.toplist li.me { background: #e8f2d4; font-weight: bold; }
+.toplist .rk { width: 20px; text-align: right; color: #777; }
+.toplist .rk img { vertical-align: middle; }
+.toplist .av { border-radius: 50%; }
+.toplist a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lastweek table { margin: 4px 0; }
+.lastweek th { text-align: left; padding: 3px 10px; font-weight: normal; color: #555; white-space: nowrap; width: 40%; }
+.lastweek td { padding: 3px 10px; }
+.toplist + p, .topbox p.none { margin: 8px 10px; font-weight: normal; }
 /* Combat simulator */
 .simmode label { margin-right: 10px; }
 .simmode .sep { color: #aaa; margin: 0 8px 0 0; }

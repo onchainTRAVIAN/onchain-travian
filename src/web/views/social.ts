@@ -86,11 +86,11 @@ const RANK_TABS: { key: RankKind; label: string; title: string; col: string }[] 
   { key: 'raid', label: 'Robbers', title: 'The greatest robbers', col: 'Resources' },
 ];
 
-/** Classic statistics navigation: main tabs, plus the player sub-tabs. */
+/** Statistics navigation: folder tabs, plus the player sub-tabs underneath. */
 function statsTabs(main: 'players' | 'villages' | 'heroes' | 'week', sub?: RankKind): SafeHtml {
-  const t = (href: string, on: boolean, label: string) => html`<a href="${href}" class="${on ? 'on' : ''}">${label}</a>`;
-  return html`<p class="tabs">${t('/stats', main === 'players', 'Players')}${t('/alliances', false, 'Alliances')}${t('/stats/villages', main === 'villages', 'Villages')}${t('/stats/heroes', main === 'heroes', 'Heroes')}${t('/stats/week', main === 'week', 'Top 10')}${t('/endgame', false, 'Wonders')}</p>
-    ${main === 'players' ? html`<p class="tabs subtabs">${RANK_TABS.map((r) => t(`/stats?k=${r.key}`, r.key === sub, r.label))}</p>` : ''}`;
+  const t = (href: string, on: boolean, label: string) => html`<a href="${href}" class="${on ? 'on' : ''}"${on ? html` aria-current="page"` : ''}>${label}</a>`;
+  return html`<nav class="ftabs" aria-label="Statistics">${t('/stats', main === 'players', 'Players')}${t('/alliances', false, 'Alliances')}${t('/stats/villages', main === 'villages', 'Villages')}${t('/stats/heroes', main === 'heroes', 'Heroes')}${t('/stats/week', main === 'week', 'Top 10')}${t('/endgame', false, 'Wonders')}</nav>
+    ${main === 'players' ? html`<nav class="fsub" aria-label="Ranking">${RANK_TABS.map((r) => t(`/stats?k=${r.key}`, r.key === sub, r.label))}</nav>` : html`<div class="fsub empty"></div>`}`;
 }
 
 /** "Rank / Name" search under a ranking, like the original. */
@@ -98,7 +98,7 @@ function rankSearch(action: string, kind?: string): SafeHtml {
   return html`<form method="get" action="${action}" class="ranksearch">${kind ? html`<input type="hidden" name="k" value="${kind}">` : ''}
     <label>Rank <input type="number" name="rank" min="1" class="w30" inputmode="numeric"></label>
     <label>Name <input type="text" name="name" maxlength="20" class="w120"></label>
-    <button type="submit" class="small">OK</button></form>`;
+    <button type="submit" class="small">Find</button></form>`;
 }
 
 function pager(base: string, page: number, hasMore: boolean): SafeHtml {
@@ -109,6 +109,33 @@ function pager(base: string, page: number, hasMore: boolean): SafeHtml {
 
 function rankFoot(form: SafeHtml, pages: SafeHtml): SafeHtml {
   return html`<div class="rankfoot">${form}${pages}</div>`;
+}
+
+/** Thin bar under a value, relative to the leader (SVG works under the CSP). */
+function vbar(value: number, top: number): SafeHtml {
+  if (top <= 0) return html``;
+  const w = Math.max(1, Math.round((value / top) * 100));
+  return html`<svg class="vbar" viewBox="0 0 100 3" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="3" class="bg"></rect><rect width="${w}" height="3" class="fg"></rect></svg>`;
+}
+
+function rankCell(rank: number): SafeHtml {
+  return rank <= 3 ? html`<td class="ra top">${medalImg(rank, 18)}</td>` : html`<td class="ra">${rank}.</td>`;
+}
+
+function tribeMark(tribe: TribeId): SafeHtml {
+  return tribe === 'nature' ? html`` : html`<img src="/static/img/units/${tribe}-1.svg" width="14" height="14" alt="${TRIBES[tribe].name}" title="${TRIBES[tribe].name}" class="tmark">`;
+}
+
+interface Plaque { href: string; name: string; avatar: string; sub: SafeHtml; value: string; label: string }
+/** The top three on plaques, second–first–third. */
+function hallOfFame(entries: Plaque[]): SafeHtml {
+  if (entries.length === 0) return html``;
+  return html`<div class="fame">${[1, 0, 2].filter((i) => entries[i]).map((i) => {
+    const e = entries[i] as Plaque;
+    return html`<a class="plaque r${i + 1}" href="${e.href}"><span class="medal">${medalImg(i + 1, i === 0 ? 30 : 24)}</span>
+      <img class="av" src="${e.avatar}" width="${i === 0 ? 54 : 44}" height="${i === 0 ? 54 : 44}" alt="">
+      <b class="nm">${e.name}</b><span class="sb">${e.sub}</span><span class="vl"><b>${e.value}</b> ${e.label}</span></a>`;
+  })}</div>`;
 }
 
 const MEDAL = ['gold', 'silver', 'bronze'] as const;
@@ -126,50 +153,50 @@ export function weeklyView(d: {
   winners: { weekStart: number; rows: { category: WeeklyCategory; rank: number; value: number; prize: number; userId: number; username: string }[] } | null;
 }): SafeHtml {
   const end = d.weekStart + WEEK_MS;
-  const box = (c: WeeklyCategory, rows: WeeklyRow[]) => html`<table class="top10">
-    <thead><tr><th colspan="3">${WEEKLY_LABEL[c].title}</th></tr><tr><td></td><td>Player</td><td>${WEEKLY_LABEL[c].col}</td></tr></thead><tbody>
+  const box = (c: WeeklyCategory, rows: WeeklyRow[]) => html`<section class="spanel topbox"><h3 class="sp-head">${WEEKLY_LABEL[c].title}<span>${WEEKLY_LABEL[c].col}</span></h3>
     ${rows.length === 0
-      ? html`<tr><td colspan="3" class="none center">nobody yet</td></tr>`
-      : rows.map(
-          (r, i) => html`<tr class="${r.userId === d.myId ? 'hl' : ''}"><td class="ra">${i < 3 ? medalImg(i + 1, 14) : `${i + 1}.`}</td>
-            <td class="pla"><a href="/player/${r.userId}">${r.username}</a></td><td class="num">${fmtNum(r.value)}</td></tr>`,
-        )}
-    </tbody></table>`;
+      ? html`<p class="none small center">Nobody yet — be the first.</p>`
+      : html`<ol class="toplist">${rows.map(
+          (r, i) => html`<li class="${r.userId === d.myId ? 'me' : ''}"><span class="rk">${i < 3 ? medalImg(i + 1, 16) : `${i + 1}.`}</span>
+            <img class="av" src="${avatarUrl({ id: r.userId, tribe: r.tribe, avatarAt: r.avatarAt })}" width="18" height="18" alt="">
+            <a href="/player/${r.userId}">${r.username}</a><b>${fmtNum(r.value)}</b></li>`,
+        )}</ol>`}</section>`;
   return html`<h1>Statistics</h1>${statsTabs('week')}
-    <p class="small">Week of ${new Date(d.weekStart).toISOString().slice(0, 10)}, ends in ${timer(end, d.now, false)} (Monday 00:00 UTC).
-      The best three of each list get a medal and ${WEEKLY_PRIZES[0]} / ${WEEKLY_PRIZES[1]} / ${WEEKLY_PRIZES[2]} Gold.</p>
-    <div class="top10grid">${d.standings.map((st) => box(st.category, st.rows))}</div>
+    <div class="weekbar spanel"><span>Week of <b>${new Date(d.weekStart).toISOString().slice(0, 10)}</b> · ends in <b>${timer(end, d.now, false)}</b> (Monday 00:00 UTC)</span>
+      <span class="prizes">${medalImg(1, 16)} ${WEEKLY_PRIZES[0]} ${medalImg(2, 16)} ${WEEKLY_PRIZES[1]} ${medalImg(3, 16)} ${WEEKLY_PRIZES[2]} Gold</span></div>
+    <div class="topgrid">${d.standings.map((st) => box(st.category, st.rows))}</div>
     ${d.winners
-      ? html`<table class="ranks"><thead><tr><th colspan="2">Medals of the week of ${new Date(d.winners.weekStart).toISOString().slice(0, 10)}</th></tr></thead><tbody>
-        ${WEEKLY_CATEGORIES.map((c) => {
+      ? html`<section class="spanel lastweek"><h3 class="sp-head">Medals of the week of ${new Date(d.winners.weekStart).toISOString().slice(0, 10)}</h3>
+        <table class="plain"><tbody>${WEEKLY_CATEGORIES.map((c) => {
           const w = d.winners?.rows.filter((r) => r.category === c) ?? [];
-          return html`<tr><td class="lbl">${WEEKLY_LABEL[c].title}</td><td>${w.length === 0
+          return html`<tr><th>${WEEKLY_LABEL[c].title}</th><td>${w.length === 0
             ? html`<span class="none">-</span>`
             : w.map((r) => html`<span class="nowrap">${medalImg(r.rank, 14)} <a href="/player/${r.userId}">${r.username}</a> <span class="small muted">(${fmtNum(r.value)})</span></span> `)}</td></tr>`;
-        })}
-        </tbody></table>`
+        })}</tbody></table></section>`
       : ''}`;
 }
 
-export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; hasMore: boolean; myId?: number | null }): SafeHtml {
+export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; hasMore: boolean; myId?: number | null; top?: number }): SafeHtml {
+  const top = d.top ?? (d.page === 1 ? d.rows[0]?.pop ?? 0 : 0);
   return html`<h1>Statistics</h1>${statsTabs('villages')}
     <table class="ranks"><thead><tr><th colspan="4">The largest villages</th></tr><tr><td></td><td>Village</td><td>Player</td><td>Population</td></tr></thead><tbody>
     ${d.rows.map(
-      (r, i) => html`<tr class="${r.ownerId !== null && r.ownerId === d.myId ? 'hl' : ''}"><td class="ra">${d.offset + i + 1}.</td>
-        <td class="vil"><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.name}</a> <span class="small muted">(${r.x}|${r.y})</span></td>
-        <td class="pla">${r.ownerId ? html`<a href="/player/${r.ownerId}">${r.owner}</a>` : '-'}</td><td class="num">${fmtNum(r.pop)}</td></tr>`,
+      (r, i) => html`<tr class="${r.ownerId !== null && r.ownerId === d.myId ? 'hl' : ''}">${rankCell(d.offset + i + 1)}
+        <td class="vil"><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.name}</a> <span class="co">(${r.x}|${r.y})</span></td>
+        <td class="pla">${r.ownerId ? html`<a href="/player/${r.ownerId}">${r.owner}</a>` : '-'}</td><td class="val">${fmtNum(r.pop)}${vbar(r.pop, top)}</td></tr>`,
     )}</tbody></table>
     ${rankFoot(html``, pager('/stats/villages', d.page, d.hasMore))}`;
 }
 
 export function heroRankingView(d: { rows: { name: string; level: number; xp: number; owner: string; ownerId: number; tribe: TribeId }[]; offset: number; page: number; hasMore: boolean; myId?: number | null }): SafeHtml {
+  const top = d.page === 1 ? d.rows[0]?.xp ?? 0 : 0;
   return html`<h1>Statistics</h1>${statsTabs('heroes')}
     <table class="ranks"><thead><tr><th colspan="5">The most experienced heroes</th></tr><tr><td></td><td>Hero</td><td>Player</td><td>Level</td><td>Experience</td></tr></thead><tbody>
     ${d.rows.length === 0
       ? html`<tr><td colspan="5" class="none center">No heroes yet.</td></tr>`
       : d.rows.map(
-          (r, i) => html`<tr class="${r.ownerId === d.myId ? 'hl' : ''}"><td class="ra">${d.offset + i + 1}.</td><td>${r.name}</td>
-            <td class="pla"><a href="/player/${r.ownerId}">${r.owner}</a></td><td class="num">${r.level}</td><td class="num">${fmtNum(r.xp)}</td></tr>`,
+          (r, i) => html`<tr class="${r.ownerId === d.myId ? 'hl' : ''}">${rankCell(d.offset + i + 1)}<td class="pla"><img src="/static/img/units/hero.svg" width="16" height="16" alt="" class="tmark"> ${r.name}</td>
+            <td class="pla"><a href="/player/${r.ownerId}">${r.owner}</a> ${tribeMark(r.tribe)}</td><td class="num">${r.level}</td><td class="val">${fmtNum(r.xp)}${vbar(r.xp, top)}</td></tr>`,
         )}</tbody></table>
     ${rankFoot(html``, pager('/stats/heroes', d.page, d.hasMore))}`;
 }
@@ -181,23 +208,41 @@ export function rankingView(d: {
   page: number;
   hasMore: boolean;
   myId: number | null;
-  /** Row to mark, e.g. after a name/rank search. */
   findId?: number | null;
+  /** The top three (for the hall of fame) and the leader's value (for bars). */
+  leaders: { id: number; username: string; tribe: TribeId; pop: number; villages: number; off: number; def: number; loot: number; avatarAt: number; allianceId: number | null; allianceTag: string | null }[];
+  me: { rank: number; value: number; total: number; page: number; username: string; avatar: string } | null;
 }): SafeHtml {
   const tab = RANK_TABS.find((t) => t.key === d.kind) ?? RANK_TABS[0];
   const value = (r: (typeof d.rows)[number]) => (d.kind === 'attack' ? r.off : d.kind === 'defense' ? r.def : d.kind === 'raid' ? r.loot : r.pop);
+  const top = d.leaders[0] ? value(d.leaders[0]) : 0;
+  const unit = d.kind === 'population' ? 'inhabitants' : d.kind === 'raid' ? 'resources' : 'points';
   const isPop = d.kind === 'population';
   return html`<h1>Statistics</h1>
     ${statsTabs('players', d.kind)}
+    ${hallOfFame(d.leaders.slice(0, 3).map((r) => ({
+      href: `/player/${r.id}`,
+      name: r.username,
+      avatar: avatarUrl({ id: r.id, tribe: r.tribe, avatarAt: r.avatarAt }),
+      sub: html`${tribeMark(r.tribe)} ${TRIBES[r.tribe].name}${r.allianceTag ? html` · <span class="atag">${r.allianceTag}</span>` : ''}`,
+      value: fmtNum(value(r)),
+      label: unit,
+    })))}
+    ${d.me
+      ? html`<div class="mebar spanel"><img class="av" src="${d.me.avatar}" width="22" height="22" alt=""><span>You are <b>${fmtNum(d.me.rank)}.</b> of ${fmtNum(d.me.total)} with <b>${fmtNum(d.me.value)}</b> ${unit}</span>
+          ${d.page !== d.me.page || d.findId ? html`<a href="/stats?k=${d.kind}&amp;page=${d.me.page}#me">show my place</a>` : ''}</div>`
+      : ''}
     <table class="ranks"><thead><tr><th colspan="5">${tab?.title ?? ''}</th></tr>
       <tr><td></td><td>Player</td><td>Alliance</td>${isPop ? html`<td>Population</td><td>Villages</td>` : html`<td>Population</td><td>${tab?.col ?? ''}</td>`}</tr></thead><tbody>
       ${d.rows.length === 0
         ? html`<tr><td colspan="5" class="none center">No players yet.</td></tr>`
         : d.rows.map(
-            (r, i) => html`<tr class="${r.id === d.myId ? 'hl' : ''}${r.id === d.findId ? ' found' : ''}"${r.id === d.findId ? html` id="found"` : ''}><td class="ra">${d.offset + i + 1}.</td>
-              <td class="pla"><a href="/player/${r.id}">${r.username}</a></td>
-              <td class="al">${r.allianceId && r.allianceTag ? html`<a href="/alliance/${r.allianceId}">${r.allianceTag}</a>` : '-'}</td>
-              ${isPop ? html`<td class="num">${fmtNum(r.pop)}</td><td class="num">${r.villages}</td>` : html`<td class="num">${fmtNum(r.pop)}</td><td class="num">${fmtNum(value(r))}</td>`}</tr>`,
+            (r, i) => html`<tr class="${r.id === d.myId ? 'hl' : ''}${r.id === d.findId ? ' found' : ''}"${r.id === d.myId ? html` id="me"` : r.id === d.findId ? html` id="found"` : ''}>${rankCell(d.offset + i + 1)}
+              <td class="pla"><img class="av" src="${avatarUrl({ id: r.id, tribe: r.tribe, avatarAt: r.avatarAt })}" width="20" height="20" alt=""> <a href="/player/${r.id}">${r.username}</a> ${tribeMark(r.tribe)}</td>
+              <td class="al">${r.allianceId && r.allianceTag ? html`<a href="/alliance/${r.allianceId}" class="atag">${r.allianceTag}</a>` : html`<span class="none">-</span>`}</td>
+              ${isPop
+                ? html`<td class="val">${fmtNum(r.pop)}${vbar(r.pop, top)}</td><td class="num">${r.villages}</td>`
+                : html`<td class="num">${fmtNum(r.pop)}</td><td class="val">${fmtNum(value(r))}${vbar(value(r), top)}</td>`}</tr>`,
           )}
     </tbody></table>
     ${rankFoot(rankSearch('/stats', d.kind), pager(`/stats?k=${d.kind}`, d.page, d.hasMore))}`;
