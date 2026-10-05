@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.1 — 2026-10-05
+- **New Gold shop** with tabs: Buy Gold, Advantages, Specials, History.
+  - **Buy Gold:** 6 packages in dollars: 36 Gold for $1.99, 114 for $4.99, 280 for $9.99, 680 for $19.99 (best seller), 1,815 for $49.99 and 3,750 for $99.99 (best value). Each shows its ETH price at the live ETH/USD rate; click a package, then pay with your wallet.
+  - **Advantages:** Gold Club, Master Builder, the production boosts and the army boosts as cards.
+- **Gold Club now costs 200 Gold** (was 500).
+
 ## 0.14.0 — 2026-10-05
 - **Tasks** for new (and all) players: 29 steps in 5 chapters (First steps, Getting stronger, Into the world, Your hero, Growing your empire). Each has a how-to, a "Show me" link, progress, and a reward of resources into your village (storage-capped) — key steps also give 5–20 Gold. A "Task overview" panel with an advisor shows the current task; on the village pages the field or building to use glows with a hint bubble. Existing players can collect rewards for what they've already done; the panel can be hidden.
 - **Ornate panels:** parchment background, bronze corner flourishes, serif titles; wooden strip behind the top buttons; tribe advisors.

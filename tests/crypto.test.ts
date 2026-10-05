@@ -24,7 +24,7 @@ import { ensureWorld } from '../src/game/engine/world.js';
 import { registerPlayer } from '../src/game/actions/account.js';
 import { creditBalance } from '../src/game/actions/credits.js';
 import { getModifiers } from '../src/game/modifiers.js';
-import { ETH_ASSET, creditsForDeposit, formatUnitsShort, parseUnitsSafe } from '../src/crypto/pricing.js';
+import { ETH_ASSET, GOLD_PACKAGES, creditsForDeposit, formatUnitsShort, goldForUsd, parseUnitsSafe, weiForUsd } from '../src/crypto/pricing.js';
 import { TIERS, computeTiers, effectiveBalance } from '../src/crypto/tiers.js';
 import { linkWallet, prepareSiwe, userByWallet, verifySiwe } from '../src/crypto/wallet.js';
 import { indexDeposits } from '../src/crypto/indexer.js';
@@ -35,10 +35,27 @@ import { testTokenAbi } from '../src/crypto/testToken.js';
 const TOKEN = '0x00000000000000000000000000000000000000aa';
 const site = { domain: 'game.test', origin: 'https://game.test' };
 
+describe('dollar Gold packages', () => {
+  it('give exactly the package amount, and bigger packages are better value', () => {
+    for (const p of GOLD_PACKAGES) {
+      expect(goldForUsd(p.usd)).toBe(p.gold);
+      // Paying the quoted ETH at the same price gives the package.
+      expect(creditsForDeposit(ETH_ASSET, weiForUsd(p.usd, 2500), { ethUsd: 2500 })).toBe(p.gold);
+    }
+    const rates = GOLD_PACKAGES.map((p) => p.gold / p.usd);
+    expect(rates.every((r, i) => i === 0 || r > rates[i - 1]!)).toBe(true);
+    expect(goldForUsd(0)).toBe(0);
+    expect(goldForUsd(1)).toBe(Math.floor(36 / 1.99));
+  });
+});
+
 describe('pricing', () => {
   it('converts ETH and token deposits to credits, with the token bonus', () => {
-    expect(creditsForDeposit(ETH_ASSET, parseEther('1'), { creditsPerEth: 10_000 })).toBe(10_000);
-    expect(creditsForDeposit(ETH_ASSET, parseEther('0.0123'), { creditsPerEth: 10_000 })).toBe(123);
+    // ETH follows the dollar packages: $19.99 → 680 Gold, even if the price moved a little while paying.
+    expect(creditsForDeposit(ETH_ASSET, parseEther('0.00999'), { ethUsd: 2000 })).toBe(680);
+    expect(creditsForDeposit(ETH_ASSET, parseEther('0.0005'), { ethUsd: 4000 })).toBe(36);
+    // Between packages: the best reached package's rate ($30 at the 680/$19.99 rate).
+    expect(creditsForDeposit(ETH_ASSET, parseEther('0.01'), { ethUsd: 3000 })).toBe(Math.floor(30 * (680 / 19.99)));
     const opts = { creditsPerToken: 1, tokenBonus: 0.2, tokenDecimals: 18, tokenAddress: TOKEN };
     expect(creditsForDeposit(TOKEN, parseEther('100'), opts)).toBe(120);
     expect(creditsForDeposit('0x00000000000000000000000000000000000000bb', parseEther('100'), opts)).toBe(0);
@@ -158,7 +175,7 @@ describe.skipIf(!hasChain)('on-chain payments and holder perks (anvil)', () => {
     token = (await client.waitForTransactionReceipt({ hash: tHash })).contractAddress as Address;
     const pHash = await wallet.deployContract({ abi: gamePaymentsAbi, bytecode: bytecode('GamePayments'), args: [token, TREASURY] });
     payments = (await client.waitForTransactionReceipt({ hash: pHash })).contractAddress as Address;
-    Object.assign(config, { TOKEN_ADDRESS: token, PAYMENTS_ADDRESS: payments, CONFIRMATIONS: 2, CREDITS_PER_ETH: 10_000, CREDITS_PER_TOKEN: 1, TOKEN_BONUS: 0.2, HOLDER_MIN_SNAPSHOTS: 2 });
+    Object.assign(config, { TOKEN_ADDRESS: token, PAYMENTS_ADDRESS: payments, CONFIRMATIONS: 2, ETH_USD: 1999, CREDITS_PER_TOKEN: 1, TOKEN_BONUS: 0.2, HOLDER_MIN_SNAPSHOTS: 2 });
     db.delete(messages).run();
     playerId = (await registerPlayer(db, { username: 'Whale', password: 'password123', tribe: 'teutons' }, clock.now())).userId;
   }, 30_000);
@@ -177,11 +194,11 @@ describe.skipIf(!hasChain)('on-chain payments and holder perks (anvil)', () => {
     await test.mine({ blocks: 3 });
     const r = await indexDeposits(db, client, clock.now(), payments);
     expect(r?.credited).toBe(1);
-    expect(creditBalance(db, playerId)).toBe(100);
+    expect(creditBalance(db, playerId)).toBe(680);
     // Re-indexing the same range (e.g. after a crash) never double-credits.
     db.delete(meta).where(eq(meta.key, 'indexer_block')).run();
     await indexDeposits(db, client, clock.now(), payments);
-    expect(creditBalance(db, playerId)).toBe(100);
+    expect(creditBalance(db, playerId)).toBe(680);
     expect(db.select().from(messages).where(eq(messages.toUserId, playerId)).all()).toHaveLength(1);
   });
 
@@ -192,7 +209,7 @@ describe.skipIf(!hasChain)('on-chain payments and holder perks (anvil)', () => {
     await client.waitForTransactionReceipt({ hash: await wallet.writeContract({ address: payments, abi: gamePaymentsAbi, functionName: 'depositToken', args: [BigInt(playerId), amount] }) });
     await test.mine({ blocks: 3 });
     await indexDeposits(db, client, clock.now(), payments);
-    expect(creditBalance(db, playerId)).toBe(100 + 120);
+    expect(creditBalance(db, playerId)).toBe(680 + 120);
   });
 
   it('linked holders get tier perks after enough snapshots', async () => {

@@ -4,6 +4,7 @@ import { clock } from '../clock.js';
 import { getMeta, setMeta } from '../game/engine/world.js';
 import { publicClient } from './chain.js';
 import { indexDeposits } from './indexer.js';
+import { fetchEthUsd, setEthUsd } from './pricing.js';
 import { applyTiers, takeSnapshot } from './holders.js';
 
 /** Background jobs for on-chain data. Each job never overlaps with itself. */
@@ -11,6 +12,20 @@ export function startCryptoWorkers(db: DB): () => void {
   const timers: NodeJS.Timeout[] = [];
   let indexing = false;
   let snapshotting = false;
+
+  // Live ETH/USD for the Gold shop (every 5 minutes; the last price is kept across restarts).
+  const saved = Number(getMeta(db, 'eth_usd') ?? '0');
+  if (saved > 0) setEthUsd(saved, Number(getMeta(db, 'eth_usd_at') ?? '0'));
+  const runPrice = async () => {
+    const usd = await fetchEthUsd();
+    if (usd === null) return;
+    const now = clock.now();
+    setEthUsd(usd, now);
+    setMeta(db, 'eth_usd', String(usd));
+    setMeta(db, 'eth_usd_at', String(now));
+  };
+  timers.push(setInterval(() => void runPrice(), 5 * 60_000));
+  void runPrice();
 
   if (cryptoEnabled()) {
     const runIndexer = async () => {

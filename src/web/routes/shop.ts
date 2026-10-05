@@ -27,6 +27,8 @@ import { capacityFor, stockOf } from '../../game/engine/state.js';
 import { res } from '../../game/rules/resources.js';
 import { authed, setFlash } from '../session.js';
 import { shopView, tickerView } from '../views/shop.js';
+import { userDeposits } from '../../crypto/indexer.js';
+import { ethUsd, ethUsdUpdatedAt } from '../../crypto/pricing.js';
 import { backUrl, formAction, loadGamePage, sendPage } from './helpers.js';
 
 export const shopRouter = Router();
@@ -39,6 +41,11 @@ shopRouter.get('/shop', (req, res_) => {
     res_,
     'Shop',
     shopView({
+      tab: (['buy', 'adv', 'specials', 'history'] as const).find((t) => t === req.query.tab) ?? 'adv',
+      deposits: userDeposits(db, ctx.user.id),
+      accountId: ctx.user.id,
+      ethUsd: ethUsd(),
+      ethUsdAt: ethUsdUpdatedAt(),
       balance: page.chrome.credits,
       boosts: activeBoosts(db, ctx.user.id, ctx.now),
       stock: stockOf(page.state.village),
@@ -64,8 +71,8 @@ shopRouter.post(
     const ctx = authed(req);
     buyProtection(db, ctx.user.id, ctx.now);
     setFlash(r, 'ok', 'Your villages are protected for the next 24 hours.');
-    r.redirect(303, '/shop#protection');
-  }, '/shop#protection'),
+    r.redirect(303, '/shop?tab=specials#protection');
+  }, '/shop?tab=specials#protection'),
 );
 
 shopRouter.post(
@@ -76,9 +83,9 @@ shopRouter.post(
       const ctx = authed(req);
       const t = transferGold(db, ctx.user.id, d.to, d.amount, d.note, ctx.now);
       setFlash(r, 'ok', `Sent ${d.amount} Gold to ${t.toName}. Your balance: ${t.balance} Gold.`);
-      r.redirect(303, '/shop#gold');
+      r.redirect(303, '/shop?tab=specials#gold');
     },
-    '/shop#gold',
+    '/shop?tab=specials#gold',
   ),
 );
 
@@ -156,8 +163,8 @@ shopRouter.post(
     const ctx = authed(req);
     buyStorageBoost(db, ctx.user.id, d.villageId, ctx.now);
     setFlash(r, 'ok', `Storage expanded by 50% for good (${STORAGE_BOOST_PRICE} Gold).`);
-    r.redirect(303, '/shop#storage');
-  }, '/shop#storage'),
+    r.redirect(303, '/shop?tab=specials#storage');
+  }, '/shop?tab=specials#storage'),
 );
 
 shopRouter.post(

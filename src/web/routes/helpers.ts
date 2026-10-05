@@ -58,7 +58,7 @@ export function loadGamePage(req: Request): GamePage {
       for (const b of activeBoosts(db, ctx.user.id, ctx.now)) {
         if ((b.expiresAt ?? 0) - ctx.now < 24 * 3_600_000) {
           const p = PRODUCTS.find((x) => `shop:${x.id}` === b.source);
-          out.push({ kind: 'warn', text: html`${p?.name ?? 'A boost'} ends in ${timer(b.expiresAt ?? ctx.now, ctx.now, false)}`, href: '/shop' });
+          out.push({ kind: 'warn', text: html`${p?.name ?? 'A boost'} ends in ${timer(b.expiresAt ?? ctx.now, ctx.now, false)}`, href: '/shop?tab=adv' });
         }
       }
       const unread = unreadCounts(db, ctx.user.id);

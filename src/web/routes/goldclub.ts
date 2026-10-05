@@ -208,7 +208,7 @@ goldclubRouter.post(
     buyGoldClub(db, authed(req).user.id, authed(req).now);
     setFlash(r, 'ok', `Welcome to the Gold Club! (${GOLD_CLUB_PRICE} Gold)`);
     r.redirect(303, '/troops/farmlist');
-  }, '/shop#goldclub'),
+  }, '/shop?tab=adv#goldclub'),
 );
 
 goldclubRouter.post(

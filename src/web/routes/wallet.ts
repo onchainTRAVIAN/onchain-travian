@@ -110,21 +110,4 @@ walletRouter.post(
   }, '/wallet'),
 );
 
-walletRouter.get('/shop/topup', requireAuth, (req, res) => {
-  const ctx = authed(req);
-  const page = loadGamePage(req);
-  sendPage(
-    req,
-    res,
-    'Buy Gold',
-    topupView({
-      accountId: ctx.user.id,
-      balance: creditBalance(db, ctx.user.id),
-      address: walletOf(db, ctx.user.id)?.address ?? null,
-      packages: packages().filter((p) => p.credits > 0),
-      deposits: userDeposits(db, ctx.user.id),
-      csrf: ctx.csrf,
-    }),
-    { nav: 'shop', chrome: page.chrome },
-  );
-});
+walletRouter.get('/shop/topup', requireAuth, (_req, res) => res.redirect(302, '/shop?tab=buy'));

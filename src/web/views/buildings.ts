@@ -126,7 +126,7 @@ export function marketPanel(d: {
             <td><form method="post" action="/market/accept">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="linkbtn">Accept offer</button></form></td></tr>`,
         )}
     </tbody></table>
-    ${d.npc ?? ''}
+    ${d.npc ? html`<h2 id="npc">NPC trade</h2>${d.npc}` : ''}
     ${d.routes ?? ''}`;
 }
 

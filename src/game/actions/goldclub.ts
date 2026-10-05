@@ -14,7 +14,7 @@ import { sendTroops } from './troops.js';
 import { oasisStock } from '../engine/oasis.js';
 
 /** Gold Club: bought once per world. */
-export const GOLD_CLUB_PRICE = 500;
+export const GOLD_CLUB_PRICE = 200;
 export const FARM_LISTS_MAX = 10;
 export const FARM_ENTRIES_MAX = 100;
 /** Furthest distance for "Add all free oases". */

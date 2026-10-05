@@ -10,22 +10,7 @@ import { unitIcon, unitsInline } from './parts.js';
 export function goldClubLocked(): SafeHtml {
   return html`<div class="card"><b>Gold Club</b>
     <p class="small">Farm lists (raid many targets with one click, optionally automatically), evasion, trade routes and the cropper finder are part of the Gold Club: ${GOLD_CLUB_PRICE} Gold, once for the whole world.</p>
-    <a class="btn" href="/shop#goldclub">Join the Gold Club</a></div>`;
-}
-
-export function goldClubCard(d: { member: boolean; balance: number; csrf: string }): SafeHtml {
-  return html`<h2 id="goldclub">Gold Club</h2>
-    <div class="card"><div class="cardrow"><b>Gold Club — for the whole world</b><span class="price">${GOLD_CLUB_PRICE} Gold</span></div>
-      <ul class="small">
-        <li><b>Farm lists</b> at the Rally Point: saved raid targets (villages and oases), sent with one click — or automatically every 15–120 minutes.</li>
-        <li><b>Evasion</b>: your capital's troops slip away when an attack arrives and come back afterwards.</li>
-        <li><b>Trade routes</b>: merchants deliver resources between your villages on a daily schedule.</li>
-        <li><b>Cropper finder</b>: search the map for 9- and 15-crop villages with oasis bonus.</li>
-      </ul>
-      ${d.member
-        ? html`<div class="small good">You are a Gold Club member.</div>`
-        : html`<form method="post" action="/shop/goldclub">${csrfField(d.csrf)}<button type="submit"${d.balance < GOLD_CLUB_PRICE ? html` class="secondary"` : ''}>Join the Gold Club</button></form>`}
-    </div>`;
+    <a class="btn" href="/shop?tab=adv#goldclub">Join the Gold Club</a></div>`;
 }
 
 const RESULT: Record<string, { icon: string; label: string }> = {

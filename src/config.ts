@@ -28,8 +28,8 @@ const EnvSchema = z.object({
   TOKEN_ADDRESS: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional().or(z.literal('').transform(() => undefined)),
   TOKEN_SYMBOL: z.string().default('REALM'),
   TOKEN_DECIMALS: z.coerce.number().int().min(0).max(36).default(18),
-  /** Credits for 1 ETH. */
-  CREDITS_PER_ETH: z.coerce.number().positive().default(10_000),
+  /** ETH/USD used until the live price feed answers (and if it never does). */
+  ETH_USD: z.coerce.number().positive().default(3000),
   /** Credits for 1 whole token, before the token bonus. */
   CREDITS_PER_TOKEN: z.coerce.number().positive().default(1),
   /** Extra credits when paying with the game token (0.2 = +20%). */

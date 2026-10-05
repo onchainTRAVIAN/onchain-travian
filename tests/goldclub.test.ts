@@ -64,7 +64,7 @@ beforeAll(async () => {
 });
 
 describe('Gold Club', () => {
-  it('needs the Gold Club, costs 500 Gold once', () => {
+  it('needs the Gold Club, costs 200 Gold once', () => {
     expect(() => createFarmList(db, r.userId, r.villageId, 'Farms', clock.now())).toThrow(/Gold Club/);
     grantCredits(db, r.userId, 1000, 'test', 'gc-test', clock.now());
     const before = creditBalance(db, r.userId);

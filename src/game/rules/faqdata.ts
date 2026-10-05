@@ -1162,7 +1162,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     body: [
       {
         steps: [
-          'Join the Gold Club (500 Gold, once per world).',
+          'Join the Gold Club (200 Gold, once per world).',
           'Open [Farm list](/troops/farmlist) and create a list for a village.',
           'Add targets (villages or oases) with the troops for each.',
           'Or use **Add all free oases** within 1 to 35 fields, with a minimum of resources.',
@@ -2012,7 +2012,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
             ['NPC trade', '3 Gold'],
             ['24 h protection', '80 Gold'],
             ['Found an alliance', '280 Gold'],
-            ['Gold Club (whole world)', '500 Gold, once'],
+            ['Gold Club (whole world)', '200 Gold, once'],
             ['News ticker', 'Price per hour shown on the page'],
           ],
         },
@@ -2036,16 +2036,29 @@ export const FAQ_TOPICS: FaqTopic[] = [
             ['Weekly Top 10', 'Places 1, 2 and 3 in each of 5 categories win 300, 200 and 100 Gold'],
             ['Gold market', 'Sell resources or troops to other players'],
             ['Transfers', 'Other players can send you Gold'],
-            ['Buy Gold', 'Pay with ETH or the game token on the Buy Gold page (if switched on)'],
+            ['Buy Gold', 'Pick a package on the Buy Gold page and pay with ETH (or the game token)'],
           ],
         },
       },
-      { p: 'On [Buy Gold](/shop/topup), paying with the game token gives extra Gold. Gold arrives after the payment is confirmed, and you get a message.' },
+      {
+        table: {
+          head: ['Package', 'Price'],
+          rows: [
+            ['36 Gold', '$1.99'],
+            ['114 Gold', '$4.99'],
+            ['280 Gold', '$9.99'],
+            ['680 Gold (best seller)', '$19.99'],
+            ['1,815 Gold', '$49.99'],
+            ['3,750 Gold (best value)', '$99.99'],
+          ],
+        },
+      },
+      { p: 'Prices are in US dollars; you pay the same value in ETH at the live ETH price, shown on each package. Paying a different amount gives Gold at the rate of the biggest package you reached. Paying with the game token gives extra Gold. Gold arrives after the payment is confirmed, and you get a message.' },
       { note: 'If the Buy Gold page says crypto payments are not switched on, buying is not possible yet. The other ways still work.' },
     ],
     related: ['what-is-gold', 'weekly-top10', 'gold-market', 'gold-transfer', 'wallet'],
     links: [
-      { href: '/shop/topup', label: 'Buy Gold' },
+      { href: '/shop?tab=buy', label: 'Buy Gold' },
       { href: '/goldmarket', label: 'Gold market' },
     ],
   },
@@ -2094,8 +2107,8 @@ export const FAQ_TOPICS: FaqTopic[] = [
     id: 'gold-club',
     category: 'gold',
     title: 'Gold Club: what do I get?',
-    keywords: ['gold club', 'goldclub', 'club', 'farm list', 'evasion', 'trade routes', 'cropper finder', 'oasis raider', '500 gold'],
-    summary: 'The Gold Club costs 500 Gold once and lasts the whole world. It gives farm lists, the Oasis Raider, evasion, trade routes and the cropper finder.',
+    keywords: ['gold club', 'goldclub', 'club', 'farm list', 'evasion', 'trade routes', 'cropper finder', 'oasis raider', '200 gold'],
+    summary: 'The Gold Club costs 200 Gold once and lasts the whole world. It gives farm lists, the Oasis Raider, evasion, trade routes and the cropper finder.',
     body: [
       {
         table: {
@@ -2141,7 +2154,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
       { p: 'Find it on [Plus & Gold](/shop), under Protection. It shows when you can buy again.' },
     ],
     related: ['beginner-protection', 'what-is-gold'],
-    links: [{ href: '/shop#protection', label: 'Protection' }],
+    links: [{ href: '/shop?tab=specials#protection', label: 'Protection' }],
   },
   {
     id: 'gold-transfer',
@@ -2154,7 +2167,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
       { p: 'Transfers cannot be undone. Check the name.' },
     ],
     related: ['what-is-gold', 'get-gold'],
-    links: [{ href: '/shop#gold', label: 'Send Gold' }],
+    links: [{ href: '/shop?tab=specials#gold', label: 'Send Gold' }],
   },
   {
     id: 'news-ticker',

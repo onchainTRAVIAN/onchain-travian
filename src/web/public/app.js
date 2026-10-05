@@ -532,4 +532,15 @@
     input.value = a.getAttribute('data-value');
     input.focus();
   });
+  // Gold shop: picking a package updates the pay button and the summary.
+  var payBtn = document.querySelector('.paybtn');
+  document.querySelectorAll('input.gpin').forEach(function (r) {
+    r.addEventListener('change', function () {
+      var q = function (sel) { return document.querySelector(sel); };
+      if (q('[data-sel-gold]')) q('[data-sel-gold]').textContent = Number(r.getAttribute('data-gold')).toLocaleString('en-US');
+      if (q('[data-sel-usd]')) q('[data-sel-usd]').textContent = r.getAttribute('data-usd');
+      if (q('[data-sel-eth]')) q('[data-sel-eth]').textContent = r.getAttribute('data-eth');
+      if (payBtn) payBtn.setAttribute('data-units', r.getAttribute('data-units'));
+    });
+  });
 })();
