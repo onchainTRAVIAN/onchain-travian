@@ -330,3 +330,21 @@ export function catapultTargetAllowed(building: string, rallyLevel: number): boo
 export function canAimTwice(rallyLevel: number, catapults: number): boolean {
   return rallyLevel >= 20 && catapults >= 20;
 }
+
+/**
+ * Gaul traps catch attackers before the fight: each free trap holds one soldier, taken evenly
+ * from every unit type (rounded down, in slot order).
+ */
+export function trapCatch(units: UnitCounts, freeTraps: number): UnitCounts {
+  const caught = units.map(() => 0);
+  let free = Math.max(0, Math.floor(freeTraps));
+  const total = units.reduce((a, b) => a + b, 0);
+  if (free <= 0 || total <= 0) return caught;
+  const share = Math.min(1, free / total);
+  units.forEach((n, i) => {
+    const t = Math.min(n, Math.floor(n * share), free);
+    caught[i] = t;
+    free -= t;
+  });
+  return caught;
+}

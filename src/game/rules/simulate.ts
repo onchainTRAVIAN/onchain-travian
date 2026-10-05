@@ -1,4 +1,4 @@
-import { WALL_DURABILITY, catapultResult, cataMorale, moraleMalus, resolveBattle, type ArmyGroup, type AttackMode, type BattleResult } from './battle.js';
+import { WALL_DURABILITY, trapCatch, catapultResult, cataMorale, moraleMalus, resolveBattle, type ArmyGroup, type AttackMode, type BattleResult } from './battle.js';
 import { HERO_BONUS_PER_POINT, heroCombat } from './hero.js';
 import { TRIBES, carryOf, emptyUnits, type TribeId, type UnitCounts } from './units.js';
 
@@ -34,8 +34,12 @@ export interface SimInput {
   defenseBonus: number;
   /** Level of the building the catapults aim at (0 = none). */
   targetLevel: number;
+  /** Free Gaul traps in the village (each catches one attacker before the fight). */
+  traps: number;
 }
 export interface SimResult extends BattleResult {
+  /** Attackers caught in traps before the fight (they don't fight and don't come home). */
+  trapped: UnitCounts;
   attackerSurvivors: UnitCounts;
   defenderSurvivors: UnitCounts[];
   heroDied: { attacker: boolean; defenders: boolean[] };
@@ -59,8 +63,14 @@ function heroOf(army: SimArmy, role: 'attack' | 'defense') {
   return { ...c, cav: u.type === 'cav' };
 }
 
+/** Traps only work in a Gaul village. */
+function trappedBy(input: SimInput, units: UnitCounts): UnitCounts {
+  return input.village && input.defenders[0]?.tribe === 'gauls' ? trapCatch(units, input.traps) : units.map(() => 0);
+}
+
 function battle(input: SimInput, multiplier: number): BattleResult {
-  const a = input.attacker;
+  const caught = trappedBy(input, input.attacker.units);
+  const a = { ...input.attacker, units: input.attacker.units.map((n, i) => n - (caught[i] ?? 0)) };
   const ramSlot = slotOfType(a.tribe, 'ram');
   const ownerTribe = input.defenders[0]?.tribe ?? 'romans';
   const defGroups: ArmyGroup[] = input.defenders.map((d) => ({
@@ -92,7 +102,8 @@ function battle(input: SimInput, multiplier: number): BattleResult {
 /** The same battle the server would fight, without touching the world. */
 export function simulate(input: SimInput): SimResult {
   const r = battle(input, 1);
-  const a = input.attacker;
+  const trapped = trappedBy(input, input.attacker.units);
+  const a = { ...input.attacker, units: input.attacker.units.map((n, i) => n - (trapped[i] ?? 0)) };
   const cataSlot = slotOfType(a.tribe, 'catapult');
   const catas = cataSlot >= 0 ? a.units[cataSlot] ?? 0 : 0;
   const buildingAfter =
@@ -123,6 +134,7 @@ export function simulate(input: SimInput): SimResult {
   }
   return {
     ...r,
+    trapped,
     attackerSurvivors,
     defenderSurvivors,
     heroDied,

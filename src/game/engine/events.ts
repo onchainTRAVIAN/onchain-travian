@@ -4,7 +4,7 @@ import { buildOrders, celebrations, heroes, movements, researchOrders, slots, ti
 import { finishCelebration } from '../actions/celebration.js';
 import { config } from '../../config.js';
 import { BUILDINGS, RALLY_SLOT, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
-import { WALL_DURABILITY, canAimTwice, cataMorale, catapultResult, catapultTargetAllowed, computeLoot, moraleMalus, resolveBattle, resolveScouting, scoutPoints, type ArmyGroup } from '../rules/battle.js';
+import { WALL_DURABILITY, trapCatch, canAimTwice, cataMorale, catapultResult, catapultTargetAllowed, computeLoot, moraleMalus, resolveBattle, resolveScouting, scoutPoints, type ArmyGroup } from '../rules/battle.js';
 import { distance, travelTimeMs } from '../rules/map.js';
 import { OASIS_RANGE, oasisSlots } from '../rules/expansion.js';
 import { RESOURCE_KEYS, addRes, res, sumRes, subRes, type Resources } from '../rules/resources.js';
@@ -163,23 +163,15 @@ function repairTraps(q: Q, villageId: number, freed: number): void {
 
 /** Put attackers into free Gaul traps (proportionally across unit types). Traps must be built first. */
 function trapAttackers(q: Q, target: VillageState, home: VillageInfo, units: UnitCounts): UnitCounts {
-  const caught = emptyUnits();
-  if (target.tribe !== 'gauls' || target.userId === null) return caught;
+  if (target.tribe !== 'gauls' || target.userId === null) return emptyUnits();
   let capacity = 0;
   for (const s of target.slots) if (s.building === 'trapper') capacity += trapCapacity(s.level);
   const built = Math.min(capacity, target.village.traps);
-  if (built <= 0) return caught;
+  if (built <= 0) return emptyUnits();
   const prisoners = readPrisoners(target.village);
   const held = Object.values(prisoners).reduce((sum, c) => sum + totalUnits(c), 0);
-  let free = built - held;
-  const total = totalUnits(units);
-  if (free <= 0 || total <= 0) return caught;
-  const share = Math.min(1, free / total);
-  units.forEach((n, i) => {
-    const t = Math.min(n, Math.floor(n * share), free);
-    caught[i] = t;
-    free -= t;
-  });
+  const caught = trapCatch(units, built - held);
+  if (totalUnits(caught) <= 0) return caught;
   const key = String(home.id);
   prisoners[key] = addUnits(prisoners[key] ?? emptyUnits(), caught);
   q.update(villages).set({ prisoners: JSON.stringify(prisoners) }).where(eq(villages.id, target.village.id)).run();

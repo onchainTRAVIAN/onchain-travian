@@ -597,3 +597,4 @@ table.simarmy tr.herorow label { margin-left: 8px; }
 table.simres td { text-align: center; }
 table.simfacts th { text-align: left; width: 35%; background: #f3f3f3; }
 input.w60 { width: 60px; }
+table.simres tr.trap td.trapc { color: #8a5a00; font-weight: bold; }

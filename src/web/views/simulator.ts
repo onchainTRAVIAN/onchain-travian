@@ -44,7 +44,8 @@ function armyInputs(p: string, a: SimArmy, role: 'attacker' | 'defender', title:
     </tbody></table>`;
 }
 
-function lossTable(tribe: TribeId, title: string, role: 'att' | 'def', units: UnitCounts, losses: UnitCounts, hero: boolean, heroDied: boolean): SafeHtml {
+function lossTable(tribe: TribeId, title: string, role: 'att' | 'def', units: UnitCounts, losses: UnitCounts, hero: boolean, heroDied: boolean, trapped?: UnitCounts): SafeHtml {
+  const anyTrapped = !!trapped && trapped.some((n) => n > 0);
   const all = TRIBES[tribe].units;
   const show = all.map((_, i) => (units[i] ?? 0) > 0);
   if (!show.some(Boolean) && !hero) return html`<table class="report simres"><thead><tr><th class="side ${role}">${title}</th></tr></thead><tbody><tr><td class="none">no troops</td></tr></tbody></table>`;
@@ -52,8 +53,9 @@ function lossTable(tribe: TribeId, title: string, role: 'att' | 'def', units: Un
   return html`<table class="report simres"><thead><tr><th class="side ${role}" colspan="${show.filter(Boolean).length + 1 + (hero ? 1 : 0)}">${title}</th></tr></thead><tbody>
     <tr><td class="lbl"></td>${all.map((_, i) => (show[i] ? html`<td>${unitIcon(tribe, i, 16, false)}</td>` : ''))}${hero ? html`<td>${unitIcon(tribe, 10, 16, false)}</td>` : ''}</tr>
     <tr><th class="lbl">Troops</th>${all.map((_, i) => (show[i] ? cell(units[i] ?? 0) : ''))}${hero ? html`<td>1</td>` : ''}</tr>
+    ${anyTrapped ? html`<tr class="trap"><th class="lbl">Trapped</th>${all.map((_, i) => (show[i] ? cell(trapped?.[i] ?? 0, 'trapc') : ''))}${hero ? html`<td class="none">0</td>` : ''}</tr>` : ''}
     <tr class="loss"><th class="lbl">Casualties</th>${all.map((_, i) => (show[i] ? cell(losses[i] ?? 0, 'bad') : ''))}${hero ? html`<td class="${heroDied ? 'bad' : 'none'}">${heroDied ? 1 : 0}</td>` : ''}</tr>
-    <tr><th class="lbl">Survivors</th>${all.map((_, i) => (show[i] ? cell((units[i] ?? 0) - (losses[i] ?? 0)) : ''))}${hero ? html`<td>${heroDied ? 0 : 1}</td>` : ''}</tr>
+    <tr><th class="lbl">Survivors</th>${all.map((_, i) => (show[i] ? cell((units[i] ?? 0) - (losses[i] ?? 0) - (trapped?.[i] ?? 0)) : ''))}${hero ? html`<td>${heroDied ? 0 : 1}</td>` : ''}</tr>
   </tbody></table>`;
 }
 
@@ -68,7 +70,8 @@ export function simResultPanel(input: SimInput, r: SimResult): SafeHtml {
   return html`<h2>Result</h2>
     <p class="simhead ${r.attackerWon ? 'att' : 'def'}"><b>${r.attackerWon ? (input.mode === 'raid' ? 'The raid succeeds' : 'The attacker wins') : 'The defender holds'}</b>
       <span class="small muted"> · attack ${fmtNum(Math.round(r.attackPower))} vs defence ${fmtNum(Math.round(r.defensePower))}${input.village && r.morale < 0.999 ? ` · morale ${pct(r.morale)}` : ''}</span></p>
-    ${lossTable(att.tribe, 'Attacker', 'att', att.units, r.attackerLosses, !!att.hero, r.heroDied.attacker)}
+    ${lossTable(att.tribe, 'Attacker', 'att', att.units, r.attackerLosses, !!att.hero, r.heroDied.attacker, r.trapped)}
+    ${r.trapped.some((n) => n > 0) ? html`<p class="small">${fmtNum(r.trapped.reduce((a, b) => a + b, 0))} attackers are caught in traps before the fight — they are held prisoner until the Gaul frees them or an attack on this village wins.</p>` : ''}
     ${input.defenders.map((d, k) => lossTable(d.tribe, k === 0 ? (input.village ? 'Defender' : 'Animals') : `Reinforcement ${k}`, 'def', d.units, r.defenderLosses[k] ?? d.units.map(() => 0), !!d.hero, r.heroDied.defenders[k] ?? false))}
     <table class="simfacts"><tbody>
       ${input.village && input.mode === 'attack' && rams > 0 && input.wall > 0
@@ -109,11 +112,14 @@ export function simulatorView(d: { input: SimInput; result: SimResult; worldSpee
             <label>Stonemason <input type="number" name="stone" value="${v(i.stonemason)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
             <label>Population <input type="number" name="dpop" value="${i.defenderPop}" min="1" class="w60" inputmode="numeric"></label>
             <label>Defence bonus <input type="number" name="dbon" value="${v(Math.round(i.defenseBonus * 100))}" min="0" max="100" class="w30" inputmode="numeric" placeholder="0">%</label>
-            <label>Catapult target level <input type="number" name="tl" value="${v(i.targetLevel)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label></p>
+            <label>Catapult target level <input type="number" name="tl" value="${v(i.targetLevel)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
+            ${(i.defenders[0]?.tribe ?? 'romans') === 'gauls'
+              ? html`<label title="Free traps (Trapper capacity minus prisoners already held)">Free traps <input type="number" name="traps" value="${v(i.traps)}" min="0" class="w60" inputmode="numeric" placeholder="0"></label>`
+              : html`<span class="small muted">Traps: Gaul defenders only.</span>`}</p>
           ${extra.map((a, k) => html`<details class="simreinf"${a ? html` open` : ''}><summary>Reinforcement ${k + 1}</summary>${armyInputs(`d${k + 2}`, a ?? blank('romans'), 'defender', `Reinforcement ${k + 1}`, false)}</details>`)}`
         : html`<input type="hidden" name="wall" value="0">`}
       <p><button type="submit">Simulate</button> <a href="/simulator" class="small">reset to my troops</a></p>
-      <p class="small muted">Uses the same battle rules as real fights (world speed x${d.worldSpeed} does not change fighting). Traps and random catapult targets are not simulated.</p>
+      <p class="small muted">Uses the same battle rules as real fights (world speed x${d.worldSpeed} does not change fighting). Random catapult targets are not simulated.</p>
     </form>
     <div id="simresult" aria-live="polite">${simResultPanel(d.input, d.result)}</div>`;
 }

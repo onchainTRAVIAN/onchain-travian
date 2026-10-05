@@ -69,6 +69,7 @@ function inputFrom(req: Request): SimInput & { extra: number } {
     defenderPop: num(q.dpop, 1, 10_000_000, Math.max(1, myPop)),
     defenseBonus: num(q.dbon, 0, 100) / 100,
     targetLevel: num(q.tl, 0, 20),
+    traps: num(q.traps, 0, 1_000_000),
     extra: defenders.length,
   };
 }
