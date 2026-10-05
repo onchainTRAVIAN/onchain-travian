@@ -72,6 +72,8 @@ export function invitePlayer(db: DB, userId: number, username: string, now: numb
     const target = tx.select().from(users).where(eq(users.usernameLower, username.toLowerCase())).get();
     assertGame(target, `No player called "${username}"`);
     assertGame(!membership(tx, target.id), `${target.username} is already in an alliance`);
+    const pending = tx.select({ id: allianceInvites.userId }).from(allianceInvites).where(eq(allianceInvites.allianceId, m.a.id)).all().length;
+    assertGame(pending < 20, 'At most 20 open invitations at a time');
     tx.insert(allianceInvites).values({ allianceId: m.a.id, userId: target.id, invitedBy: userId, createdAt: now }).onConflictDoNothing().run();
   });
 }

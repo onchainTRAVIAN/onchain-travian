@@ -6,7 +6,9 @@ import type { ArmyGroup } from '../rules/battle.js';
 import { natarStrength } from '../rules/natars.js';
 import { addUnits, type TribeId, type UnitCounts } from '../rules/units.js';
 import { prisonersOf, trapCapacityOf } from '../actions/traps.js';
-import { heroAtHome } from './hero.js';
+import { heroAtHome, heroesStationedIn } from './hero.js';
+import { artifactValue } from './artifacts.js';
+import { users } from '../../db/schema.js';
 import { villageInfo } from './movement.js';
 import { catchUp, levelOf, parseUnits } from './state.js';
 
@@ -23,7 +25,10 @@ export interface DefenseSnapshot {
   tribe: TribeId;
   /** The owner's own troops first, then other players' reinforcements merged by tribe. */
   armies: DefenseArmy[];
-  hero: { slot: number; points: number; bonus: number } | null;
+  hero: { slot: number; points: number; bonus: number; health: number } | null;
+  /** Heroes of other players standing here, by the tribe of the army they belong to. */
+  stationedHeroes: { tribe: TribeId; slot: number; points: number; bonus: number; health: number }[];
+  architect: number;
   wall: number;
   residence: number;
   stonemason: number;
@@ -31,6 +36,10 @@ export interface DefenseSnapshot {
   villagePop: number;
   playerPop: number;
   strength: number;
+}
+
+function tribeOfUser(q: Q, userId: number): TribeId {
+  return (q.select({ t: users.tribe }).from(users).where(eq(users.id, userId)).get()?.t ?? 'romans') as TribeId;
 }
 
 export function defenseSnapshot(q: Q, villageId: number, now: number): DefenseSnapshot | undefined {
@@ -66,7 +75,9 @@ export function defenseSnapshot(q: Q, villageId: number, now: number): DefenseSn
     name: info.name,
     tribe: info.tribe,
     armies,
-    hero: h ? { slot: h.unitSlot, points: h.defPoints, bonus: h.defBonus } : null,
+    hero: h ? { slot: h.unitSlot, points: h.defPoints, bonus: h.defBonus, health: h.health } : null,
+    stationedHeroes: heroesStationedIn(q, villageId).map((sh) => ({ tribe: tribeOfUser(q, sh.userId), slot: sh.unitSlot, points: sh.defPoints, bonus: sh.defBonus, health: sh.health })),
+    architect: artifactValue(q, villageId, 'architect', now),
     wall,
     residence,
     stonemason: levelOf(state, 'stonemason'),

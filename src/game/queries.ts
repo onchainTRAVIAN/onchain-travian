@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import type { Q } from '../db/index.js';
-import { allianceMembers, alliances, heroes, messages, movements, reports, tiles, troops, users, villages } from '../db/schema.js';
+import { allianceMembers, alliances, heroes, messages, movements, oasisTroops, reports, tiles, troops, users, villages } from '../db/schema.js';
 import { config } from '../config.js';
 import { distance, wrapCoord } from './rules/map.js';
 import type { TribeId, UnitCounts } from './rules/units.js';
@@ -103,6 +103,7 @@ export function villageMovements(q: Q, villageId: number): MovementView[] {
 
 export interface StationedView {
   ownerVillageId: number;
+  /** 0 for an oasis (then x|y identify it). */
   locationId: number;
   villageName: string;
   ownerName: string;
@@ -139,7 +140,15 @@ export function troopsAway(q: Q, villageId: number): StationedView[] {
     .map((r) => ({
       ownerVillageId: villageId, locationId: r.t.villageId, villageName: r.name, ownerName: r.owner ?? 'Nature',
       x: r.x, y: r.y, tribe: 'romans' as TribeId, units: parseUnits(r.t.units),
-    }));
+    }))
+    .concat(
+      q
+        .select()
+        .from(oasisTroops)
+        .where(eq(oasisTroops.ownerVillageId, villageId))
+        .all()
+        .map((r) => ({ ownerVillageId: villageId, locationId: 0, villageName: `Oasis (${r.x}|${r.y})`, ownerName: '', x: r.x, y: r.y, tribe: 'romans' as TribeId, units: parseUnits(r.units) })),
+    );
 }
 
 export type RankKind = 'population' | 'attack' | 'defense' | 'raid';

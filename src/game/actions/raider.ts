@@ -132,6 +132,8 @@ export function toggleBlock(db: DB, userId: number, x: number, y: number): boole
     db.delete(farmBlocks).where(eq(farmBlocks.id, b.id)).run();
     return false;
   }
+  const n = db.select({ id: farmBlocks.id }).from(farmBlocks).where(eq(farmBlocks.userId, userId)).all().length;
+  assertGame(n < 200, 'At most 200 blocked oases');
   db.insert(farmBlocks).values({ userId, x, y }).run();
   return true;
 }

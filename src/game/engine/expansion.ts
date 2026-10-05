@@ -1,23 +1,13 @@
-import { and, eq, gt, inArray, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
-import {
-  buildOrders,
-  heroes,
-  slots,
-  marketOffers,
-  movements,
-  researchOrders,
-  tiles,
-  trainOrders,
-  troops,
-  users,
-  villages,
-} from '../../db/schema.js';
+import { artifacts, buildOrders, celebrations, heroes, marketOffers, movements, oasisTroops, researchOrders, slots, tiles, trainOrders, troops, users, villages } from '../../db/schema.js';
 import { culturePointsRequired, expansionSlots } from '../rules/expansion.js';
-import { catchUpCulture, levelOf, loadVillage, refreshPopulation } from './state.js';
+import { catchUpCulture, levelOf, loadVillage, parseUnits, refreshPopulation } from './state.js';
+import { config } from '../../config.js';
 import { BUILDINGS, FIELD_MAX_NON_CAPITAL, WALL_FOR, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
 import { scheduleReturn, sendTroopsHome, villageInfo } from './movement.js';
 import { emptyUnits } from '../rules/units.js';
+import { clearOasisGarrison } from './oasisTroops.js';
 
 export interface ExpansionCheck {
   ok: boolean;
@@ -69,10 +59,25 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
     sendTroopsHome(q, targetId, row.ownerVillageId, now);
   }
   q.delete(troops).where(eq(troops.ownerVillageId, targetId)).run();
+  q.delete(oasisTroops).where(eq(oasisTroops.ownerVillageId, targetId)).run();
+  // Other players' heroes standing here without troops walk home too.
+  sendStationedHeroesHome(q, targetId, target.x, target.y, now);
+  // A hero out on a mission from this village loses its army: it falls, and can be revived at the capital.
+  killHeroesOnMissionsFrom(q, targetId);
   q.delete(movements).where(eq(movements.fromVillageId, targetId)).run();
   q.insert(troops).values({ villageId: targetId, ownerVillageId: targetId, units: JSON.stringify(new Array(10).fill(0)) }).run();
+  // The Trapper falls with the village: prisoners go home; soldiers of this village held elsewhere are lost.
+  releaseAllPrisoners(q, target, now);
+  forgetPrisonersOf(q, targetId);
+  q.delete(celebrations).where(eq(celebrations.villageId, targetId)).run();
+  // Artifacts and construction plans in a conquered (Natar) village change hands like a captured one.
+  q.update(artifacts)
+    .set({ capturedAt: now, activeAt: now + Math.round(86_400_000 / config.WORLD_SPEED) })
+    .where(and(eq(artifacts.villageId, targetId), isNull(artifacts.capturedAt)))
+    .run();
 
-  // Oases belong to the old owner's empire; they become wild again.
+  // Oases belong to the old owner's empire; they become wild again (garrisons walk home).
+  for (const o of q.select({ x: tiles.x, y: tiles.y }).from(tiles).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, targetId))).all()) clearOasisGarrison(q, o.x, o.y, now);
   q.update(tiles).set({ villageId: null, animalsAt: now }).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, targetId))).run();
 
   // A hero based here falls and moves its home to the old owner's capital.
@@ -106,6 +111,8 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
       blacksmith: '[0,0,0,0,0,0,0,0,0,0]',
       armoury: '[0,0,0,0,0,0,0,0,0,0]',
       expansions: 0,
+      traps: 0,
+      prisoners: '{}',
       resAt: now,
     })
     .where(eq(villages.id, targetId))
@@ -113,15 +120,16 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
   const home = q.select({ e: villages.expansions }).from(villages).where(eq(villages.id, fromVillageId)).get();
   q.update(villages).set({ expansions: (home?.e ?? 0) + 1 }).where(eq(villages.id, fromVillageId)).run();
 
-  // T3.6: the wall and the old tribe's special buildings are destroyed on conquest; the wall plot
-  // takes the new owner's wall type (level 0) so it can be built again.
+  // T3.6: the wall is destroyed on conquest and the plot takes the new owner's wall type (level 0);
+  // the old tribe's special buildings are lost only when a different tribe takes over.
   const newTribe = q.select({ t: users.tribe }).from(users).where(eq(users.id, newOwnerId)).get()?.t;
+  const oldTribe = oldOwner === null ? null : q.select({ t: users.tribe }).from(users).where(eq(users.id, oldOwner)).get()?.t;
   for (const sl of q.select().from(slots).where(eq(slots.villageId, targetId)).all()) {
     const def = sl.building ? BUILDINGS[sl.building as BuildingId] : undefined;
     if (sl.slot === WALL_SLOT) {
       const wall = newTribe && newTribe !== 'natars' ? WALL_FOR[newTribe] : null;
       q.update(slots).set({ building: wall, level: 0 }).where(and(eq(slots.villageId, targetId), eq(slots.slot, sl.slot))).run();
-    } else if (def?.tribe) {
+    } else if (def?.tribe && def.tribe !== newTribe && newTribe !== oldTribe) {
       q.update(slots).set({ building: null, level: 0 }).where(and(eq(slots.villageId, targetId), eq(slots.slot, sl.slot))).run();
     }
   }
@@ -132,19 +140,67 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
  * A village whose population catapults brought to 0 disappears (never a capital or a player's
  * last village). Foreign troops go home, a hero based here moves to the capital, the land is freed.
  */
+/** Heroes of other players stationed in a village walk home (they may be there without any troops). */
+function sendStationedHeroesHome(q: Q, villageId: number, x: number, y: number, now: number): void {
+  for (const h of q.select().from(heroes).where(and(eq(heroes.locationId, villageId), eq(heroes.status, 'away'))).all()) {
+    const home = villageInfo(q, h.homeVillageId);
+    if (!home || home.id === villageId) continue;
+    q.update(heroes).set({ status: 'moving', locationId: null }).where(eq(heroes.id, h.id)).run();
+    scheduleReturn(q, home, x, y, emptyUnits(), null, now, true);
+  }
+}
+
+/** A village's outgoing movements are about to be deleted: heroes travelling with them fall (revivable). */
+function killHeroesOnMissionsFrom(q: Q, villageId: number): void {
+  const owner = q.select({ u: villages.userId }).from(villages).where(eq(villages.id, villageId)).get()?.u ?? null;
+  if (owner === null) return;
+  const heroMove = q.select({ id: movements.id }).from(movements).where(and(eq(movements.fromVillageId, villageId), eq(movements.hero, true))).get();
+  if (!heroMove) return;
+  q.update(heroes).set({ status: 'dead', locationId: null, health: 0 }).where(and(eq(heroes.userId, owner), eq(heroes.status, 'moving'))).run();
+}
+
+/** Free every prisoner held in a village's traps (they walk home). */
+function releaseAllPrisoners(q: Q, v: { id: number; x: number; y: number; prisoners: string }, now: number): void {
+  let held: Record<string, unknown> = {};
+  try {
+    held = JSON.parse(v.prisoners) as Record<string, unknown>;
+  } catch {
+    return;
+  }
+  for (const [key, units] of Object.entries(held)) {
+    const home = villageInfo(q, Number(key));
+    if (!home) continue;
+    const counts = parseUnits(JSON.stringify(units));
+    if (counts.some((n) => n > 0)) scheduleReturn(q, home, v.x, v.y, counts, null, now);
+  }
+  q.update(villages).set({ prisoners: '{}' }).where(eq(villages.id, v.id)).run();
+}
+
+/** Soldiers of this village held in other villages' traps are lost (the village changed tribe or vanished). */
+function forgetPrisonersOf(q: Q, villageId: number): void {
+  const key = String(villageId);
+  for (const row of q.select({ id: villages.id, prisoners: villages.prisoners }).from(villages).where(sql`${villages.prisoners} like ${'%"' + key + '"%'}`).all()) {
+    try {
+      const p = JSON.parse(row.prisoners) as Record<string, unknown>;
+      if (!(key in p)) continue;
+      delete p[key];
+      q.update(villages).set({ prisoners: JSON.stringify(p) }).where(eq(villages.id, row.id)).run();
+    } catch {
+      /* malformed: leave it */
+    }
+  }
+}
+
 export function destroyVillage(q: Q, villageId: number, now: number): void {
   const v = q.select().from(villages).where(eq(villages.id, villageId)).get();
   if (!v) return;
   for (const row of q.select().from(troops).where(and(eq(troops.villageId, villageId), ne(troops.ownerVillageId, villageId))).all()) {
     sendTroopsHome(q, villageId, row.ownerVillageId, now);
   }
-  // Heroes of other players stationed here walk home too (they could be here without any troops).
-  for (const h of q.select().from(heroes).where(and(eq(heroes.locationId, villageId), eq(heroes.status, 'away'))).all()) {
-    const home = villageInfo(q, h.homeVillageId);
-    if (!home) continue;
-    q.update(heroes).set({ status: 'moving', locationId: null }).where(eq(heroes.id, h.id)).run();
-    scheduleReturn(q, home, v.x, v.y, emptyUnits(), null, now, true);
-  }
+  sendStationedHeroesHome(q, villageId, v.x, v.y, now);
+  killHeroesOnMissionsFrom(q, villageId);
+  releaseAllPrisoners(q, v, now);
+  forgetPrisonersOf(q, villageId);
   if (v.userId !== null) {
     const capital = q
       .select({ id: villages.id })

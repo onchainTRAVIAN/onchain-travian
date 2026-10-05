@@ -123,6 +123,18 @@ function returnVillage(q: Q, l: ListingRow): number | null {
   return (own.find((v) => v.cap) ?? own[0])?.id ?? null;
 }
 
+/** Goods leaving the market walk back to the village (CANCEL_RETURN_MS), never instantly. */
+function walkBack(q: Q, villageId: number, units: UnitCounts, goods: Resources, now: number): void {
+  const v = q.select({ x: villages.x, y: villages.y }).from(villages).where(eq(villages.id, villageId)).get();
+  if (!v) return;
+  q.insert(movements)
+    .values({
+      kind: 'delivery', fromVillageId: villageId, toVillageId: villageId, originX: v.x, originY: v.y, toX: v.x, toY: v.y,
+      units: JSON.stringify(units), loot: sumRes(goods) > 0 ? JSON.stringify(goods) : null, departAt: now, arriveAt: now + CANCEL_RETURN_MS,
+    })
+    .run();
+}
+
 export function cancelListing(db: DB, userId: number, listingId: number, now: number): void {
   db.transaction((tx) => {
     const l = tx.select().from(marketListings).where(eq(marketListings.id, listingId)).get();
@@ -183,14 +195,18 @@ export function editListing(
         const cap = capacityFor(state);
         const others = sumRes(listedResources(tx, l.villageId)) - sumRes(old);
         assertGame(others + sumRes(next) <= sumRes(cap), `You can list at most ${fmtInt(sumRes(cap))} resources from this village (its storage)`);
+        // More is taken from the village now; less walks back like a cancelled offer (never instantly,
+        // so the market can't hide resources from an attack that is about to land).
         const after = res();
+        const back = res();
         for (const k of RESOURCE_KEYS) {
           const delta = next[k] - old[k];
           if (delta > 0) assertGame(stock[k] >= delta, `Not enough ${k} in this village`);
-          if (delta < 0) assertGame(stock[k] - delta <= cap[k], `Not enough storage to take back ${-delta} ${k}`);
-          after[k] = stock[k] - delta;
+          after[k] = stock[k] - Math.max(0, delta);
+          back[k] = Math.max(0, -delta);
         }
         setResources(tx, l.villageId, after);
+        if (sumRes(back) > 0) walkBack(tx, l.villageId, emptyUnits(), back, now);
       }
       goods = JSON.stringify(next);
     }
@@ -209,12 +225,15 @@ export function editListing(
         catchUp(tx, l.villageId, now);
         const home = troopsAt(tx, l.villageId, l.villageId);
         const tribe = (l.tribe in TRIBES ? l.tribe : 'romans') as TribeId;
+        const back = emptyUnits();
         const after = home.map((h, i) => {
           const delta = (next[i] ?? 0) - (old[i] ?? 0);
           assertGame(delta <= 0 || h >= delta, `Not enough ${TRIBES[tribe].units[i]?.name ?? 'units'} at home`);
-          return h - delta;
+          back[i] = Math.max(0, -delta);
+          return h - Math.max(0, delta);
         });
         setTroopsAt(tx, l.villageId, l.villageId, after);
+        if (totalUnits(back) > 0) walkBack(tx, l.villageId, back, res(), now);
       }
       units = JSON.stringify(next);
     }

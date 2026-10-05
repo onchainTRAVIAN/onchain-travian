@@ -63,8 +63,8 @@ export function trainOptions(q: Q, state: VillageState, building: BuildingId, no
   if (!site) return [];
   const mods = getModifiers(q, state.userId, now);
   const bLevel = levelOf(state, building);
-  // Romans' Horse Drinking Trough: cavalry trains 1% faster per level.
-  const trough = state.tribe === 'romans' && site.units === 'stable' ? 1 + 0.01 * levelOf(state, 'horsetrough') : 1;
+  // Romans' Horse Drinking Trough: cavalry trains 1% faster per level (time × (1 − 0.01·L)).
+  const trough = state.tribe === 'romans' && site.units === 'stable' ? 1 / (1 - 0.01 * levelOf(state, 'horsetrough')) : 1;
   const stock = stockOf(state.village);
   return TRIBES[state.tribe].units
     .map((unit, slot) => ({ unit, slot }))

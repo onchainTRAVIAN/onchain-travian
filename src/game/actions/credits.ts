@@ -63,6 +63,8 @@ export function finishConstructionNow(db: DB, userId: number, orderId: number, n
     assertGame(o, 'Construction not found');
     ownedVillage(tx, userId, o.villageId);
     assertGame(o.finishAt > now, 'Already finished');
+    assertGame(o.building !== 'wonder', 'The World Wonder cannot be finished with Gold');
+    assertGame(!o.demolish, 'Demolitions cannot be finished with Gold');
     const price = instantPrice(workLeft(o.startAt, o.finishAt, now));
     spend(tx, userId, price, `Instant construction: ${o.building} level ${o.toLevel}`, now);
     tx.update(buildOrders).set({ finishAt: now }).where(eq(buildOrders.id, orderId)).run();
@@ -112,6 +114,7 @@ export function finishResearchNow(db: DB, userId: number, orderId: number, now: 
     const o = tx.select().from(researchOrders).where(eq(researchOrders.id, orderId)).get();
     assertGame(o, 'Research not found');
     ownedVillage(tx, userId, o.villageId);
+    assertGame(o.finishAt > now, 'Already finished');
     const price = instantPrice(o.finishAt - now);
     spend(tx, userId, price, 'Instant research', now);
     tx.update(researchOrders).set({ finishAt: now }).where(eq(researchOrders.id, orderId)).run();
@@ -284,6 +287,17 @@ export const TRANSFER_MAX = 1_000_000;
  * Send Gold to another player. Both ledger rows are written in one transaction, and the
  * receiver gets an in-game message so they know who sent it.
  */
+/** Gold you may pass on: your balance minus what the game gave you for free (tasks, medals, welcome gift). */
+export function transferableBalance(q: Q, userId: number): number {
+  const given =
+    q
+      .select({ n: sql<number>`coalesce(sum(${creditsLedger.amount}), 0)` })
+      .from(creditsLedger)
+      .where(and(eq(creditsLedger.userId, userId), sql`(${creditsLedger.idemKey} like 'task:%' or ${creditsLedger.idemKey} like 'medal:%' or ${creditsLedger.idemKey} like 'starter:%')`))
+      .get()?.n ?? 0;
+  return creditBalance(q, userId) - given;
+}
+
 export function transferGold(
   db: DB,
   fromUserId: number,
@@ -307,6 +321,8 @@ export function transferGold(
     assertGame(!to.banned, 'That player is banned');
     const bal = creditBalance(tx, fromUserId);
     assertGame(bal >= amount, `You only have ${bal} Gold`);
+    const free = transferableBalance(tx, fromUserId);
+    assertGame(free >= amount, `You can send ${Math.max(0, free)} Gold: Gold from tasks, medals and gifts stays on your account`);
     const key = `transfer:${fromUserId}:${to.id}:${now}:${Math.random().toString(36).slice(2)}`;
     tx.insert(creditsLedger).values({ userId: fromUserId, amount: -amount, reason: `Sent to ${to.username}`, idemKey: `${key}:out`, createdAt: now }).run();
     tx.insert(creditsLedger).values({ userId: to.id, amount, reason: `From ${from.username}`, idemKey: `${key}:in`, createdAt: now }).run();

@@ -15,6 +15,7 @@ import { heroAtHome } from '../engine/hero.js';
 import { canExpand } from '../engine/expansion.js';
 import { oasisOwner, tileAt } from '../engine/oasis.js';
 import { ownedVillage } from './build.js';
+import { sendOasisTroopsHome } from '../engine/oasisTroops.js';
 import { attackBlockedBy } from './alliance.js';
 
 export type MissionKind = 'attack' | 'raid' | 'reinforce' | 'scout' | 'settle';
@@ -34,6 +35,8 @@ export interface SendPreview {
   targetName: string;
   targetOwner: string;
   targetKind: 'village' | 'oasis' | 'valley';
+  /** An oasis held by another player (attacking it ends your own protection). */
+  ownedOasis: boolean;
   distance: number;
   travelMs: number;
   x: number;
@@ -104,16 +107,27 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
   }
 
   let targetVillageId: number | null = null;
+  let ownedOasis = false;
   let targetName: string;
   let targetOwner: string;
   let targetKind: SendPreview['targetKind'];
 
   if (tile.kind === 'oasis') {
-    assertGame(input.kind === 'attack' || input.kind === 'raid' || input.kind === 'scout', 'You can only attack, raid or scout an oasis');
+    assertGame(input.kind !== 'settle', 'You cannot settle in an oasis');
     const owner = oasisOwner(q, tile);
-    assertGame(!owner || owner.userId !== userId, 'This oasis is already yours');
-    const oasisBlock = owner ? attackBlockedBy(q, userId, owner.userId) : null;
-    assertGame(!oasisBlock, oasisBlock ?? '');
+    const ownerUser = owner?.userId != null ? q.select({ u: users.username, p: users.protectedUntil }).from(users).where(eq(users.id, owner.userId)).get() : undefined;
+    if (input.kind === 'reinforce') {
+      // You can garrison an oasis you hold or one held by your alliance (or a pact partner).
+      assertGame(owner && owner.userId !== null, 'Only a held oasis can be reinforced');
+      assertGame(owner.userId === userId || attackBlockedBy(q, userId, owner.userId) !== null, 'You can only reinforce your own or your allies\' oases');
+      assertGame(!input.hero, 'Your hero cannot stay in an oasis');
+    } else {
+      assertGame(!owner || owner.userId !== userId, 'This oasis is already yours');
+      const oasisBlock = owner ? attackBlockedBy(q, userId, owner.userId) : null;
+      assertGame(!oasisBlock, oasisBlock ?? '');
+      assertGame(!ownerUser || ownerUser.p <= now, `${ownerUser?.u ?? 'This player'} is under beginner protection`);
+    }
+    ownedOasis = !!owner && owner.userId !== null && owner.userId !== userId;
     targetName = `Oasis (${x}|${y})`;
     targetOwner = owner ? (q.select({ u: users.username }).from(users).where(eq(users.id, owner.userId ?? 0)).get()?.u ?? 'Nature') : 'Nature';
     targetKind = 'oasis';
@@ -150,7 +164,7 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
     travelTimeArenaMs(dist, groupSpeed(me.tribe, units, heroSpeedFor(q, userId, withHero, me.tribe)), levelOf(state, 'tournament'), config.TROOP_SPEED) /
       artifactValue(q, villageId, 'boots', now),
   );
-  return { targetVillageId, targetName, targetOwner, targetKind, distance: dist, travelMs, x, y };
+  return { targetVillageId, targetName, targetOwner, targetKind, ownedOasis, distance: dist, travelMs, x, y };
 }
 
 export function sendTroops(db: DB, userId: number, villageId: number, input: SendInput, now: number): MovementRow {
@@ -159,7 +173,7 @@ export function sendTroops(db: DB, userId: number, villageId: number, input: Sen
     const home = ownedVillage(tx, userId, villageId);
     const units = cleanUnits(input.units);
     setTroopsAt(tx, villageId, villageId, subUnits(troopsAt(tx, villageId, villageId), units));
-    if (input.kind !== 'reinforce' && input.kind !== 'settle' && preview.targetKind === 'village') {
+    if (input.kind !== 'reinforce' && input.kind !== 'settle' && (preview.targetKind === 'village' || preview.ownedOasis)) {
       // Attacking another player ends your own protection (beginner or bought); the 8 h wait
       // before buying protection again counts from now.
       tx.update(users)
@@ -191,6 +205,14 @@ export function sendTroops(db: DB, userId: number, villageId: number, input: Sen
 }
 
 /** Bring your troops back from a village they are reinforcing. */
+/** Bring your troops home from an oasis. */
+export function withdrawFromOasis(db: DB, userId: number, ownerVillageId: number, x: number, y: number, now: number): void {
+  db.transaction((tx) => {
+    ownedVillage(tx, userId, ownerVillageId);
+    assertGame(sendOasisTroopsHome(tx, x, y, ownerVillageId, now), 'No troops to withdraw');
+  });
+}
+
 export function withdrawTroops(db: DB, userId: number, ownerVillageId: number, locationId: number, now: number): void {
   db.transaction((tx) => {
     ownedVillage(tx, userId, ownerVillageId);

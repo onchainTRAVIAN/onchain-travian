@@ -26,6 +26,17 @@ const authLimiter = rateLimit({
   },
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  limit: config.NODE_ENV === 'test' ? 10_000 : 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    setFlash(res, 'error', 'Too many new accounts from this connection. Please try again later.');
+    res.redirect(303, '/register');
+  },
+});
+
 const RegisterSchema = z.object({
   username: z
     .string()
@@ -99,7 +110,7 @@ authRouter.get('/register', (req, res) => {
   sendPage(req, res, 'Join', registerView(req.ctx.csrf));
 });
 
-authRouter.post('/register', authLimiter, async (req, res) => {
+authRouter.post('/register', authLimiter, registerLimiter, async (req, res) => {
   const parsed = RegisterSchema.safeParse(req.body);
   const body = (req.body ?? {}) as Record<string, unknown>;
   const values = {

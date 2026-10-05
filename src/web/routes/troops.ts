@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
-import { previewSend, sendBackReinforcements, sendTroops, withdrawTroops, type SendInput } from '../../game/actions/troops.js';
+import { previewSend, sendBackReinforcements, sendTroops, withdrawFromOasis, withdrawTroops, type SendInput } from '../../game/actions/troops.js';
 import { levelOf, troopsAt } from '../../game/engine/state.js';
 import { reinforcementsIn, tileLabel, troopsAway, villageMovements } from '../../game/queries.js';
 import { eq } from 'drizzle-orm';
@@ -150,7 +150,7 @@ troopsRouter.post('/troops/send/preview', (req, res, next) => {
   }
   const input = toInput(parsed.data);
   try {
-    const preview = previewSend(db, ctx.user.id, ctx.villageId, input, ctx.now);
+    const preview = db.transaction((tx) => previewSend(tx, ctx.user.id, ctx.villageId, input, ctx.now));
     sendPage(req, res, 'Confirm', confirmView({ tribe: page.state.tribe, input, preview, csrf: ctx.csrf, now: ctx.now, carry: carryOf(page.state.tribe, input.units, getModifiers(db, ctx.user.id, ctx.now).troopCarry) }), { nav: 'troops', chrome: page.chrome });
   } catch (err) {
     if (err instanceof GameError) {
@@ -173,6 +173,16 @@ troopsRouter.post(
     },
     '/troops/send',
   ),
+);
+
+troopsRouter.post(
+  '/troops/withdraw-oasis',
+  formAction(z.object({ x: z.coerce.number().int(), y: z.coerce.number().int() }), (req, res, data) => {
+    const ctx = authed(req);
+    withdrawFromOasis(db, ctx.user.id, ctx.villageId, data.x, data.y, ctx.now);
+    setFlash(res, 'ok', 'Your troops are heading home.');
+    res.redirect(303, '/troops');
+  }, '/troops'),
 );
 
 troopsRouter.post(

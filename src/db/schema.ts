@@ -140,6 +140,19 @@ export const troops = sqliteTable(
   (t) => [uniqueIndex('troops_loc_owner_idx').on(t.villageId, t.ownerVillageId), index('troops_owner_idx').on(t.ownerVillageId)],
 );
 
+/** Troops stationed in an oasis (reinforcements sent to an oasis you or an ally hold). */
+export const oasisTroops = sqliteTable(
+  'oasis_troops',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    x: integer('x').notNull(),
+    y: integer('y').notNull(),
+    ownerVillageId: integer('owner_village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    units: text('units').notNull(), // JSON number[10]
+  },
+  (t) => [uniqueIndex('oasis_troops_loc_owner_idx').on(t.x, t.y, t.ownerVillageId), index('oasis_troops_owner_idx').on(t.ownerVillageId)],
+);
+
 export const buildOrders = sqliteTable(
   'build_orders',
   {

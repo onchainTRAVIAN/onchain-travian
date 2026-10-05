@@ -2,7 +2,7 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { artifactValue } from './artifacts.js';
 import { clock } from '../../clock.js';
 import type { Q } from '../../db/index.js';
-import { marketListings, movements, slots, tiles, trainOrders, troops, users, villages } from '../../db/schema.js';
+import { marketListings, movements, oasisTroops, slots, tiles, trainOrders, troops, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
 import {
   BUILDINGS,
@@ -185,6 +185,9 @@ export function ownedTroopTotals(q: Q, villageId: number): UnitCounts {
   for (const m of q.select({ units: movements.units }).from(movements).where(eq(movements.fromVillageId, villageId)).all()) {
     total = addUnits(total, parseUnits(m.units));
   }
+  for (const o of q.select({ units: oasisTroops.units }).from(oasisTroops).where(eq(oasisTroops.ownerVillageId, villageId)).all()) {
+    total = addUnits(total, parseUnits(o.units));
+  }
   return total;
 }
 
@@ -204,12 +207,12 @@ function tribeOfVillage(q: Q, villageId: number): TribeId {
  * and reinforcements from others — plus its own troops on the move and its own soldiers held
  * in enemy traps. Its troops stationed in other villages are fed by those hosts.
  */
-export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId): number {
+export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId, now = clock.now()): number {
   // Roman Horse Drinking Trough: Equites Legati / Imperatoris / Caesaris eat 1 less from level 10 / 15 / 20.
   const trough =
     tribe === 'romans' ? q.select({ l: slots.level }).from(slots).where(and(eq(slots.villageId, villageId), eq(slots.building, 'horsetrough'))).get()?.l ?? 0 : 0;
   // Diet control (artifact) cuts what this village's own troops eat.
-  const diet = artifactValue(q, villageId, 'diet', clock.now());
+  const diet = artifactValue(q, villageId, 'diet', now);
   const own = (units: UnitCounts) => (upkeepOf(tribe, units) - troughDiscount(trough, units)) * diet;
   let total = 0;
   for (const row of q.select({ owner: troops.ownerVillageId, units: troops.units }).from(troops).where(eq(troops.villageId, villageId)).all()) {
@@ -218,6 +221,9 @@ export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId): number 
   let moving = emptyUnits();
   for (const m of q.select({ units: movements.units }).from(movements).where(eq(movements.fromVillageId, villageId)).all()) {
     moving = addUnits(moving, parseUnits(m.units));
+  }
+  for (const o of q.select({ units: oasisTroops.units }).from(oasisTroops).where(eq(oasisTroops.ownerVillageId, villageId)).all()) {
+    moving = addUnits(moving, parseUnits(o.units));
   }
   total += own(moving);
   // Troops on sale in the Gold market still eat at home.
@@ -251,10 +257,10 @@ export function heroUpkeep(q: Q, villageId: number): number {
  * Crop eaten per hour by the population, own troops and the hero. Like Travian speed servers,
  * consumption does NOT scale with world speed (only production, times and culture do).
  */
-export function cropUpkeep(q: Q, state: VillageState): number {
+export function cropUpkeep(q: Q, state: VillageState, now = clock.now()): number {
   // Natar strongholds never go hungry (their garrisons would otherwise starve away).
   if (state.tribe === 'natars') return 0;
-  return state.village.pop + fedTroopUpkeep(q, state.village.id, state.tribe) + heroUpkeep(q, state.village.id);
+  return state.village.pop + fedTroopUpkeep(q, state.village.id, state.tribe, now) + heroUpkeep(q, state.village.id);
 }
 
 export interface Economy {
@@ -267,7 +273,7 @@ export interface Economy {
 export function economyOf(q: Q, state: VillageState, now: number): Economy {
   const mods = getModifiers(q, state.userId, now);
   const gross = grossProduction(state, mods, oasisBonuses(q, state.village.id), heroProductionBonus(q, state.village.id));
-  const upkeep = cropUpkeep(q, state);
+  const upkeep = cropUpkeep(q, state, now);
   const net = { ...gross, crop: gross.crop - upkeep };
   return { gross, upkeep, net, capacity: capacityFor(state) };
 }

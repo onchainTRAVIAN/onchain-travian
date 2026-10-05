@@ -3,7 +3,7 @@ import { icon, resIcon } from './layout.js';
 import { assetUrl } from '../assets.js';
 import { config } from '../../config.js';
 import { OASIS_LABEL, type OasisType } from '../../game/rules/map.js';
-import { TRIBES } from '../../game/rules/units.js';
+import { TRIBES, type TribeId } from '../../game/rules/units.js';
 import type { MapCell } from '../../game/queries.js';
 import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
@@ -297,6 +297,9 @@ export interface TileViewData {
   /** Resources lying in an unoccupied oasis (lootable). */
   oasisStock: Resources | null;
   oasisOwner: { name: string; userId: number | null; villageName: string } | null;
+  /** Armies standing in this oasis (shown to its holder and to their owners). */
+  garrison: { owner: string; village: string; tribe: TribeId; units: number[] }[];
+  canReinforce: boolean;
   /** Travel time for your slowest and fastest unit types at home, for orientation. */
   travel: { label: string; ms: number }[];
   now: number;
@@ -328,7 +331,9 @@ export function tileView(d: TileViewData): SafeHtml {
         <p class="cost">${RESOURCE_KEYS.filter((k) => (d.oasisStock?.[k] ?? 0) > 0).map((k) => html`<span>${resIcon(k)}${fmtNum(Math.floor(d.oasisStock?.[k] ?? 0))}</span>`)}</p>
         <p class="small muted">Unoccupied oases gather these over time. Win an attack or raid here and your troops carry home as much as they can.</p>`
       : ''}
-    ${d.animals && d.animals.some((n) => n > 0) ? html`<h2>🐾 Animals</h2>${unitsTable('nature', d.animals, undefined, { hideEmpty: true })}` : ''}
+    ${d.animals && d.animals.some((n) => n > 0) ? html`<h2>Animals</h2>${unitsTable('nature', d.animals, undefined, { hideEmpty: true })}` : ''}
+    ${d.garrison.map((g) => html`<h2>Garrison of ${g.owner}</h2><p class="small muted">from ${g.village}</p>${unitsTable(g.tribe, g.units, undefined, { hideEmpty: true })}`)}
+    ${d.canReinforce ? html`<p><a class="btn secondary" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=reinforce">Reinforce this oasis</a> <span class="small muted">Troops stationed here defend it; they eat at home.</span></p>` : ''}
     ${d.kind === 'oasis'
       ? html`<div class="actions">
           <a class="btn" href="/troops/send?x=${d.x}&amp;y=${d.y}&amp;kind=attack">⚔️ Attack</a>

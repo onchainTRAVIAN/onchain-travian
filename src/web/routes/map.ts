@@ -2,7 +2,8 @@ import { Router, type Request, type Response } from 'express';
 import { db } from '../../db/index.js';
 import { eq, inArray } from 'drizzle-orm';
 import { movements, tiles, users, villages } from '../../db/schema.js';
-import { friendlyUserIds } from '../../game/actions/alliance.js';
+import { attackBlockedBy, friendlyUserIds } from '../../game/actions/alliance.js';
+import { oasisGarrison } from '../../game/engine/oasisTroops.js';
 import { oasisAnimals, oasisStock, type TileRow } from '../../game/engine/oasis.js';
 import { config } from '../../config.js';
 import { troopsAt } from '../../game/engine/state.js';
@@ -184,6 +185,13 @@ mapRouter.get('/map/tile', (req, res) => {
       animals: t.tile.kind === 'oasis' ? db.transaction((tx) => oasisAnimals(tx, t.tile, ctx.now)) : null,
       oasisStock: t.tile.kind === 'oasis' && t.tile.villageId === null ? db.transaction((tx) => oasisStock(tx, t.tile, ctx.now)) : null,
       oasisOwner: oasisOwnerInfo(t.tile),
+      garrison:
+        t.tile.kind === 'oasis'
+          ? oasisGarrison(db, x, y)
+              .filter((g) => g.owner.userId === ctx.user.id || (t.tile.villageId !== null && oasisOwnerInfo(t.tile)?.userId === ctx.user.id))
+              .map((g) => ({ owner: g.owner.username, village: g.owner.name, tribe: g.owner.tribe, units: g.units }))
+          : [],
+      canReinforce: t.tile.kind === 'oasis' && t.tile.villageId !== null && (oasisOwnerInfo(t.tile)?.userId === ctx.user.id || (oasisOwnerInfo(t.tile)?.userId != null && attackBlockedBy(db, ctx.user.id, oasisOwnerInfo(t.tile)?.userId ?? null) !== null)),
       travel,
       now: ctx.now,
     }),

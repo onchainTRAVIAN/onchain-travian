@@ -54,7 +54,7 @@ export function taskContext(q: Q, userId: number): TaskContext {
     raidedOasis,
     sentResources: sent,
     oases: vs.reduce((s, v) => s + oasesOwnedBy(q, v.village.id).length, 0),
-    defaultVillageName: vs.some((v) => v.village.isCapital && v.village.name === `${user?.username ?? ''}'s village`),
+    defaultVillageName: vs.some((v) => v.village.isCapital && (v.village.name === `${user?.username ?? ''}'s village` || /'s village$/i.test(v.village.name))),
   };
 }
 

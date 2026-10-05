@@ -120,6 +120,13 @@
       "when": 1791184008855,
       "tag": "0016_natar_attacks",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1791186885455,
+      "tag": "0017_oasis_troops",
+      "breakpoints": true
     }
   ]
 }

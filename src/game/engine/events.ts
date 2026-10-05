@@ -46,6 +46,8 @@ import {
   processHeroRevivals,
   type HeroRow,
 } from './hero.js';
+import { addOasisTroops, clearOasisGarrison, oasisGarrison, setOasisTroops } from './oasisTroops.js';
+import { attackBlockedBy } from '../actions/alliance.js';
 import { type TileRow, oasesOwnedBy, oasisAnimals, oasisLoyaltyHit, oasisLoyaltyNow, oasisStock, setOasisAnimals, setOasisLoyalty, setOasisStock, tileAt } from './oasis.js';
 
 type MovementRow = typeof movements.$inferSelect;
@@ -223,6 +225,12 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const targetInfo = targetId !== null ? villageInfo(q, targetId) : undefined;
   if (!target || targetId === null || !targetInfo) {
     scheduleReturn(q, home, mv.toX, mv.toY, attackerUnits, null, t, !!aHero);
+    return;
+  }
+  // The village became yours while the troops were on their way (an earlier wave conquered it):
+  // they arrive as reinforcements instead of fighting, looting or chiefing your own village.
+  if (targetInfo.userId !== null && targetInfo.userId === home.userId) {
+    handleReinforce(q, mv, t);
     return;
   }
 
@@ -409,6 +417,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
           const keepType = isField || hit.building === 'main' || to > 0;
           q.update(slots).set({ level: to, building: keepType ? hit.building : null }).where(and(eq(slots.villageId, targetId), eq(slots.slot, hit.slot))).run();
           if (!keepType) q.delete(buildOrders).where(and(eq(buildOrders.villageId, targetId), eq(buildOrders.slot, hit.slot))).run();
+          if (hit.building === 'heromansion') releaseExtraOases(q, targetId, to, t);
         }
       }
       if (changes.length > 1) notes.push(`Catapults: ${changes.join(', ')}.`);
@@ -475,7 +484,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     setResources(q, targetId, subRes(fresh, loot));
   }
 
-  addPoints(q, home.userId, 'offPoints', defenderLossValue);
+  if (home.tribe !== 'natars') addPoints(q, home.userId, 'offPoints', defenderLossValue);
   addLootTotal(q, home.userId, Math.floor(sumRes(loot)));
   const defUnitTotal = defenders.reduce((s, d) => s + totalUnits(d.group.units), 0);
   for (const d of defenders) {
@@ -504,7 +513,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   };
   const title = `${home.name} ${mode === 'raid' ? 'raids' : 'attacks'} ${targetInfo.name}`;
   const allDead = totalUnits(survivors) === 0 && !attackerHeroAlive;
-  addReport(q, home.userId, result.attackerWon ? 'attack_won' : 'attack_lost', title, allDead ? { ...data, defendersHidden: true } : data, t);
+  if (home.tribe !== 'natars') addReport(q, home.userId, result.attackerWon ? 'attack_won' : 'attack_lost', title, allDead ? { ...data, defendersHidden: true } : data, t);
   addReport(q, targetInfo.userId, result.attackerWon ? 'defense_lost' : 'defense_won', title, data, t);
   const notified = new Set<number | null>([home.userId, targetInfo.userId]);
   for (const d of defenders) {
@@ -542,6 +551,9 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
   const tile = tileAt(q, mv.toX, mv.toY);
   if (!tile) return;
   const animals = oasisAnimals(q, tile, t);
+  // Troops the holder (or allies) keep in the oasis fight next to the animals.
+  const garrison = oasisGarrison(q, tile.x, tile.y).filter((g) => g.owner.userId !== home.userId);
+  const holder = tile.villageId !== null ? villageInfo(q, tile.villageId) : undefined;
   const natureSide: ReportSide = {
     userId: null, username: 'Nature', villageId: 0, villageName: `Oasis (${tile.x}|${tile.y})`, x: tile.x, y: tile.y, tribe: 'nature', units: animals, losses: emptyUnits(),
   };
@@ -550,7 +562,7 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
     const data: BattleReportData = {
       type: 'battle', mode: 'scout', attacker: side(home, attackerUnits, emptyUnits()), defenders: [], attackerWon: true, defendersHidden: false,
       loot: res(), capacity: 0, attackPower: 0, defensePower: 0,
-      scout: { success: true, troops: [{ tribe: 'nature', units: animals }], resources: floorRes(oasisStock(q, tile, t)) },
+      scout: { success: true, troops: [{ tribe: 'nature', units: animals }, ...garrison.map((g) => ({ tribe: g.owner.tribe, units: g.units, owner: g.owner.username }))], resources: floorRes(oasisStock(q, tile, t)) },
       oasis: { x: tile.x, y: tile.y, captured: false },
     };
     addReport(q, home.userId, 'scout', `${home.name} scouts an oasis (${tile.x}|${tile.y})`, data, t);
@@ -563,28 +575,53 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
   const result = resolveBattle({
     mode,
     attacker: { tribe: home.tribe, units: attackerUnits, upgrades: home.attackUpgrades, hero: aHero ? heroCombatOf(home.tribe, aHero) : undefined },
-    defenders: [{ tribe: 'nature', units: animals }],
+    defenders: [{ tribe: 'nature', units: animals }, ...garrison.map((g) => ({ tribe: g.owner.tribe, units: g.units, upgrades: g.owner.defenseUpgrades }))],
     defenderTribe: null,
     wallLevel: 0,
-    attackMultiplier: attackerMods.attack * heroOffMultiplier(aHero),
+    attackMultiplier: attackerMods.attack * heroOffMultiplier(aHero) * breweryBonus(q, home),
+    defenseMultiplier: holder?.userId != null ? getModifiers(q, holder.userId, t).defense : 1,
   });
   const animalLosses = result.defenderLosses[0] ?? emptyUnits();
   const animalsLeft = subUnits(animals, animalLosses);
   setOasisAnimals(q, tile.x, tile.y, animalsLeft, t);
+  let garrisonLeft = 0;
+  const garrisonSides: ReportSide[] = [];
+  garrison.forEach((g, k) => {
+    const losses = result.defenderLosses[k + 1] ?? emptyUnits();
+    const left = subUnits(g.units, losses);
+    garrisonLeft += totalUnits(left);
+    setOasisTroops(q, g.id, left);
+    addPoints(q, g.owner.userId, 'defPoints', upkeepOf(home.tribe, result.attackerLosses));
+    garrisonSides.push({ ...side(g.owner, g.units, losses) });
+    addReport(q, g.owner.userId, result.attackerWon ? 'defense_lost' : 'defense_won', `Oasis (${tile.x}|${tile.y}) was ${mode === 'raid' ? 'raided' : 'attacked'} by ${home.name}`, {
+      type: 'battle', mode, attacker: side(home, attackerUnits, result.attackerLosses), defenders: [{ ...natureSide, losses: animalLosses }, side(g.owner, g.units, losses)],
+      attackerWon: result.attackerWon, defendersHidden: false, loot: res(), capacity: 0, attackPower: result.attackPower, defensePower: result.defensePower,
+      oasis: { x: tile.x, y: tile.y, captured: false },
+    }, t);
+  });
   const survivors = subUnits(attackerUnits, result.attackerLosses);
-  const killedValue = upkeepOf('nature', animalLosses);
-  // Winners carry home what the oasis has gathered (as much as the survivors can carry).
+  const killedValue = upkeepOf('nature', animalLosses) + garrison.reduce((s, g, k) => s + upkeepOf(g.owner.tribe, result.defenderLosses[k + 1] ?? emptyUnits()), 0);
+  // Winners carry home what the oasis has gathered; a held oasis gives up its village's resources instead (cranny applies).
   let loot = res();
   const capacity = carryOf(home.tribe, survivors, attackerMods.troopCarry);
-  if (result.attackerWon && capacity > 0) {
-    const stock = oasisStock(q, tile, t);
-    loot = computeLoot(stock, 0, capacity);
-    const left = res();
-    for (const k of RESOURCE_KEYS) left[k] = Math.max(0, stock[k] - loot[k]);
-    setOasisStock(q, tile.x, tile.y, left, t);
-    addLootTotal(q, home.userId, Math.floor(sumRes(loot)));
+  if (result.attackerWon && capacity > 0 && totalUnits(survivors) > 0) {
+    if (holder && holder.userId !== null && holder.userId !== home.userId) {
+      const hv = catchUp(q, holder.id, t);
+      if (hv) {
+        const stock = stockOf(hv.village);
+        loot = computeLoot(stock, hiddenByCranny(hv, home.tribe, artifactValue(q, holder.id, 'confusion', t)), capacity);
+        setResources(q, holder.id, subRes(stock, loot));
+      }
+    } else {
+      const stock = oasisStock(q, tile, t);
+      loot = computeLoot(stock, 0, capacity);
+      const left = res();
+      for (const k of RESOURCE_KEYS) left[k] = Math.max(0, stock[k] - loot[k]);
+      setOasisStock(q, tile.x, tile.y, left, t);
+    }
+    if (home.tribe !== 'natars') addLootTotal(q, home.userId, Math.floor(sumRes(loot)));
   }
-  addPoints(q, home.userId, 'offPoints', killedValue);
+  if (home.tribe !== 'natars') addPoints(q, home.userId, 'offPoints', killedValue);
 
   const heroReports: NonNullable<BattleReportData['heroes']> = [];
   let heroAlive = false;
@@ -597,7 +634,7 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
 
   const notes: string[] = [];
   let captured = false;
-  if (mode === 'attack' && result.attackerWon && totalUnits(animalsLeft) === 0) {
+  if (mode === 'attack' && result.attackerWon && totalUnits(animalsLeft) === 0 && garrisonLeft === 0) {
     if (!heroAlive) notes.push('Send your hero with the attack to capture this oasis.');
     else {
       const homeState = loadVillage(q, home.id);
@@ -614,6 +651,7 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
       } else {
         const previous = tile.villageId;
         q.update(tiles).set({ villageId: home.id, oasisLoyalty: 100, oasisLoyaltyAt: t }).where(and(eq(tiles.x, tile.x), eq(tiles.y, tile.y))).run();
+        clearOasisGarrison(q, tile.x, tile.y, t);
         captured = true;
         notes.push('The oasis is now yours! Its bonus applies to your village.');
         if (previous !== null) {
@@ -627,7 +665,7 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
   }
 
   const data: BattleReportData = {
-    type: 'battle', mode, attacker: side(home, attackerUnits, result.attackerLosses), defenders: [{ ...natureSide, losses: animalLosses }],
+    type: 'battle', mode, attacker: side(home, attackerUnits, result.attackerLosses), defenders: [{ ...natureSide, losses: animalLosses }, ...garrisonSides],
     attackerWon: result.attackerWon, defendersHidden: false, loot, capacity,
     attackPower: result.attackPower, defensePower: result.defensePower,
     heroes: heroReports.length ? heroReports : undefined,
@@ -649,6 +687,20 @@ function handleReinforce(q: Q, mv: MovementRow, t: number): void {
   const target = mv.toVillageId !== null ? villageInfo(q, mv.toVillageId) : undefined;
   const hero = mv.hero ? heroOf(q, home.userId) : undefined;
   if (!target) {
+    const tile = tileAt(q, mv.toX, mv.toY);
+    const holder = tile?.kind === 'oasis' && tile.villageId !== null ? villageInfo(q, tile.villageId) : undefined;
+    // Troops may garrison an oasis held by you or an ally; otherwise (or with a hero) they come home.
+    if (tile && holder && holder.userId !== null && !hero && (holder.userId === home.userId || attackBlockedBy(q, home.userId ?? -1, holder.userId) !== null)) {
+      addOasisTroops(q, tile.x, tile.y, home.id, units);
+      addReport(q, home.userId, 'reinforce', `${home.name} reinforces an oasis (${tile.x}|${tile.y})`, {
+        type: 'reinforce',
+        from: { userId: home.userId, username: home.username, villageId: home.id, villageName: home.name, x: home.x, y: home.y, tribe: home.tribe, units },
+        to: { userId: holder.userId, username: holder.username, villageId: 0, villageName: `Oasis (${tile.x}|${tile.y})`, x: tile.x, y: tile.y },
+        units,
+        hero: false,
+      }, t);
+      return;
+    }
     scheduleReturn(q, home, mv.toX, mv.toY, units, null, t, !!hero);
     return;
   }
@@ -773,14 +825,33 @@ function handleMovement(q: Q, mv: MovementRow): void {
 
 function handleBuildDone(q: Q, order: typeof buildOrders.$inferSelect): void {
   catchUp(q, order.villageId, order.finishAt);
-  // A building demolished to level 0 leaves an empty plot.
-  const building = order.demolish && order.toLevel <= 0 ? null : order.building;
-  q.update(slots).set({ building, level: Math.max(0, order.toLevel) }).where(and(eq(slots.villageId, order.villageId), eq(slots.slot, order.slot))).run();
   q.delete(buildOrders).where(eq(buildOrders.id, order.id)).run();
+  const slot = q.select().from(slots).where(and(eq(slots.villageId, order.villageId), eq(slots.slot, order.slot))).get();
+  // The plot changed meanwhile (catapults, conquest): the work is lost rather than restoring the old plan.
+  if (!slot || (slot.building !== order.building && !(slot.building === null && slot.level === 0 && !order.demolish && order.toLevel === 1))) return;
+  // One level up or down from where the building stands NOW: rams and catapults that hit it while
+  // the builders worked are not undone by finishing the order.
+  const level = order.demolish ? Math.max(0, Math.min(slot.level - 1, order.toLevel)) : Math.min(slot.level + 1, order.toLevel);
+  // A building demolished to level 0 leaves an empty plot.
+  const building = order.demolish && level <= 0 ? null : order.building;
+  q.update(slots).set({ building, level }).where(and(eq(slots.villageId, order.villageId), eq(slots.slot, order.slot))).run();
   refreshPopulation(q, order.villageId);
-  if (order.building === 'wonder' && !order.demolish) wonderLevelDone(q, order.villageId, order.toLevel, order.finishAt);
+  if (order.building === 'heromansion') releaseExtraOases(q, order.villageId, level, order.finishAt);
+  if (order.building === 'wonder' && !order.demolish) wonderLevelDone(q, order.villageId, level, order.finishAt);
   // Finishing a Palace makes this village the capital (T3.6: the Palace can stand in any village).
-  if (order.building === 'palace' && order.toLevel === 1 && !order.demolish) moveCapital(q, order.villageId, order.finishAt);
+  if (order.building === 'palace' && level === 1 && !order.demolish) moveCapital(q, order.villageId, order.finishAt);
+}
+
+/** A smaller Hero's Mansion holds fewer oases: the newest extra ones go wild again. */
+function releaseExtraOases(q: Q, villageId: number, mansionLevel: number, t: number): void {
+  const owned = oasesOwnedBy(q, villageId);
+  const extra = owned.length - oasisSlots(mansionLevel);
+  if (extra <= 0) return;
+  const newestFirst = [...owned].sort((a, b) => (b.oasisLoyaltyAt ?? 0) - (a.oasisLoyaltyAt ?? 0));
+  for (const o of newestFirst.slice(0, extra)) {
+    q.update(tiles).set({ villageId: null, animalsAt: t, oasisLoyalty: 100 }).where(and(eq(tiles.x, o.x), eq(tiles.y, o.y))).run();
+    clearOasisGarrison(q, o.x, o.y, t);
+  }
 }
 
 function handleResearchDone(q: Q, order: typeof researchOrders.$inferSelect): void {
@@ -805,13 +876,14 @@ function handleResearchDone(q: Q, order: typeof researchOrders.$inferSelect): vo
  */
 export function processDue(db: DB, now: number, limit = 1000): number {
   let processed = 0;
-  db.transaction((tx) => processHeroRevivals(tx, now));
   while (processed < limit) {
+    const nextRevive = db.select().from(heroes).where(and(eq(heroes.status, 'reviving'), lte(heroes.reviveAt, now))).orderBy(asc(heroes.reviveAt)).limit(1).get();
     const nextBuild = db.select().from(buildOrders).where(lte(buildOrders.finishAt, now)).orderBy(asc(buildOrders.finishAt), asc(buildOrders.id)).limit(1).get();
     const nextMove = db.select().from(movements).where(lte(movements.arriveAt, now)).orderBy(asc(movements.arriveAt), asc(movements.id)).limit(1).get();
     const nextResearch = db.select().from(researchOrders).where(lte(researchOrders.finishAt, now)).orderBy(asc(researchOrders.finishAt), asc(researchOrders.id)).limit(1).get();
     const nextParty = db.select().from(celebrations).where(lte(celebrations.finishAt, now)).orderBy(asc(celebrations.finishAt)).limit(1).get();
     const candidates: { at: number; run: () => void }[] = [];
+    if (nextRevive) candidates.push({ at: nextRevive.reviveAt ?? now, run: () => db.transaction((tx) => processHeroRevivals(tx, nextRevive.reviveAt ?? now)) });
     if (nextBuild) candidates.push({ at: nextBuild.finishAt, run: () => db.transaction((tx) => handleBuildDone(tx, nextBuild)) });
     if (nextMove) candidates.push({ at: nextMove.arriveAt, run: () => db.transaction((tx) => handleMovement(tx, nextMove)) });
     if (nextResearch) candidates.push({ at: nextResearch.finishAt, run: () => db.transaction((tx) => handleResearchDone(tx, nextResearch)) });

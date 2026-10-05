@@ -1324,6 +1324,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     keywords: ['incoming attack', 'under attack', 'attacked', 'red warning', 'alert', 'enemy coming', 'attack coming', 'help'],
     summary: 'The Village overview shows a red alert with the time of the first attack. You can add defence, ask for help, spend or hide resources, or evade.',
     body: [
+      { note: 'An attack already on its way is not stopped by protection bought, or an alliance or pact made, after it was sent (classic rule).' },
       { p: 'You see the sender and arrival time, but not the troops. Incoming scouts are shown as "Incoming scouts".' },
       {
         steps: [
@@ -1581,6 +1582,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     keywords: ['oasis', 'capture', 'conquer oasis', 'take oasis', 'annex', 'occupy oasis', 'own oasis', 'claim oasis', 'oasis bonus', 'oaza'],
     summary: "Send a normal attack (not a raid) with your hero to a free oasis within 3 fields of your village, kill every animal, and have a Hero's Mansion at level 10 or more.",
     body: [
+      { p: 'A held oasis can be defended: send reinforcements to it (you, your alliance and pact partners can). Those troops fight next to the animals, eat at home and come back with Withdraw on the Rally Point. Raiding a held oasis takes resources from the village that holds it (the cranny protects them). Beginner protection covers your oases too, and attacking someone\'s oasis ends your own protection.' },
       {
         steps: [
           "Build the **Hero's Mansion** to level 10. Level 15 and 20 let the village hold a 2nd and 3rd oasis.",

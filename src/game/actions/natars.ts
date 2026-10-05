@@ -14,8 +14,8 @@ const TICK_MS = 10 * 60_000;
 const CHANCE_PER_TICK = TICK_MS / (6 * 3_600_000);
 /** Share of Natar attacks that are normal attacks (with rams); the rest are raids. */
 const ATTACK_SHARE = 0.2;
-/** Natar armies march at most this long (real time at troop speed 1), so the warning stays useful. */
-const MAX_MARCH_MS = 4 * 3_600_000;
+/** Natar armies never march longer than this (real time at troop speed 1). */
+const MAX_MARCH_MS = 12 * 3_600_000;
 
 export interface NatarPlan {
   userId: number;

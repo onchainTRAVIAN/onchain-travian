@@ -596,9 +596,17 @@ describe('gold market', () => {
     editListing(db, a.userId, id, { price: 45, goods: res(1500, 200, 0, 0) }, clock.now());
     expect(Math.floor(village(a.villageId).wood)).toBe(1500);
     expect(Math.floor(village(a.villageId).clay)).toBe(2800);
+    // Lowering an offer walks the difference back (never instantly: no raid-proof vault).
     editListing(db, a.userId, id, { price: 45, goods: res(500, 0, 0, 0) }, clock.now());
-    expect(Math.floor(village(a.villageId).wood)).toBe(2500);
-    expect(Math.floor(village(a.villageId).clay)).toBe(3000);
+    expect(Math.floor(village(a.villageId).wood)).toBe(1500);
+    expect(Math.floor(village(a.villageId).clay)).toBe(2800);
+    const walk = db.select().from(movements).where(and(eq(movements.kind, 'delivery'), eq(movements.toVillageId, a.villageId))).all();
+    expect(walk.length).toBe(1);
+    clock.advance(walk[0]!.arriveAt - clock.now() + 1);
+    processDue(db, clock.now());
+    // 1000 wood and 200 clay are back (plus whatever the fields produced meanwhile).
+    expect(Math.floor(village(a.villageId).wood)).toBeGreaterThanOrEqual(2500);
+    expect(Math.floor(village(a.villageId).clay)).toBeGreaterThanOrEqual(3000);
     expect(() => editListing(db, a.userId, id, { price: 45, goods: res(9000, 0, 0, 0) }, clock.now())).toThrow(/Not enough wood/);
     expect(() => editListing(db, b.userId, id, { price: 1 }, clock.now())).toThrow(/not found/);
     const units = emptyUnits();
@@ -614,6 +622,10 @@ describe('gold market', () => {
     const fewer = emptyUnits();
     fewer[0] = 5;
     editListing(db, a.userId, tid, { price: 20, units: fewer }, clock.now());
+    expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(15); // the 20 walk back
+    const walkT = db.select().from(movements).where(and(eq(movements.kind, 'delivery'), eq(movements.toVillageId, a.villageId))).all();
+    clock.advance(Math.max(...walkT.map((m) => m.arriveAt)) - clock.now() + 1);
+    processDue(db, clock.now());
     expect(troopsAt(db, a.villageId, a.villageId)[0]).toBe(35);
     cancelListing(db, a.userId, tid, clock.now());
     cancelListing(db, a.userId, id, clock.now());

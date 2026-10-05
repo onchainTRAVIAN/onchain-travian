@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.16.0 — 2026-10-05 — audit round
+Fixes from a full review of the rules and loopholes:
+- **Gold market:** lowering an offer now walks the difference back to the village (like cancelling) instead of returning it instantly, so the market can't hide goods from an incoming attack.
+- **Heroes** out on a mission when their village was conquered or destroyed got stuck forever; they now fall and can be revived.
+- **Waves that land on a village you already conquered** arrive as reinforcements (no self-looting, self-catapulting or double conquest).
+- **Rams and catapults are no longer undone** by a construction already running on that building: it finishes one level above where the building stands.
+- **Conquest:** prisoners in the Trapper go home; the village's soldiers held in other traps are lost; celebrations stop; a conquered Natar village's artifacts now work; a same-tribe conqueror keeps the tribe buildings.
+- **Owned oases:** beginner protection covers them (both ways); you can **reinforce** an oasis you or your alliance hold, those troops defend it and eat at home (Withdraw on the Rally Point); raiding a held oasis loots the holder's village (cranny applies); a smaller Hero's Mansion releases the extra oases.
+- **No Gold finish** for the World Wonder or demolitions; finish-now refuses already-finished research.
+- **Horse Drinking Trough:** cavalry trains 1% faster per level, as in T3.6.
+- Hero revivals happen in time order with other events.
+- **Alt-account farming:** Gold from tasks, medals and the welcome gift can't be sent to other players; at most 5 registrations per hour per connection.
+- Messages: 20 s cooldown, 60 per hour, mutes apply; at most 20 open alliance invitations.
+- Natars: armies march at their real speed; they collect no attack points or reports.
+- Simulator matches real fights for the Architect's secret, carry bonuses, hero health and stationed heroes.
+
 ## 0.15.1 — 2026-10-05
 - **Live map:**
   - Drag to move (mouse or touch), with smooth movement and a world that wraps around.

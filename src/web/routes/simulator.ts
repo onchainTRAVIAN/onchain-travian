@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import { db } from '../../db/index.js';
 import { config } from '../../config.js';
 import { heroAtHome } from '../../game/engine/hero.js';
+import { getModifiers } from '../../game/modifiers.js';
 import { parseLevels, troopsAt } from '../../game/engine/state.js';
 import { villages } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
@@ -54,7 +55,7 @@ function inputFrom(req: Request): SimPageInput {
     const v = db.select({ blacksmith: villages.blacksmith }).from(villages).where(eq(villages.id, ctx.villageId)).get();
     attacker.levels = parseLevels(v?.blacksmith).concat(Array(10).fill(0)).slice(0, 10);
     const h = heroAtHome(db, ctx.user.id, ctx.villageId, ctx.now);
-    if (h) attacker.hero = { slot: h.unitSlot, points: h.strength, bonus: h.offBonus };
+    if (h) attacker.hero = { slot: h.unitSlot, points: h.strength, bonus: h.offBonus, health: h.health };
   }
   const village = str(q.oasis) !== '1';
   const ownerTribe: TribeId = village ? 'romans' : 'nature';
@@ -73,6 +74,11 @@ function inputFrom(req: Request): SimPageInput {
     defenders.length = 0;
     for (const a of snap.armies.slice(0, 3)) defenders.push({ tribe: a.tribe, units: a.units, levels: a.levels.concat(Array(10).fill(0)).slice(0, 10), hero: null });
     if (defenders[0] && snap.hero) defenders[0].hero = snap.hero;
+    // A stationed hero fights with the reinforcing army of its tribe (one per army in the simulator).
+    for (const sh of snap.stationedHeroes) {
+      const army = defenders.find((d, i) => i > 0 && d.tribe === sh.tribe && !d.hero);
+      if (army) army.hero = sh;
+    }
     if (q.natar === '1') {
       attacker.tribe = 'natars';
       attacker.units = natarArmy(snap.strength, NATAR_TYPICAL, str(q.mode) === 'raid' ? 'raid' : 'attack');
@@ -96,6 +102,8 @@ function inputFrom(req: Request): SimPageInput {
     defenseBonus: num(q.dbon, 0, 100) / 100,
     targetLevel: num(q.tl, 0, 20),
     traps: snap ? snap.freeTraps : num(q.traps, 0, 1_000_000),
+    architect: snap ? snap.architect : 1,
+    carryMult: fresh ? getModifiers(db, ctx.user.id, ctx.now).troopCarry : 1,
     extra: defenders.length,
     villages: myVillages.map((v) => ({ id: v.id, name: v.name, pop: v.pop })),
     defv: snap?.villageId ?? (defv || ctx.villageId),

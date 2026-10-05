@@ -2,6 +2,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { meta, slots, tiles, troops, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
+import { clock } from '../../clock.js';
 import { generateTile, layoutFields, type FieldLayout } from '../rules/map.js';
 import { MAIN_SLOT, RALLY_SLOT, TOWN_SLOT_FIRST, TOWN_SLOT_LAST, WALL_FOR, WALL_SLOT } from '../rules/buildings.js';
 import { emptyUnits } from '../rules/units.js';
@@ -31,7 +32,7 @@ export function ensureWorld(db: DB): void {
     }
     setMeta(tx, 'world_seed', String(seed));
     setMeta(tx, 'world_radius', String(R));
-    setMeta(tx, 'world_started_at', String(Date.now()));
+    setMeta(tx, 'world_started_at', String(clock.now()));
   });
 }
 

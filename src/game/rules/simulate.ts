@@ -5,6 +5,8 @@ import { TRIBES, carryOf, emptyUnits, type TribeId, type UnitCounts } from './un
 /** A hero in the simulator: the unit it was trained from and its points. */
 export interface SimHero {
   slot: number;
+  /** Current health in % (100 when unknown); the hero dies when a fight takes it to 0. */
+  health?: number;
   /** Attack points (attacker) or defence points (defender). */
   points: number;
   /** Off-bonus (attacker) or def-bonus (defender) points, 0.2% each. */
@@ -36,6 +38,10 @@ export interface SimInput {
   targetLevel: number;
   /** Free Gaul traps in the village (each catches one attacker before the fight). */
   traps: number;
+  /** Architect's secret in the target (buildings and wall sturdier): multiplier, 1 = none. */
+  architect?: number;
+  /** Attacker's carry bonus (holder perks, Gold), 1 = none. */
+  carryMult?: number;
 }
 export interface SimResult extends BattleResult {
   /** Attackers caught in traps before the fight (they don't fight and don't come home). */
@@ -93,7 +99,7 @@ function battle(input: SimInput, multiplier: number): BattleResult {
     attackerPop: input.village ? input.attackerPop : undefined,
     defenderPop: input.village ? input.defenderPop : undefined,
     rams: ramSlot >= 0 ? { count: a.units[ramSlot] ?? 0, upgrade: a.levels[ramSlot] ?? 0 } : undefined,
-    siegeDurability: 1 + 0.1 * input.stonemason,
+    siegeDurability: (1 + 0.1 * input.stonemason) * (input.architect ?? 1),
     wallDurability: input.village ? WALL_DURABILITY[ownerTribe] ?? 1 : 1,
     extraUnits: heroes,
   });
@@ -108,14 +114,19 @@ export function simulate(input: SimInput): SimResult {
   const catas = cataSlot >= 0 ? a.units[cataSlot] ?? 0 : 0;
   const buildingAfter =
     input.village && input.mode === 'attack' && r.attackerWon && catas > 0 && input.targetLevel > 0
-      ? catapultResult(input.targetLevel, catas, a.levels[cataSlot] ?? 0, r.ratio, 1 + 0.1 * input.stonemason, cataMorale(input.attackerPop, input.defenderPop))
+      ? catapultResult(input.targetLevel, catas, a.levels[cataSlot] ?? 0, r.ratio, (1 + 0.1 * input.stonemason) * (input.architect ?? 1), cataMorale(input.attackerPop, input.defenderPop))
       : null;
   const attackerSurvivors = a.units.map((n, i) => n - (r.attackerLosses[i] ?? 0));
   const defenderSurvivors = input.defenders.map((d, k) => d.units.map((n, i) => n - (r.defenderLosses[k]?.[i] ?? 0)));
-  // Heroes die when their side loses more than 90% (as in the real battle).
+  // Same rule as damageHero: health drops by the loss ratio; dead at 0 health, over 90% damage or a wipe.
+  const dies = (h: SimHero | null | undefined, ratio: number) => {
+    if (!h) return false;
+    const damage = Math.round(ratio * 100);
+    return (h.health ?? 100) - damage <= 0 || damage > 90 || ratio >= 1;
+  };
   const heroDied = {
-    attacker: !!a.hero && r.attackerLossRatio > 0.9,
-    defenders: input.defenders.map((d) => !!d.hero && r.defenderLossRatio > 0.9),
+    attacker: dies(a.hero, r.attackerLossRatio),
+    defenders: input.defenders.map((d) => dies(d.hero, r.defenderLossRatio)),
   };
   // How strong the attack must be to win: bisection on an attack multiplier.
   let winAt: number | null = null;
@@ -141,7 +152,7 @@ export function simulate(input: SimInput): SimResult {
     wallFrom: input.village ? input.wall : 0,
     buildingAfter,
     morale: input.village ? moraleMalus(input.attackerPop, input.defenderPop, r.defensePower > 0 ? r.attackPower / r.defensePower : 1) : 1,
-    carry: carryOf(a.tribe, attackerSurvivors),
+    carry: carryOf(a.tribe, attackerSurvivors, input.carryMult ?? 1),
     winAt,
   };
 }

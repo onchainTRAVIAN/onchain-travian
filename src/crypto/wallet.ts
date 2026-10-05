@@ -42,6 +42,9 @@ export async function verifySiwe(db: DB, req: SiweRequest, message: string, sign
   const valid = validateSiweMessage({ message: fields, domain: req.domain, nonce: nonceRow.nonce, time: new Date(now) });
   assertGame(valid && fields.chainId === config.CHAIN_ID, 'The sign-in message does not match this site');
   assertGame(/^0x[0-9a-fA-F]+$/.test(signature), 'Invalid signature');
+  // Consume the nonce now, before awaiting: a second request with the same message must fail.
+  const consumed = db.delete(walletNonces).where(eq(walletNonces.nonce, nonceRow.nonce)).run();
+  assertGame(consumed.changes === 1, 'This sign-in request was already used');
   let ok = false;
   try {
     ok = await verifyMessage({ address: fields.address, message, signature: signature as `0x${string}` });
@@ -49,7 +52,6 @@ export async function verifySiwe(db: DB, req: SiweRequest, message: string, sign
     ok = false;
   }
   if (!ok) throw new GameError('The signature does not match the wallet');
-  db.delete(walletNonces).where(eq(walletNonces.nonce, nonceRow.nonce)).run();
   return fields.address.toLowerCase();
 }
 

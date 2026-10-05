@@ -1,12 +1,25 @@
-import { and, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, or } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
 import { messages, users } from '../../db/schema.js';
 import { assertGame } from '../errors.js';
+
+export const MESSAGE_COOLDOWN_MS = 20_000;
+export const MESSAGES_PER_HOUR = 60;
 
 export function sendMessage(db: DB, fromUserId: number, toUsername: string, subject: string, body: string, now: number): number {
   const to = db.select({ id: users.id }).from(users).where(eq(users.usernameLower, toUsername.toLowerCase())).get();
   assertGame(to, `No player called "${toUsername}"`);
   assertGame(to.id !== fromUserId, 'You cannot write to yourself');
+  const me = db.select({ muted: users.mutedUntil }).from(users).where(eq(users.id, fromUserId)).get();
+  assertGame(!me?.muted || me.muted <= now, 'You are muted and cannot send messages right now');
+  const recent = db
+    .select({ at: messages.createdAt })
+    .from(messages)
+    .where(and(eq(messages.fromUserId, fromUserId), gt(messages.createdAt, now - 3_600_000)))
+    .all();
+  assertGame(recent.length < MESSAGES_PER_HOUR, `At most ${MESSAGES_PER_HOUR} messages an hour`);
+  const last = Math.max(0, ...recent.map((r) => r.at));
+  assertGame(now - last >= MESSAGE_COOLDOWN_MS, `Please wait ${Math.ceil((MESSAGE_COOLDOWN_MS - (now - last)) / 1000)} s before the next message`);
   return db
     .insert(messages)
     .values({ fromUserId, toUserId: to.id, subject, body, createdAt: now })

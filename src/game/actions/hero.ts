@@ -18,6 +18,7 @@ import { catchUpHero, heroTribe, heroUnit, type HeroRow } from '../engine/hero.j
 import { catchUp, levelOf, setResources, setTroopsAt, stockOf, troopsAt } from '../engine/state.js';
 import { isResearched } from './research.js';
 import { ownedVillage } from './build.js';
+import { clearOasisGarrison } from '../engine/oasisTroops.js';
 
 export interface SkillInput {
   strength: number;
@@ -146,6 +147,7 @@ export function releaseOasis(db: DB, userId: number, villageId: number, x: numbe
       .where(and(eq(tiles.x, x), eq(tiles.y, y), eq(tiles.kind, 'oasis'), eq(tiles.villageId, villageId)))
       .run();
     assertGame(r.changes > 0, 'This oasis is not held by this village');
+    clearOasisGarrison(tx, x, y, now);
   });
 }
 

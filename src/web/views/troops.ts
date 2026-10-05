@@ -46,8 +46,9 @@ export function troopsView(d: TroopsViewData): SafeHtml {
       ? html`<p class="muted small">None of your troops are stationed elsewhere.</p>`
       : html`<ul class="list">${d.away.map(
           (r) => html`<li><span class="grow"><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.villageName}</a> <span class="sub">${r.ownerName} · ${unitsInline(d.tribe, r.units)}</span></span>
-            <form method="post" action="/troops/withdraw">${csrfField(d.csrf)}<input type="hidden" name="locationId" value="${r.locationId}">
-            <button type="submit" class="small secondary">Withdraw</button></form></li>`,
+            ${r.locationId === 0
+              ? html`<form method="post" action="/troops/withdraw-oasis">${csrfField(d.csrf)}<input type="hidden" name="x" value="${r.x}"><input type="hidden" name="y" value="${r.y}"><button type="submit" class="small secondary">Withdraw</button></form>`
+              : html`<form method="post" action="/troops/withdraw">${csrfField(d.csrf)}<input type="hidden" name="locationId" value="${r.locationId}"><button type="submit" class="small secondary">Withdraw</button></form>`}</li>`,
         )}</ul>`}`;
 }
 
