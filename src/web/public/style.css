@@ -980,3 +980,14 @@ input.tickerin { width: 100%; box-sizing: border-box; font-size: 14px; padding: 
 .sp.taskbox a.btn { display: inline-block; padding: 2px 10px; }
 .sp.taskbox .tk-more a { color: #4b7d00; }
 .sp.infobox li a { display: block; width: auto; padding: 0; border-left: 0; font-size: 11px; }
+/* ---------- Ornate panels (Legends-inspired details on the classic layout) ---------- */
+.sp, .spanel { position: relative; background: #fbf8ef url(/static/img/ui/parchment.svg) 0 0 / 160px 160px repeat; border-color: #d6cdb0; }
+.sp::before, .spanel::before, .sp::after, .spanel::after { content: ''; position: absolute; width: 28px; height: 28px; pointer-events: none; z-index: 2; background: 0 0 / 28px 28px no-repeat; }
+.sp::before, .spanel::before { top: -1px; left: -1px; background-image: url(/static/img/ui/corner-tl.svg); }
+.sp::after, .spanel::after { bottom: -1px; right: -1px; background-image: url(/static/img/ui/corner-br.svg); }
+.sp-head { padding-left: 26px; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; letter-spacing: 0.2px; background: linear-gradient(rgba(244, 238, 216, 0.95), rgba(232, 224, 196, 0.95)); border-bottom-color: #d6cdb0; }
+.sp > :last-child, .spanel > :last-child { margin-bottom: 0; }
+.sp, .spanel { padding-bottom: 6px; }
+.tile.spanel::before, .tile.spanel::after { width: 18px; height: 18px; background-size: 18px 18px; }
+.tile.spanel { padding-bottom: 0; }
+#header::before { background: url(/static/img/ui/header-strip.svg) 0 0 / auto 30px repeat-x; border: 0; opacity: 1; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }

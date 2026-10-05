@@ -2,6 +2,7 @@
 
 ## 0.14.0 — 2026-10-05
 - **Tasks** for new (and all) players: 29 steps in 5 chapters (First steps, Getting stronger, Into the world, Your hero, Growing your empire). Each has a how-to, a "Show me" link, progress, and a reward of resources into your village (storage-capped) — key steps also give 5–20 Gold. A "Task overview" panel with an advisor shows the current task; on the village pages the field or building to use glows with a hint bubble. Existing players can collect rewards for what they've already done; the panel can be hidden.
+- **Ornate panels:** parchment background, bronze corner flourishes, serif titles; wooden strip behind the top buttons; tribe advisors.
 - **Info box** under the menu: beginner protection left, incoming attacks, hero needs (revive / free points), boosts ending soon, new reports.
 
 ## 0.13.5 — 2026-10-05
