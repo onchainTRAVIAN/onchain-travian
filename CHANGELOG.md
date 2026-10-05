@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.0 — 2026-10-05
+- **Natars attack players** with 300+ population, at most once a day, at a random time.
+  - Their army is 50–90% of your strength (troops, wall, residence and population), so stronger players face stronger Natars and small players aren't harassed.
+  - Mostly raids; some are attacks with War Elephants.
+  - Survivors and loot disappear afterwards.
+- Natar strongholds no longer starve.
+- **Combat simulator:**
+  - "It defends": loads one of your villages with the troops standing there, your hero, wall, residence and traps.
+  - "Natars attack it": shows a typical Natar army against that defence.
+  - New "Losses in resources" table: what each side's dead soldiers cost to train, and the raid profit after losses.
+
 ## 0.14.2 — 2026-10-05
 - **Reports** redesigned:
   - wooden folder tabs: All, Offensive, Defensive, Scouting, Trade, Other;

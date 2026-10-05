@@ -33,6 +33,7 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Train troops page `/troops/train` (all training buildings, POST `/train/all`); never nest forms (queues render outside the training form).
 - Treaties: `attackBlockedBy` (alliance.ts) blocks attack/raid/scout between same alliance / confed / NAP; checked in `previewSend`. Oasis loyalty regen `OASIS_LOYALTY_REGEN_PER_LEVEL` (2/h per Mansion level, not speed-scaled). Player rename `renamePlayer` (1000 Gold).
 - Top nav buttons: grey `img/nav/<name>.svg` + optional colour `<name>-c.svg` (shown on hover/open page via `navImg`).
+- Natar attacks: `src/game/actions/natars.ts` (`processNatarAttacks` every 10 min from the world tick; 300+ pop, 24 h cooldown `users.natar_attack_at`), sizing in `src/game/rules/natars.ts` (`natarStrength`, `natarArmy`); defence snapshot `src/game/engine/defense.ts` (also used by the simulator's "It defends"). Natar returns disband; Natars have no crop upkeep and no morale.
 - Tasks: rules `src/game/rules/tasks.ts` (checks on `TaskContext`), actions `src/game/actions/tasks.ts` (`taskStatus`, `claimTask` once via `task_claims`, Gold idem key `task:<user>:<id>`); panel + `/tasks` in `src/web/views/tasks.ts`; hints via `VillageViewData.hint`. Info box notices built in `loadGamePage`.
 - Storage expansion: `villages.storage_boost` → `storageOf` ×1.5 (`STORAGE_BOOST_PRICE` 150).
 - Production breakdown: `src/game/engine/breakdown.ts` (`/production`) must mirror `grossProduction`/`economyOf` — update both together.

@@ -21,6 +21,8 @@ export const users = sqliteTable(
     protectedUntil: integer('protected_until').notNull(),
     /** The player hid the beginner tasks panel. */
     tasksHidden: integer('tasks_hidden', { mode: 'boolean' }).notNull().default(false),
+    /** Last time the Natars attacked this player (at most one a day, from 300 population). */
+    natarAttackAt: integer('natar_attack_at').notNull().default(0),
     /** Gold Club member (bought once per world): farm lists, evasion, trade routes, cropper finder. */
     goldClub: integer('gold_club', { mode: 'boolean' }).notNull().default(false),
     /** End of the last protection bought with Gold (another can be bought 8 h after it ends). */

@@ -2192,15 +2192,41 @@ export const FAQ_TOPICS: FaqTopic[] = [
     category: 'endgame',
     title: 'Who are the Natars?',
     keywords: ['natars', 'natar', 'npc', 'ancient empire', 'computer player', 'natarian'],
-    summary: 'The Natars are a computer tribe that guards artifacts and World Wonder villages with very large armies. They never attack.',
+    summary: 'The Natars are a computer tribe that guards artifacts and World Wonder villages with very large armies. They also raid players with 300 or more population, at most once a day.',
     body: [
       { p: 'Natar strongholds have Treasuries (with artifacts), or World Wonder places, and big garrisons of Pikemen, Thorned Warriors, Guardsmen, Axeriders and Natarian Knights.' },
       { p: 'Artifact villages hold a garrison of 1,500 Pikemen, 800 Thorned Warriors, 1,000 Guardsmen, 300 Axeriders and 300 Knights for small artifacts; twice that for large and four times for unique ones. World Wonder and construction plan villages have three times the base garrison.' },
       { p: 'On this world the artifacts and World Wonders have already been released. See the [Artifacts & Wonders](/endgame) page.' },
       { tips: ['Scout first and use the simulator. Bring rams and catapults.', 'Work together with your alliance.'] },
     ],
-    related: ['artifacts', 'artifact-capture', 'world-wonder'],
+    related: ['artifacts', 'artifact-capture', 'world-wonder', 'natar-attacks'],
     links: [{ href: '/endgame', label: 'Artifacts & Wonders' }],
+  },
+  {
+    id: 'natar-attacks',
+    category: 'endgame',
+    title: 'Natar attacks on players',
+    keywords: ['natar attack', 'natars attack', 'natar raid', 'npc attack', 'attacked by natars'],
+    summary: 'Natars attack players with 300 or more population, at most once a day. Their army is sized to your strength, so small players get small raids and strong players get big attacks.',
+    body: [
+      {
+        table: {
+          head: ['Rule', 'Value'],
+          rows: [
+            ['Who', 'Players with 300+ population, not under protection'],
+            ['How often', 'At most once every 24 hours, at a random time'],
+            ['Army size', '50% to 90% of your strength (defence of the troops in the village, wall and residence, plus population)'],
+            ['Type', 'Mostly raids; about one in five is a normal attack with War Elephants (rams)'],
+            ['Target', 'One of your villages; bigger villages are picked more often'],
+          ],
+        },
+      },
+      { p: 'You see them coming like any attack, in the Info box and the Rally Point. The Natars never bring catapults or chiefs. Their survivors and loot disappear after the attack.' },
+      { p: 'Try it in the [Combat simulator](/simulator): pick your village and press "Natars attack it" to see a typical Natar army against your current defence.' },
+      { tips: ['A good wall and some defensive troops at home usually hold them off.', 'A cranny keeps part of your resources safe from raids.'] },
+    ],
+    related: ['natars', 'defence-tips', 'combat-simulator', 'cranny'],
+    links: [{ href: '/simulator', label: 'Combat simulator' }],
   },
   {
     id: 'artifacts',

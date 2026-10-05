@@ -312,8 +312,9 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   const cataSlot = slotOf('catapult');
   // Stonemason (capital only) makes buildings and the wall sturdier against siege.
   const durability = (targetInfo.isCapital ? 1 + 0.1 * levelOf(target, 'stonemason') : 1) * artifactValue(q, targetId, 'architect', t);
-  const attackerPop = playerPop(q, home.userId);
   const defenderPop = playerPop(q, target.userId);
+  // Natar armies are sized to their target already: no morale for or against them.
+  const attackerPop = home.tribe === 'natars' ? defenderPop : playerPop(q, home.userId);
   const result = resolveBattle({
     mode,
     attacker: { tribe: home.tribe, units: fighting, upgrades: home.attackUpgrades, hero: aHero ? heroCombatOf(home.tribe, aHero) : undefined },
@@ -673,6 +674,8 @@ function handleReinforce(q: Q, mv: MovementRow, t: number): void {
 function handleReturn(q: Q, mv: MovementRow, t: number): void {
   const state = catchUp(q, mv.fromVillageId, t);
   if (!state) return;
+  // Natar raiders disband after their attack: survivors and loot never reach the strongholds.
+  if (state.tribe === 'natars') return;
   addTroopsAt(q, mv.fromVillageId, mv.fromVillageId, parseUnits(mv.units));
   if (mv.hero && state.userId !== null) {
     q.update(heroes).set({ status: 'home', locationId: mv.fromVillageId }).where(and(eq(heroes.userId, state.userId), eq(heroes.status, 'moving'))).run();

@@ -7,6 +7,8 @@ import { villages } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { playerProfile } from '../../game/queries.js';
 import { simulate, type SimArmy, type SimInput } from '../../game/rules/simulate.js';
+import { defenseSnapshot } from '../../game/engine/defense.js';
+import { NATAR_TYPICAL, natarArmy } from '../../game/rules/natars.js';
 import type { TribeId } from '../../game/rules/units.js';
 import { authed } from '../session.js';
 import { simulatorView, simResultPanel } from '../views/simulator.js';
@@ -33,7 +35,14 @@ function armyFrom(q: Request['query'], p: string, fallbackTribe: TribeId): SimAr
 }
 
 /** The simulator's input from the query string; with no query, your own village's army. */
-function inputFrom(req: Request): SimInput & { extra: number } {
+export type SimPageInput = SimInput & {
+  extra: number;
+  villages: { id: number; name: string; pop: number }[];
+  defv: number;
+  natar: { strength: number; playerPop: number; name: string } | null;
+};
+
+function inputFrom(req: Request): SimPageInput {
   const ctx = authed(req);
   const q = req.query;
   const myTribe = (ctx.user.tribe as TribeId) ?? 'romans';
@@ -55,22 +64,42 @@ function inputFrom(req: Request): SimInput & { extra: number } {
     const a = armyFrom(q, p, 'romans');
     if (a.units.some((n) => n > 0) || a.hero) defenders.push(a);
   }
-  const myPop = playerProfile(db, ctx.user.id)?.villages.reduce((s, v) => s + v.pop, 0) ?? 100;
+  const myVillages = playerProfile(db, ctx.user.id)?.villages ?? [];
+  const myPop = myVillages.reduce((s, v) => s + v.pop, 0) || 100;
+  // "My village defends" / "Natars attack my village": fill the defence (and the Natar army) from a real village.
+  const defv = num(q.defv, 0, Number.MAX_SAFE_INTEGER);
+  const snap = (q.usedef === '1' || q.natar === '1') && myVillages.some((v) => v.id === defv) ? defenseSnapshot(db, defv, ctx.now) : undefined;
+  if (snap) {
+    defenders.length = 0;
+    for (const a of snap.armies.slice(0, 3)) defenders.push({ tribe: a.tribe, units: a.units, levels: a.levels.concat(Array(10).fill(0)).slice(0, 10), hero: null });
+    if (defenders[0] && snap.hero) defenders[0].hero = snap.hero;
+    if (q.natar === '1') {
+      attacker.tribe = 'natars';
+      attacker.units = natarArmy(snap.strength, NATAR_TYPICAL, str(q.mode) === 'raid' ? 'raid' : 'attack');
+      attacker.levels = Array(10).fill(0);
+      attacker.hero = null;
+    }
+  }
+  const natarRun = !!snap && q.natar === '1';
   return {
     mode: str(q.mode) === 'raid' ? 'raid' : 'attack',
     attacker,
-    attackerPop: q.apop === undefined ? Math.max(1, myPop) : num(q.apop, 1, 10_000_000, Math.max(1, myPop)),
+    // Natar attacks don't suffer morale: they count as the same size as you.
+    attackerPop: natarRun ? myPop : q.apop === undefined ? Math.max(1, myPop) : num(q.apop, 1, 10_000_000, Math.max(1, myPop)),
     attackBonus: num(q.abon, 0, 100) / 100,
     defenders,
-    village,
-    wall: num(q.wall, 0, 20),
-    residence: num(q.res, 0, 20),
-    stonemason: num(q.stone, 0, 20),
-    defenderPop: num(q.dpop, 1, 10_000_000, Math.max(1, myPop)),
+    village: snap ? true : village,
+    wall: snap ? snap.wall : num(q.wall, 0, 20),
+    residence: snap ? snap.residence : num(q.res, 0, 20),
+    stonemason: snap ? snap.stonemason : num(q.stone, 0, 20),
+    defenderPop: snap ? Math.max(1, snap.playerPop) : num(q.dpop, 1, 10_000_000, Math.max(1, myPop)),
     defenseBonus: num(q.dbon, 0, 100) / 100,
     targetLevel: num(q.tl, 0, 20),
-    traps: num(q.traps, 0, 1_000_000),
+    traps: snap ? snap.freeTraps : num(q.traps, 0, 1_000_000),
     extra: defenders.length,
+    villages: myVillages.map((v) => ({ id: v.id, name: v.name, pop: v.pop })),
+    defv: snap?.villageId ?? (defv || ctx.villageId),
+    natar: natarRun ? { strength: snap.strength, playerPop: snap.playerPop, name: snap.name } : null,
   };
 }
 

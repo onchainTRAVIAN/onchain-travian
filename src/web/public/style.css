@@ -1106,3 +1106,11 @@ img.helm { vertical-align: middle; margin: -3px 4px -3px 0; }
 .weekbar::before, .weekbar::after, .mebar::before, .mebar::after { width: 16px; height: 16px; background-size: 16px 16px; }
 .weekbar { padding-left: 18px; padding-right: 18px; }
 .lastweek table.plain { margin: 6px 12px 4px; width: calc(100% - 24px); }
+/* Simulator: village bar and resource losses */
+.simvil .pad { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 12px; }
+.simvil .pad .muted { flex-basis: 100%; }
+.simvil button img { vertical-align: -2px; }
+.simh { margin: 12px 0 4px; font: bold 14px Georgia, serif; }
+.simcost th:first-child { text-align: left; white-space: nowrap; }
+.simcost tr.att th:first-child { color: #a01d10; }
+.simcost tr.def th:first-child { color: #2b6a00; }

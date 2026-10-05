@@ -252,6 +252,8 @@ export function heroUpkeep(q: Q, villageId: number): number {
  * consumption does NOT scale with world speed (only production, times and culture do).
  */
 export function cropUpkeep(q: Q, state: VillageState): number {
+  // Natar strongholds never go hungry (their garrisons would otherwise starve away).
+  if (state.tribe === 'natars') return 0;
   return state.village.pop + fedTroopUpkeep(q, state.village.id, state.tribe) + heroUpkeep(q, state.village.id);
 }
 

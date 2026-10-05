@@ -1,8 +1,11 @@
 import type { SimArmy, SimInput, SimResult } from '../../game/rules/simulate.js';
+import type { SimPageInput } from '../routes/simulator.js';
+import { NATAR_FACTOR_MAX, NATAR_FACTOR_MIN, NATAR_MIN_POP } from '../../game/rules/natars.js';
+import { RESOURCE_KEYS, res, sumRes, type Resources } from '../../game/rules/resources.js';
 import { TRIBES, type TribeId, type UnitCounts } from '../../game/rules/units.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { icon } from './layout.js';
+import { icon, resIcon } from './layout.js';
 import { unitIcon } from './parts.js';
 
 const TRIBE_CHOICES: { id: TribeId; label: string }[] = [
@@ -14,7 +17,7 @@ const TRIBE_CHOICES: { id: TribeId; label: string }[] = [
 ];
 
 function tribeSelect(name: string, value: TribeId, playable: boolean): SafeHtml {
-  return html`<select name="${name}" class="simtribe" aria-label="Tribe">${TRIBE_CHOICES.filter((t) => !playable || t.id === 'romans' || t.id === 'teutons' || t.id === 'gauls').map(
+  return html`<select name="${name}" class="simtribe" aria-label="Tribe">${TRIBE_CHOICES.filter((t) => !playable || t.id !== 'nature').map(
     (t) => html`<option value="${t.id}"${t.id === value ? html` selected` : ''}>${t.label}</option>`,
   )}</select>`;
 }
@@ -59,6 +62,44 @@ function lossTable(tribe: TribeId, title: string, role: 'att' | 'def', units: Un
   </tbody></table>`;
 }
 
+/** What the fallen soldiers cost to train. */
+function lossCost(tribe: TribeId, losses: UnitCounts): Resources {
+  const out = res();
+  TRIBES[tribe].units.forEach((u, i) => {
+    const n = losses[i] ?? 0;
+    for (const k of RESOURCE_KEYS) out[k] += u.cost[k] * n;
+  });
+  return out;
+}
+
+function costRow(label: SafeHtml | string, r: Resources, cls: string, note?: string): SafeHtml {
+  const total = sumRes(r);
+  return html`<tr class="${cls}"><th>${label}</th>${RESOURCE_KEYS.map((k) => html`<td class="num">${r[k] ? fmtNum(r[k]) : html`<span class="none">0</span>`}</td>`)}
+    <td class="num"><b>${fmtNum(total)}</b>${note ? html` <span class="small muted">${note}</span>` : ''}</td></tr>`;
+}
+
+/** Losses of both sides in resources (training cost of the dead), and what a raid nets. */
+function lossCostTable(input: SimInput, r: SimResult): SafeHtml {
+  const att = lossCost(input.attacker.tribe, input.attacker.units.map((n, i) => Math.min(n, (r.attackerLosses[i] ?? 0) + (r.trapped[i] ?? 0))));
+  const def = res();
+  input.defenders.forEach((d, k) => {
+    const c = lossCost(d.tribe, r.defenderLosses[k] ?? []);
+    for (const key of RESOURCE_KEYS) def[key] += c[key];
+  });
+  const free = (t: TribeId) => t === 'natars' || t === 'nature';
+  const attNote = free(input.attacker.tribe) ? '(Natars train for free)' : undefined;
+  const defNote = input.defenders.every((d) => free(d.tribe)) ? '(animals cost nothing)' : undefined;
+  const net = r.attackerWon ? r.carry - sumRes(att) : -sumRes(att);
+  return html`<h3 class="simh">Losses in resources</h3>
+    <div class="tscroll"><table class="tb simcost"><thead><tr><th></th>${RESOURCE_KEYS.map((k) => html`<th>${resIcon(k)}</th>`)}<th>Total</th></tr></thead><tbody>
+      ${costRow('Attacker lost', att, 'att', attNote)}
+      ${costRow('Defender lost', def, 'def', defNote)}
+    </tbody></table></div>
+    ${!free(input.attacker.tribe) && r.attackerWon && r.carry > 0
+      ? html`<p class="small">If every carry slot is filled, the attacker brings home up to <b>${fmtNum(r.carry)}</b> resources: <b class="${net >= 0 ? 'good' : 'bad'}">${net >= 0 ? '+' : ''}${fmtNum(net)}</b> after its losses.</p>`
+      : ''}`;
+}
+
 /** The outcome, swapped in live by app.js. */
 export function simResultPanel(input: SimInput, r: SimResult): SafeHtml {
   const att = input.attacker;
@@ -84,16 +125,26 @@ export function simResultPanel(input: SimInput, r: SimResult): SafeHtml {
             ? html`still wins with <b>${pct(r.winAt)}</b> of this attack`
             : html`needs <b>×${(Math.ceil(r.winAt * 100) / 100).toFixed(2)}</b> this attack to win (about ${fmtNum(Math.ceil((r.winAt - 1) * 100))}% more)`}</td></tr>`
         : ''}
-    </tbody></table>`;
+    </tbody></table>
+    ${lossCostTable(input, r)}`;
 }
 
-export function simulatorView(d: { input: SimInput; result: SimResult; worldSpeed: number }): SafeHtml {
+export function simulatorView(d: { input: SimPageInput; result: SimResult; worldSpeed: number }): SafeHtml {
   const i = d.input;
   const extra = [i.defenders[1], i.defenders[2]];
   const blank = (t: TribeId): SimArmy => ({ tribe: t, units: Array(10).fill(0), levels: Array(10).fill(0), hero: null });
   return html`<h1>Combat simulator</h1>
     <p class="tabs"><a href="/troops">Overview</a><a href="/troops/send">Send troops</a><a href="/troops/farmlist">Farm list</a><a href="/simulator" class="on">Combat simulator</a></p>
     <form method="get" action="/simulator" id="simform" class="simform">
+      <div class="spanel simvil"><div class="pad"><label for="defv"><b>Your village:</b></label>
+        <select id="defv" name="defv">${i.villages.map((v) => html`<option value="${v.id}"${v.id === i.defv ? html` selected` : ''}>${v.name} (${fmtNum(v.pop)})</option>`)}</select>
+        <button type="submit" name="usedef" value="1" class="small">${icon('ui/reinforce', '', 14)} It defends</button>
+        <button type="submit" name="natar" value="1" class="small secondary">${icon('tribe/natars', '', 14)} Natars attack it</button>
+        <span class="small muted">Fills in the troops standing in that village (yours and reinforcements), your hero, wall, residence and traps.</span></div></div>
+      ${i.natar
+        ? html`<div class="note small">A typical Natar ${i.mode === 'raid' ? 'raid' : 'attack'} on <b>${i.natar.name}</b>: Natars size their army to your strength (${fmtNum(i.natar.strength)} — your defence plus population), between ${Math.round(NATAR_FACTOR_MIN * 100)}% and ${Math.round(NATAR_FACTOR_MAX * 100)}% of it; this shows the middle.
+          ${i.natar.playerPop < NATAR_MIN_POP ? html` <b>You have ${fmtNum(i.natar.playerPop)} population — Natars only attack players with ${NATAR_MIN_POP} or more.</b>` : ''}</div>`
+        : ''}
       <p class="simmode">
         <label><input type="radio" name="mode" value="attack"${i.mode === 'attack' ? html` checked` : ''}> Normal attack</label>
         <label><input type="radio" name="mode" value="raid"${i.mode === 'raid' ? html` checked` : ''}> Raid</label>

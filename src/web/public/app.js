@@ -521,7 +521,11 @@
       if (t.classList.contains('simtribe') || t.name === 'oasis') simForm.submit();
       else if (t.type === 'radio' || t.tagName === 'SELECT') { clearTimeout(simTimer); simRun(); }
     });
-    simForm.addEventListener('submit', function (e) { e.preventDefault(); clearTimeout(simTimer); simRun(); });
+    simForm.addEventListener('submit', function (e) {
+      // "It defends" / "Natars attack it" reload the page with that village's troops.
+      if (e.submitter && (e.submitter.name === 'usedef' || e.submitter.name === 'natar')) return;
+      e.preventDefault(); clearTimeout(simTimer); simRun();
+    });
   }
 
   // "(max)" links fill unit inputs.
