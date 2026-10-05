@@ -85,6 +85,13 @@
       "when": 1791160691006,
       "tag": "0011_goldclub",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1791166964250,
+      "tag": "0012_raider",
+      "breakpoints": true
     }
   ]
 }

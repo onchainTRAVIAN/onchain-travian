@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0 — 2026-10-05
+- **Oasis Raider** (Gold Club, Rally Point → Farm list): one automatic oasis raider per village. Turn it on and it checks every 5–60 minutes, finds the free oases in range (1–35 fields) with enough loot, skips guarded ones (or brings enough attack for up to N animals), never sends a second raid while one is on the way, and sizes each raid to just carry the loot (fastest troops first) — or a fixed group. Settings: troop types it may use, troops to keep at home, max troops per raid, max raids per check, "never raid" per oasis. Shows what the next check would send, today's raids and loot, every oasis's status and an activity log; "Raid now" runs a check at once.
+- Custom farm lists fold away (open when short) and scroll.
+- Villages list shows each village's population (and the total).
+- Production table on the village overview and the resource amounts in the top bar open the Production breakdown too.
+
 ## 0.10.9 — 2026-10-05
 - Fix: "finish now" for a training batch (or construction) waiting in the queue charged for the waiting time too — e.g. 2 troops behind 74 cost more than the 74. It now charges only for the batch's own remaining work, and later batches move up by exactly that.
 

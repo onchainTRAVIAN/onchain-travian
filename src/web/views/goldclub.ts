@@ -43,6 +43,7 @@ export function farmListView(d: {
   evade: boolean;
   lists: (FarmList & { villageName: string; entries: (FarmEntry & { target: string; result: { result: string; loot: number } | null; oasis: { stock: number; animals: number } | null })[] })[];
   places: { x: number; y: number; label: string }[];
+  raider?: SafeHtml;
   csrf: string;
   now: number;
 }): SafeHtml {
@@ -57,15 +58,17 @@ export function farmListView(d: {
           <button type="submit" class="small secondary">${d.evade ? 'Turn off' : 'Turn on'}</button>
           <span class="small muted">Your capital's own troops leave when an attack or raid arrives and come back afterwards.</span></p></form>`
       : ''}
+    ${d.raider ?? ''}
+    <h2 class="customlists">Custom farm lists <span class="small muted">— your own targets (villages, chosen oases), sent with one click</span></h2>
     <form method="post" action="/goldclub/list" class="row">${csrfField(d.csrf)}
       <div><label for="fl" class="sr">New list</label><input id="fl" type="text" name="name" maxlength="30" placeholder="New farm list name"></div>
       <div><button type="submit" class="block">Create list (from ${d.villageName})</button></div>
     </form>
     ${d.lists.length === 0 ? html`<p class="none">No farm lists yet.</p>` : ''}
     ${d.lists.map(
-      (l) => html`<h2>${l.name} <span class="small muted">from ${l.villageName}</span></h2>
+      (l) => html`<details class="customlist"${l.entries.length <= 8 ? html` open` : ''}><summary><b>${l.name}</b> <span class="small muted">from ${l.villageName} · ${l.entries.length} targets${l.autoMinutes ? ` · auto every ${l.autoMinutes} min` : ''}</span></summary>
         <form method="post" action="/goldclub/raid">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
-          <div class="tblwrap"><table><thead><tr><th></th><th>Target</th><th>Troops</th><th>Last raid</th><th></th></tr></thead><tbody>
+          <div class="mvscroll"><table class="tb"><thead><tr><th></th><th>Target</th><th>Troops</th><th>Last raid</th><th></th></tr></thead><tbody>
           ${l.entries.length === 0
             ? html`<tr><td colspan="5" class="none center">No targets yet — add some below.</td></tr>`
             : l.entries.map((e) => {
@@ -106,7 +109,7 @@ export function farmListView(d: {
               <p class="small"><label>Remove oases with less than <input type="number" name="minRes" min="1" required class="w60" inputmode="numeric"> resources</label>
               <button type="submit" class="small secondary">Remove</button></p></form>`
           : ''}
-        <form method="post" action="/goldclub/list/delete" class="inline">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}"><button type="submit" class="small secondary">Delete this list</button></form>`,
+        <form method="post" action="/goldclub/list/delete" class="inline">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}"><button type="submit" class="small secondary" data-confirm="Delete the list ${l.name}?">Delete this list</button></form></details>`,
     )}`;
 }
 

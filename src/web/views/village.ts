@@ -78,9 +78,10 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
 }
 
 function productionTable(eco: Economy): SafeHtml {
-  return html`<table id="production"><thead><tr><th colspan="4">Production:</th></tr></thead><tbody>
+  // Each row opens the breakdown: base from fields and every bonus on top.
+  return html`<table id="production"><thead><tr><th colspan="4"><a href="/production" title="Where your production comes from">Production:</a></th></tr></thead><tbody>
     ${RESOURCE_KEYS.map(
-      (k) => html`<tr><td class="ico">${resIcon(k)}</td><td>${RESOURCE_LABEL[k]}:</td><td class="val ${eco.net[k] < 0 ? 'bad' : ''}">${fmtNum(eco.net[k])}</td><td>per hour</td></tr>`,
+      (k) => html`<tr class="prodrow"><td class="ico"><a href="/production#${k}" title="${RESOURCE_LABEL[k]}: base and bonuses">${resIcon(k)}</a></td><td><a href="/production#${k}" class="plain">${RESOURCE_LABEL[k]}:</a></td><td class="val ${eco.net[k] < 0 ? 'bad' : ''}"><a href="/production#${k}" class="plain">${fmtNum(eco.net[k])}</a></td><td><a href="/production#${k}" class="plain">per hour</a></td></tr>`,
     )}
   </tbody></table>`;
 }

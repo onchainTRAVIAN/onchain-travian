@@ -481,6 +481,49 @@ export const farmEntries = sqliteTable(
   (t) => [index('farm_entries_list_idx').on(t.listId)],
 );
 
+/** Gold Club Oasis Raider: one automatic oasis-raiding setup per village. */
+export const oasisRaiders = sqliteTable(
+  'oasis_raiders',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    villageId: integer('village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+    radius: integer('radius').notNull().default(10),
+    minRes: integer('min_res').notNull().default(1000),
+    /** Most animals an oasis may have (0 = only empty oases). */
+    maxAnimals: integer('max_animals').notNull().default(0),
+    /** JSON boolean[10]: unit types the raider may send. */
+    allowed: text('allowed').notNull(),
+    /** JSON number[10]: troops always kept at home. */
+    reserve: text('reserve').notNull(),
+    /** 'auto' = just enough to carry the loot; 'fixed' = the `fixed` group every time. */
+    sizeMode: text('size_mode', { enum: ['auto', 'fixed'] }).notNull().default('auto'),
+    fixed: text('fixed').notNull(),
+    maxPerRaid: integer('max_per_raid').notNull().default(0),
+    intervalMin: integer('interval_min').notNull().default(10),
+    maxRaids: integer('max_raids').notNull().default(20),
+    lastRunAt: integer('last_run_at'),
+    dayKey: integer('day_key').notNull().default(0),
+    dayRaids: integer('day_raids').notNull().default(0),
+    /** JSON: the last checks, newest first. */
+    log: text('log').notNull().default('[]'),
+  },
+  (t) => [uniqueIndex('oasis_raiders_village_idx').on(t.villageId)],
+);
+
+/** Map fields a player never wants raided automatically. */
+export const farmBlocks = sqliteTable(
+  'farm_blocks',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    x: integer('x').notNull(),
+    y: integer('y').notNull(),
+  },
+  (t) => [uniqueIndex('farm_blocks_idx').on(t.userId, t.x, t.y)],
+);
+
 /** Gold Club trade routes: merchants deliver resources between your villages on a daily schedule. */
 export const tradeRoutes = sqliteTable(
   'trade_routes',
