@@ -21,15 +21,17 @@ export function crannyCapacity(level: number): number {
   return CRANNY_CAPACITY[Math.max(0, Math.min(10, level))] ?? 0;
 }
 
-/** Most a village's crannies can hide per resource: what a level-20 warehouse holds. */
-export const CRANNY_MAX_HIDDEN = 80_000;
+/** Share of storage one cranny level hides (3.5% → 35% at level 10). */
+export const CRANNY_PERCENT_PER_LEVEL = 0.035;
+/** No cranny ever hides more than this share of the storage. */
+export const CRANNY_MAX_SHARE = 0.35;
 
 /**
- * Resources hidden per resource type. The classic cranny table (`crannyCapacity`) is for x1;
- * on faster worlds it grows with world speed like production does, capped at a full warehouse.
+ * Share of each resource's storage a cranny hides: 3.5% per level (35% at level 10), times the
+ * tribe bonus (Gauls ×2) and artifacts, never above 35%.
  */
-export function crannyHidden(baseTotal: number, multiplier: number, worldSpeed: number): number {
-  return Math.min(CRANNY_MAX_HIDDEN, Math.floor(baseTotal * multiplier * worldSpeed));
+export function crannyShare(level: number, multiplier: number): number {
+  return Math.min(CRANNY_MAX_SHARE, Math.max(0, level) * CRANNY_PERCENT_PER_LEVEL * multiplier);
 }
 
 /** Gaul Trapper: number of traps per trapper level (1..20). */

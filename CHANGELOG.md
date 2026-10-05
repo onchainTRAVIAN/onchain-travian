@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.3 — 2026-10-05
+- Cranny works by percentage: 3.5% of the storage per level (warehouse for wood/clay/iron, granary for crop) — 35% at level 10, never more; Gauls' cranny counts double (35% from level 5). Only one cranny per village.
+
 ## 0.9.2 — 2026-10-05
 - Wall: an unbuilt wall shows as an outline ring around the village; clicking anywhere along the ring opens it to build. Conquered villages get the conqueror's wall type (could not be rebuilt before).
 - Cranny scales with world speed (classic table × speed), capped at a full level-20 warehouse (80,000 per resource).

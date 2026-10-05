@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS, buildCost, buildTimeMs, mainBuildingFactor } from '../src/game/rules/buildings.js';
-import { FIELD_PRODUCTION, crannyCapacity, crannyHidden, storageCapacity } from '../src/game/rules/production.js';
+import { FIELD_PRODUCTION, crannyCapacity, crannyShare, storageCapacity } from '../src/game/rules/production.js';
 import { catapultResult, computeLoot, demolish, demolishPoints, moraleMalus, resolveBattle, resolveScouting, wallDuringBattle } from '../src/game/rules/battle.js';
 import { distance, generateTile, layoutFields, travelTimeMs, wrapCoord, FIELD_LAYOUTS, type FieldLayout } from '../src/game/rules/map.js';
 import { res } from '../src/game/rules/resources.js';
@@ -44,10 +44,11 @@ describe('production & storage', () => {
     expect(storageCapacity(1)).toBeGreaterThan(800);
     expect(storageCapacity(20)).toBeGreaterThan(50_000);
     expect(crannyCapacity(0)).toBe(0);
-    // Cranny grows with world speed (x1 = classic table), capped at a full level-20 warehouse.
-    expect(crannyHidden(1000, 1, 1)).toBe(1000);
-    expect(crannyHidden(1000, 2, 20)).toBe(40_000);
-    expect(crannyHidden(1000, 1, 100)).toBe(80_000);
+    // Cranny hides 3.5% of the storage per level (35% at level 10), Gauls twice as fast, never above 35%.
+    expect(crannyShare(10, 1)).toBeCloseTo(0.35);
+    expect(crannyShare(5, 1)).toBeCloseTo(0.175);
+    expect(crannyShare(5, 2)).toBeCloseTo(0.35);
+    expect(crannyShare(10, 2)).toBeCloseTo(0.35);
     expect(crannyCapacity(10)).toBeGreaterThan(crannyCapacity(1));
   });
   it('accrue caps production at capacity but keeps overflow and never goes negative', () => {

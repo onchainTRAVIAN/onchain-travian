@@ -1,4 +1,4 @@
-import { RESOURCE_KEYS, sumRes } from '../../game/rules/resources.js';
+import { RESOURCE_KEYS, sumRes, type Resources } from '../../game/rules/resources.js';
 import { TRIBES } from '../../game/rules/units.js';
 import type { BattleReportData, ReportData, ReportSide } from '../../game/engine/reports.js';
 import type { ReportFilter } from '../../game/queries.js';
@@ -96,7 +96,9 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
     ${r.scout?.success && isAttacker
       ? html`<h3>🔭 Intelligence</h3>
         ${r.scout.resources ? html`<div class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.scout?.resources?.[k] ?? 0)}</span>`)}</div>` : ''}
-        <p class="small">City Wall level ${r.scout.wallLevel ?? 0} · Cranny hides ${fmtNum(r.scout.crannyHides ?? 0)} of each</p>
+        <p class="small">City Wall level ${r.scout.wallLevel ?? 0} · Cranny hides ${typeof r.scout.crannyHides === 'object'
+          ? RESOURCE_KEYS.map((k) => html`${resIcon(k)}${fmtNum((r.scout?.crannyHides as Resources)[k])} `)
+          : html`${fmtNum((r.scout.crannyHides as number | undefined) ?? 0)} of each`}</p>
         ${(r.scout.troops ?? []).length === 0 ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units))}`
       : ''}
     ${r.heroes?.map((h) => html`<p>🦸 ${h.name} (${h.side}): ${h.died ? html`<b class="bad">fell in battle</b>` : html`health ${h.health}%`} · +${fmtNum(h.xp)} XP</p>`)}

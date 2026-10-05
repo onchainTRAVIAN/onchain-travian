@@ -12,7 +12,7 @@ import {
   bonusBuildingPct,
   type BuildingId,
 } from '../rules/buildings.js';
-import { fieldProduction, storageCapacity, crannyCapacity, crannyHidden } from '../rules/production.js';
+import { fieldProduction, storageCapacity, crannyShare } from '../rules/production.js';
 import { RESOURCE_KEYS, res, type Resources } from '../rules/resources.js';
 import { addUnits, emptyUnits, TRIBES, upkeepOf, type TribeId, type UnitCounts } from '../rules/units.js';
 import { oasisBonus, type OasisType } from '../rules/map.js';
@@ -115,13 +115,13 @@ export function depositCapped(q: Q, state: VillageState, goods: Resources): void
 }
 
 /** Amount of each resource a cranny keeps safe from raiders. */
-export function hiddenByCranny(state: VillageState, attackerTribe: TribeId, confusion = 1): number {
-  let total = 0;
-  for (const s of state.slots) if (s.building === 'cranny') total += crannyCapacity(s.level);
-  // Scaled with world speed (capped at a full warehouse); Rivals' confusion multiplies it;
-  // Teuton raiders still find a fifth of it.
-  const hidden = crannyHidden(total, confusion * TRIBES[state.tribe].crannyMultiplier, config.WORLD_SPEED);
-  return Math.floor(hidden * TRIBES[attackerTribe].enemyCrannyFactor);
+export function hiddenByCranny(state: VillageState, attackerTribe: TribeId, confusion = 1): Resources {
+  // One cranny per village; it hides a share of the storage (warehouse for wood/clay/iron,
+  // granary for crop). Rivals' confusion strengthens it; Teuton raiders still find a fifth.
+  const level = state.slots.reduce((m, s) => (s.building === 'cranny' ? Math.max(m, s.level) : m), 0);
+  const share = crannyShare(level, confusion * TRIBES[state.tribe].crannyMultiplier) * TRIBES[attackerTribe].enemyCrannyFactor;
+  const cap = capacityFor(state);
+  return res(Math.floor(cap.wood * share), Math.floor(cap.clay * share), Math.floor(cap.iron * share), Math.floor(cap.crop * share));
 }
 
 export function populationOf(state: Pick<VillageState, 'slots'>): number {

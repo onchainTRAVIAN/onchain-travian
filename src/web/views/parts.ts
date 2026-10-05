@@ -6,7 +6,7 @@ import {
   trainingBuildingFactor,
   type BuildingDef,
 } from '../../game/rules/buildings.js';
-import { crannyCapacity, crannyHidden, fieldProduction, storageCapacity, trapCapacity } from '../../game/rules/production.js';
+import { crannyShare, fieldProduction, storageCapacity, trapCapacity } from '../../game/rules/production.js';
 import { oasisSlots, expansionSlots } from '../../game/rules/expansion.js';
 import { TRIBES, emptyUnits, totalUnits, type TribeId, type UnitCounts } from '../../game/rules/units.js';
 import type { MovementView } from '../../game/queries.js';
@@ -106,7 +106,7 @@ export function effectAt(def: BuildingDef, level: number, tribe: TribeId): SafeH
     case 'granary':
       return html`Capacity: ${fmtNum(storageCapacity(level))} units of crop`;
     case 'cranny':
-      return html`Hidden units per resource: ${fmtNum(crannyHidden(crannyCapacity(level), TRIBES[tribe].crannyMultiplier, config.WORLD_SPEED))}`;
+      return html`Hides ${Math.round(crannyShare(level, TRIBES[tribe].crannyMultiplier) * 1000) / 10}% of your storage per resource`;
     case 'barracks':
     case 'stable':
     case 'workshop':

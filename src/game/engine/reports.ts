@@ -40,7 +40,8 @@ export interface BattleReportData {
     resources?: Resources;
     troops?: { tribe: TribeId; units: UnitCounts }[];
     wallLevel?: number;
-    crannyHides?: number;
+    /** Per resource (older reports: one number for all). */
+    crannyHides?: number | Resources;
   };
 }
 

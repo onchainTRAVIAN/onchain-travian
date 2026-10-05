@@ -256,14 +256,15 @@ export function catapultResult(level: number, catapults: number, upgrade: number
 
 /**
  * Loot taken by raiders: proportional to what is unprotected, up to carry capacity.
- * `hidden` is how much of each resource the cranny protects.
+ * `hidden` is how much of each resource the cranny protects (one number for all, or per resource).
  */
-export function computeLoot(stock: Resources, hidden: number, capacity: number): Resources {
+export function computeLoot(stock: Resources, hidden: number | Resources, capacity: number): Resources {
+  const h = typeof hidden === 'number' ? res(hidden, hidden, hidden, hidden) : hidden;
   const available = res(
-    Math.max(0, Math.floor(stock.wood - hidden)),
-    Math.max(0, Math.floor(stock.clay - hidden)),
-    Math.max(0, Math.floor(stock.iron - hidden)),
-    Math.max(0, Math.floor(stock.crop - hidden)),
+    Math.max(0, Math.floor(stock.wood - h.wood)),
+    Math.max(0, Math.floor(stock.clay - h.clay)),
+    Math.max(0, Math.floor(stock.iron - h.iron)),
+    Math.max(0, Math.floor(stock.crop - h.crop)),
   );
   const total = sumRes(available);
   if (total <= capacity) return available;
