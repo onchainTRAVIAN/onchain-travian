@@ -168,3 +168,16 @@ describe('rules fixed', () => {
     expect(vil(b.villageId).wood).toBeLessThan(stockBefore);
   });
 });
+
+describe('world settings', () => {
+  it('MERCHANT_MULTIPLIER gives that many merchants per Marketplace level', async () => {
+    const { config } = await import('../src/config.js');
+    const { merchantInfo } = await import('../src/game/actions/market.js');
+    const st = loadVillage(db, a.villageId)!;
+    const base = merchantInfo(db, st).total;
+    const old = config.MERCHANT_MULTIPLIER;
+    (config as { MERCHANT_MULTIPLIER: number }).MERCHANT_MULTIPLIER = 10;
+    expect(merchantInfo(db, st).total).toBe(base * 10);
+    (config as { MERCHANT_MULTIPLIER: number }).MERCHANT_MULTIPLIER = old;
+  });
+});

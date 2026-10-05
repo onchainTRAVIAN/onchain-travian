@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.16.2 — 2026-10-05
+- **10× merchants** on this x100 world: each Marketplace level now gives 10 merchants (200 at level 20). World setting `MERCHANT_MULTIPLIER`.
+
 ## 0.16.1 — 2026-10-05
 - **All soldier pictures redrawn**: every unit of every tribe (and the animals) is now a 3/4-view figure in its own pose — lunging infantry, galloping cavalry, siege crews — with matching small icons.
 - **Every page now shares one look**: parchment panels and wooden tabs on the Rally Point (Overview / Send troops / Farm list / Simulator), Messages, Chat, Alliance, Gold market, Wallet (now a tab of Plus & Gold), Profile, map tile pages, Production, Troop guide, Artifacts & Wonders (under Statistics), the building panels, login and registration.

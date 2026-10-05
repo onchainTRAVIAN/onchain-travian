@@ -9,6 +9,8 @@ const EnvSchema = z.object({
   WORLD_NAME: z.string().min(1).default('Ancient Realms'),
   WORLD_SPEED: z.coerce.number().positive().max(1000).default(1),
   TROOP_SPEED: z.coerce.number().positive().max(1000).default(1),
+  /** Merchants per Marketplace level (1 in classic Travian; fast worlds can raise it). */
+  MERCHANT_MULTIPLIER: z.coerce.number().int().min(1).max(100).default(1),
   MAP_RADIUS: z.coerce.number().int().min(5).max(400).default(50),
   /** Days after the world starts when the Natars release artifacts / World Wonders (0 = only by an admin). */
   ARTIFACT_DAY: z.coerce.number().min(0).max(1000).default(0),

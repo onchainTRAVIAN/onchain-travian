@@ -13,7 +13,8 @@ import { ownedVillage } from './build.js';
 export type OfferRow = typeof marketOffers.$inferSelect;
 
 export function merchantInfo(q: Q, state: VillageState): { total: number; busy: number; free: number; capacity: number; speed: number } {
-  const total = levelOf(state, 'market');
+  // Classic: one merchant per Marketplace level; fast worlds multiply it (MERCHANT_MULTIPLIER).
+  const total = levelOf(state, 'market') * config.MERCHANT_MULTIPLIER;
   const moving =
     q.select({ n: sql<number>`coalesce(sum(${movements.merchants}), 0)` })
       .from(movements)

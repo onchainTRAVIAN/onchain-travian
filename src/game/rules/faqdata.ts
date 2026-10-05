@@ -1,3 +1,4 @@
+import { config } from '../../config.js';
 import type { FaqTopic } from './faq.js';
 
 /*
@@ -1805,7 +1806,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     category: 'market',
     title: 'How do I send resources with merchants?',
     keywords: ['send resources', 'merchants', 'marketplace', 'market', 'transport', 'trade', 'deliver', 'merchant capacity', 'push'],
-    summary: 'Build a Marketplace (one merchant per level), enter the amounts and the target village, and click OK. Each merchant carries 500 (Romans), 1,000 (Teutons) or 750 (Gauls).',
+    summary: `Build a Marketplace (${config.MERCHANT_MULTIPLIER === 1 ? 'one merchant' : `${config.MERCHANT_MULTIPLIER} merchants`} per level on this world), enter the amounts and the target village, and click OK. Each merchant carries 500 (Romans), 1,000 (Teutons) or 750 (Gauls).`,
     body: [
       { p: 'Marketplace needs Main Building 3, Warehouse 1 and Granary 1.' },
       {
