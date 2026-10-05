@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.9 — 2026-10-05
+- Fix: "finish now" for a training batch (or construction) waiting in the queue charged for the waiting time too — e.g. 2 troops behind 74 cost more than the 74. It now charges only for the batch's own remaining work, and later batches move up by exactly that.
+
 ## 0.10.8 — 2026-10-05
 - Farm list: oasis targets show the resources lying there and how many animals guard them; "Add all free oases" takes a minimum amount of resources; "Remove oases with less than N resources" cleans a list.
 

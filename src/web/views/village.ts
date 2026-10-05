@@ -14,7 +14,7 @@ import type { BuildOrderRow } from '../../game/actions/build.js';
 import type { TrainOrderRow } from '../../game/actions/train.js';
 import type { Economy, VillageState } from '../../game/engine/state.js';
 import type { MovementView } from '../../game/queries.js';
-import { instantPrice } from '../../game/actions/credits.js';
+import { instantPrice, workLeft } from '../../game/actions/credits.js';
 import { fmtClock, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { TOWN_SPOTS } from './spots.js';
@@ -60,7 +60,7 @@ export function buildQueue(orders: BuildOrderRow[], now: number, csrf: string): 
       <td>${o.demolish ? html`Demolishing ${l.name} (to level ${o.toLevel})` : html`${l.name} (level ${o.toLevel})`}</td>
       <td class="num">in ${timer(o.finishAt, now)} h · done at ${fmtClock(o.finishAt).slice(0, 5)}</td>
       <td><form method="post" action="/shop/finish/build" class="inline">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
-        <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(o.finishAt - now)}</button></form></td>
+        <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(workLeft(o.startAt, o.finishAt, now))}</button></form></td>
     </tr>`;
   })}</tbody></table>`;
 }
@@ -73,7 +73,7 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
     return html`<tr><td>${unitIcon(tribe, o.unitSlot)} ${fmtNum(o.total - o.done)} ${u?.name ?? '?'}</td>
       <td class="num">${timer(end, now)}</td><td class="num">${fmtClock(end)}</td>
       ${csrf ? html`<td><form method="post" action="/shop/finish/train">${csrfField(csrf)}<input type="hidden" name="orderId" value="${o.id}">
-        <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(end - now)}</button></form></td>` : ''}</tr>`;
+        <button type="submit" class="small gold" title="Finish now">${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(workLeft(o.startAt, end, now))}</button></form></td>` : ''}</tr>`;
   })}</tbody></table>`;
 }
 

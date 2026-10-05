@@ -49,13 +49,21 @@ export function instantPrice(msLeft: number, worldSpeed: number = config.WORLD_S
   return Math.max(2, Math.ceil(x1Minutes / FINISH_X1_MINUTES_PER_GOLD));
 }
 
+/**
+ * Work still left on a queued job: a batch waiting behind another one is priced only for its own
+ * duration, not for the time it spends waiting.
+ */
+export function workLeft(startAt: number, endAt: number, now: number): number {
+  return Math.max(0, endAt - Math.max(now, startAt));
+}
+
 export function finishConstructionNow(db: DB, userId: number, orderId: number, now: number): number {
   return db.transaction((tx) => {
     const o = tx.select().from(buildOrders).where(eq(buildOrders.id, orderId)).get();
     assertGame(o, 'Construction not found');
     ownedVillage(tx, userId, o.villageId);
     assertGame(o.finishAt > now, 'Already finished');
-    const price = instantPrice(o.finishAt - now);
+    const price = instantPrice(workLeft(o.startAt, o.finishAt, now));
     spend(tx, userId, price, `Instant construction: ${o.building} level ${o.toLevel}`, now);
     tx.update(buildOrders).set({ finishAt: now }).where(eq(buildOrders.id, orderId)).run();
     return price;
@@ -71,11 +79,13 @@ export function finishTrainingNow(db: DB, userId: number, orderId: number, now: 
     const fresh = tx.select().from(trainOrders).where(eq(trainOrders.id, orderId)).get();
     assertGame(fresh, 'Already finished');
     const end = fresh.startAt + fresh.total * fresh.perUnitMs;
-    const price = instantPrice(end - now);
+    const left = workLeft(fresh.startAt, end, now);
+    const price = instantPrice(left);
     spend(tx, userId, price, 'Instant training', now);
-    // Pretend training started long enough ago that every unit is done; later queued batches move up.
+    // Pretend training started long enough ago that every unit is done; batches queued after it
+    // move up by the work that was skipped.
     tx.update(trainOrders).set({ startAt: now - fresh.total * fresh.perUnitMs }).where(eq(trainOrders.id, orderId)).run();
-    const shift = end - now;
+    const shift = left;
     const later = tx
       .select()
       .from(trainOrders)

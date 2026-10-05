@@ -182,3 +182,22 @@ describe('Gold Club oasis filters', () => {
     expect(entries().length).toBe(before - removed);
   });
 });
+
+describe('Finish-now price for queued training', () => {
+  it('a small batch queued behind a big one costs only its own time', async () => {
+    const { startTraining } = await import('../src/game/actions/train.js');
+    const { finishTrainingNow, instantPrice, workLeft } = await import('../src/game/actions/credits.js');
+    setSlot(r.villageId, 19, 'barracks', 1);
+    db.update(villages).set({ wood: 1e6, clay: 1e6, iron: 1e6, crop: 1e6, resAt: clock.now() }).where(eq(villages.id, r.villageId)).run();
+    db.update(slots).set({ level: 20 }).where(and(eq(slots.villageId, r.villageId), eq(slots.building, 'warehouse'))).run();
+    const big = startTraining(db, r.userId, r.villageId, 'barracks', 0, 74, clock.now());
+    const small = startTraining(db, r.userId, r.villageId, 'barracks', 0, 2, clock.now());
+    const bigPrice = instantPrice(workLeft(big.startAt, big.startAt + big.total * big.perUnitMs, clock.now()));
+    const smallPrice = instantPrice(workLeft(small.startAt, small.startAt + small.total * small.perUnitMs, clock.now()));
+    expect(smallPrice).toBeLessThanOrEqual(bigPrice);
+    grantCredits(db, r.userId, 10_000, 'test', 'gc-train', clock.now());
+    const before = creditBalance(db, r.userId);
+    expect(finishTrainingNow(db, r.userId, small.id, clock.now())).toBe(smallPrice);
+    expect(creditBalance(db, r.userId)).toBe(before - smallPrice);
+  });
+});
