@@ -27,6 +27,9 @@ import { academyPanel, celebrationPanel, demolishPanel, embassyPanel, expansionP
 import { buildTraps, freePrisoners, trapPanelData } from '../../game/actions/traps.js';
 import { artifactsIn } from '../../game/actions/endgame.js';
 import { placesOf } from '../../game/actions/places.js';
+import { hasGoldClub } from '../../game/actions/goldclub.js';
+import { tradeRoutesPanel } from '../views/goldclub.js';
+import { tradeRoutes } from '../../db/schema.js';
 import { treasuryPanel } from '../views/endgame.js';
 import { celebrationOptions, runningCelebration, startCelebration } from '../../game/actions/celebration.js';
 
@@ -132,6 +135,22 @@ function buildingPanels(req: Request, page: GamePage, id: BuildingId): SafeHtml[
       return [
         marketPanel({
           npc: npcPanel(have, capacityFor(state), page.chrome.credits, ctx.csrf),
+          routes: tradeRoutesPanel({
+            member: hasGoldClub(db, ctx.user.id),
+            routes: db
+              .select()
+              .from(tradeRoutes)
+              .where(eq(tradeRoutes.userId, ctx.user.id))
+              .all()
+              .map((rt) => ({
+                ...rt,
+                fromName: page.chrome.villages.find((v) => v.id === rt.fromVillageId)?.name ?? '?',
+                toName: page.chrome.villages.find((v) => v.id === rt.toVillageId)?.name ?? '?',
+              })),
+            myVillages: page.chrome.villages,
+            currentVillageId: state.village.id,
+            csrf: ctx.csrf,
+          }),
           stock: have,
           places: placesOf(db, ctx.user.id),
           ownVillages: page.chrome.villages.filter((v) => v.id !== state.village.id),

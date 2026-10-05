@@ -205,7 +205,7 @@ export function mapView(d: {
             ? html`<tr><th>Village</th><td>${center.village.name}</td></tr><tr><th>Player</th><td>${center.village.owner}</td></tr><tr><th>Population</th><td>${fmtNum(center.village.pop)}</td></tr>`
             : html`<tr><th>Field</th><td>${center?.kind === 'oasis' ? 'Oasis' : 'Abandoned valley'}</td></tr>`}
         </tbody></table>
-        <p class="small muted">Click a field to open it. Arrow keys move the map.</p>
+        <p class="small muted">Click a field to open it. Arrow keys move the map. <a href="/map/croppers">» Find croppers</a></p>
       </div>
     </div>
     <div class="tblwrap"><table><thead><tr><th>Village</th><th>Player</th><th>Population</th><th>Coordinates</th></tr></thead><tbody>

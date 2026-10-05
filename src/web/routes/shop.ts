@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
+import { hasGoldClub } from '../../game/actions/goldclub.js';
 import { db } from '../../db/index.js';
 import { buildOrders } from '../../db/schema.js';
 import {
@@ -42,6 +43,7 @@ shopRouter.get('/shop', (req, res_) => {
       history: creditHistory(db, ctx.user.id, 20),
       sendTo: typeof req.query.to === 'string' ? req.query.to.slice(0, 20) : '',
       protection: protectionStatus(db, ctx.user.id, ctx.now),
+      goldClub: hasGoldClub(db, ctx.user.id),
       csrf: ctx.csrf,
       now: ctx.now,
     }),

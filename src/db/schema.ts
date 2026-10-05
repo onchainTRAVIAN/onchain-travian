@@ -19,6 +19,8 @@ export const users = sqliteTable(
     createdAt: integer('created_at').notNull(),
     lastSeenAt: integer('last_seen_at').notNull(),
     protectedUntil: integer('protected_until').notNull(),
+    /** Gold Club member (bought once per world): farm lists, evasion, trade routes, cropper finder. */
+    goldClub: integer('gold_club', { mode: 'boolean' }).notNull().default(false),
     /** End of the last protection bought with Gold (another can be bought 8 h after it ends). */
     boughtProtectionEnd: integer('bought_protection_end').notNull().default(0),
     offPoints: integer('off_points').notNull().default(0),
@@ -96,6 +98,8 @@ export const villages = sqliteTable(
     prisoners: text('prisoners').notNull().default('{}'),
     /** Gaul traps built in this village (each holds one prisoner). */
     traps: integer('traps').notNull().default(0),
+    /** Gold Club evasion: the village's own troops leave when an attack arrives (capital only). */
+    evade: integer('evade', { mode: 'boolean' }).notNull().default(false),
     /** A World Wonder village (Natar-founded; the Wonder stands on plot 25). */
     wonder: integer('wonder', { mode: 'boolean' }).notNull().default(false),
     /** Villages founded or conquered from here (uses expansion slots). */
@@ -442,6 +446,59 @@ export const savedPlaces = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [uniqueIndex('saved_places_user_xy').on(t.userId, t.x, t.y)],
+);
+
+/** Gold Club farm lists: saved raid targets sent from one village with one click (or automatically). */
+export const farmLists = sqliteTable(
+  'farm_lists',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    villageId: integer('village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    /** Auto-repeat interval in real minutes (null = only when the player clicks). */
+    autoMinutes: integer('auto_minutes'),
+    lastRunAt: integer('last_run_at'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('farm_lists_user_idx').on(t.userId)],
+);
+
+export const farmEntries = sqliteTable(
+  'farm_entries',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    listId: integer('list_id').notNull().references(() => farmLists.id, { onDelete: 'cascade' }),
+    x: integer('x').notNull(),
+    y: integer('y').notNull(),
+    units: text('units').notNull(),
+    /** Last raid sent: when, and the outcome of its report (won / lost / losses). */
+    lastSentAt: integer('last_sent_at'),
+    lastResult: text('last_result'),
+    lastLoot: integer('last_loot'),
+    lastNote: text('last_note'),
+  },
+  (t) => [index('farm_entries_list_idx').on(t.listId)],
+);
+
+/** Gold Club trade routes: merchants deliver resources between your villages on a daily schedule. */
+export const tradeRoutes = sqliteTable(
+  'trade_routes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    fromVillageId: integer('from_village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    toVillageId: integer('to_village_id').notNull().references(() => villages.id, { onDelete: 'cascade' }),
+    goods: text('goods').notNull(),
+    /** First delivery hour (UTC, 0–23) and deliveries per day (1–3, evenly spaced). */
+    hour: integer('hour').notNull(),
+    perDay: integer('per_day').notNull(),
+    active: integer('active', { mode: 'boolean' }).notNull().default(true),
+    lastRunAt: integer('last_run_at'),
+    lastNote: text('last_note'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('trade_routes_from_idx').on(t.fromVillageId)],
 );
 
 /** Gold market: resources or troops a player sells to others for Gold. Goods are held in escrow. */

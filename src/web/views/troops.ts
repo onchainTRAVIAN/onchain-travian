@@ -24,7 +24,7 @@ export function troopsView(d: TroopsViewData): SafeHtml {
     ${d.hasRally ? '' : html`<div class="note">You need a <a href="/slot/39">Rally Point</a> before you can send troops anywhere.</div>`}
     <h2>Your troops at home</h2>
     ${unitsTable(d.tribe, d.home)}
-    ${d.hasRally ? html`<div class="actions"><a class="btn block" href="/troops/send">⚔️ Send troops</a></div>` : ''}
+    ${d.hasRally ? html`<div class="actions"><a class="btn block" href="/troops/send">⚔️ Send troops</a> <a class="btn secondary block" href="/troops/farmlist">Farm list</a></div>` : ''}
     <h2>Troop movements</h2>
     ${movementList(d.movements, d.now)}
     <h2>Reinforcements in this village</h2>

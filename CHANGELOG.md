@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0 — 2026-10-05
+- **Gold Club** (500 Gold, once per world), like the classic Aukso klubas:
+  - Farm lists at the Rally Point: saved raid targets, "Raid all" / "Raid selected" in one click, optional auto-repeat every 15/30/60/120 minutes, last result and loot per target, "Add all free oases" within 5/10/15 fields.
+  - Evasion: the capital's own troops slip away from an incoming attack or raid and return afterwards.
+  - Trade routes (Marketplace): merchants deliver resources between your villages 1–3 times a day.
+  - Cropper finder (Map): 9- and 15-crop fields within 10/20/30 fields with oasis crop bonus.
+- World artifacts and World Wonders released on the live world.
+
 ## 0.9.7 — 2026-10-05
 - Every village building looks grander every 5 levels: four new stage pictures per building (levels 5, 10, 15, 20) for all 33 buildings, original art; click outlines for each.
 

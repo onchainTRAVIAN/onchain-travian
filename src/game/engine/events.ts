@@ -31,6 +31,7 @@ import { addReport, type BattleReportData, type ReportSide } from './reports.js'
 import { scheduleReturn, sendTroopsHome, villageInfo, type VillageInfo } from './movement.js';
 import { canExpand, conquerVillage, destroyVillage, moveCapital } from './expansion.js';
 import { artifactValue, artifactsIn, tryCaptureArtifact, wonderLevelDone } from '../actions/endgame.js';
+import { evadeBeforeAttack } from '../actions/goldclub.js';
 import { HERO_XP_VALUE } from '../rules/hero.js';
 import { createVillage } from './world.js';
 import {
@@ -220,6 +221,9 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     return;
   }
 
+  // Gold Club evasion: the capital's own troops slip away before a hostile attack lands.
+  const evaded = mv.kind === 'attack' || mv.kind === 'raid' ? evadeBeforeAttack(q, targetId, t) : null;
+
   // Every army inside the village defends it, plus heroes at home or stationed there.
   const stationed = q.select().from(troops).where(eq(troops.villageId, targetId)).all();
   const defenders = stationed.map((row) => {
@@ -277,6 +281,7 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   // --- Battle ---
   const mode = mv.kind === 'raid' ? 'raid' : 'attack';
   const notes: string[] = [];
+  if (evaded) notes.push(`The defenders' own troops evaded the attack (${totalUnits(evaded)} soldiers).`);
 
   // Gaul traps catch attackers before the fight.
   const trapped = trapAttackers(q, target, home, attackerUnits);

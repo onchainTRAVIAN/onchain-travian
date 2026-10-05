@@ -5,6 +5,7 @@ import { ensureWorld } from './game/engine/world.js';
 import { processDue } from './game/engine/events.js';
 import { processWeek } from './game/actions/weekly.js';
 import { processEndgame } from './game/actions/endgame.js';
+import { processFarmLists, processTradeRoutes } from './game/actions/goldclub.js';
 import { createApp } from './app.js';
 import { startCryptoWorkers } from './crypto/worker.js';
 
@@ -28,6 +29,13 @@ const worker = setInterval(() => {
     processEndgame(db, clock.now());
   } catch (err) {
     console.error('Endgame release failed:', err);
+  }
+  try {
+    // Gold Club: automatic farm-list raids and trade-route deliveries.
+    processFarmLists(db, clock.now());
+    processTradeRoutes(db, clock.now());
+  } catch (err) {
+    console.error('Gold Club automation failed:', err);
   }
 }, 1000);
 

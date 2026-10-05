@@ -4,6 +4,7 @@ import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../gam
 import { fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, resIcon, timer } from './layout.js';
+import { goldClubCard } from './goldclub.js';
 
 export function shopView(d: {
   balance: number;
@@ -13,6 +14,7 @@ export function shopView(d: {
   history: { amount: number; reason: string; createdAt: number }[];
   sendTo: string;
   protection: { protectedUntil: number; canBuyAt: number };
+  goldClub: boolean;
   csrf: string;
   now: number;
 }): SafeHtml {
@@ -22,6 +24,7 @@ export function shopView(d: {
     <div class="card cardrow"><span>Your balance</span><span class="price">${fmtNum(d.balance)} Gold</span>
       <a class="btn gold" href="/shop/topup">Buy Gold</a></div>
     <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold.</p>
+    ${goldClubCard({ member: d.goldClub, balance: d.balance, csrf: d.csrf })}
     <h2 id="protection">Protection</h2>
     <div class="card"><div class="cardrow"><b>🛡️ 24 hours of protection</b><span class="price">${PROTECTION_PRICE} Gold</span></div>
       <div class="small">Nobody can attack, raid or scout your villages for 24 hours. Attacking another player ends it early.

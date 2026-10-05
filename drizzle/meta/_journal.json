@@ -78,6 +78,13 @@
       "when": 1791157480476,
       "tag": "0010_savedplaces",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1791160691006,
+      "tag": "0011_goldclub",
+      "breakpoints": true
     }
   ]
 }
