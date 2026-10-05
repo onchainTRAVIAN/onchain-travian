@@ -598,3 +598,8 @@ table.simres td { text-align: center; }
 table.simfacts th { text-align: left; width: 35%; background: #f3f3f3; }
 input.w60 { width: 60px; }
 table.simres tr.trap td.trapc { color: #8a5a00; font-weight: bold; }
+table.upgtb td, table.upgtb th { padding: 2px 6px; }
+table.upgtb tr.base td { background: #f3f3f3; }
+table.upgtb tr:hover td { background: #f2f9e4; }
+table.upgtb td.cost { white-space: nowrap; font-size: 11px; }
+table.upgtb td.cost img { width: 14px; height: 10px; }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.2 — 2026-10-05
+- Every troop's info page lists its stats at all Blacksmith/Armoury levels 0–20 (attack with % gain, defence vs infantry and cavalry) with the cost and time of each upgrade.
+- Level-20 walls are stone for every tribe: Teutons get a grey fieldstone fortress with timber-roofed towers and blue banners, Gauls a sandstone wall with round thatched towers and green-and-yellow banners (Romans keep the marble wall).
+
 ## 0.12.1 — 2026-10-05
 - Combat simulator: Gaul traps — enter the free traps of a Gaul village; trapped attackers are shown in their own row (they don't fight). Trap catching now uses one shared rule for real fights and the simulator (verified identical).
 

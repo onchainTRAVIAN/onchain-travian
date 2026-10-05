@@ -2,7 +2,7 @@ import { config } from '../../config.js';
 import { needsResearch } from '../../game/actions/research.js';
 import { BUILDINGS } from '../../game/rules/buildings.js';
 import { RESOURCE_KEYS, type Resources } from '../../game/rules/resources.js';
-import { TRIBES, researchCost, researchTimeMs, smithyCost, trainTimeMs, type TribeId, type UnitDef } from '../../game/rules/units.js';
+import { TRIBES, researchCost, researchTimeMs, smithyCost, smithyTimeMs, trainTimeMs, upgradedStat, type TribeId, type UnitDef } from '../../game/rules/units.js';
 import { fmtDuration, fmtNum, fmtUnitTime } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon } from './layout.js';
@@ -74,9 +74,32 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
           ${research
             ? html`<tr><th>Research (Academy)</th><td>${costRow(researchCost(u))} · ${fmtDuration(researchTimeMs(u, config.WORLD_SPEED))}</td></tr>`
             : ''}
-          ${smithy ? html`<tr><th>First upgrade (Blacksmith / Armoury)</th><td>${costRow(smithyCost(u, 1))}</td></tr>` : ''}
+          ${smithy ? html`<tr><th>Upgrades</th><td><a href="#upgrades">» stats at every Blacksmith / Armoury level</a></td></tr>` : ''}
         </tbody></table>`}
+    ${smithy ? upgradeTable(u) : ''}
     <p><a href="/units?t=${d.tribe}">» All ${t.name} troops</a> | <a href="/units">» All tribes</a></p>`;
+}
+
+/** Stats at every Blacksmith (attack) / Armoury (defence) level, with the cost and time of each step. */
+function upgradeTable(u: UnitDef): SafeHtml {
+  const fmt1 = (x: number) => (Math.round(x * 10) / 10).toLocaleString('en-US');
+  const levels = Array.from({ length: 21 }, (_, l) => l);
+  return html`<h2 id="upgrades">Upgrade levels</h2>
+    <p class="small muted">Attack rises with the Blacksmith, defence with the Armoury (one step per building level, up to 20). Cost and time are for reaching that level, at a level 1 building${config.WORLD_SPEED !== 1 ? ` on this x${config.WORLD_SPEED} world` : ''}.</p>
+    <div class="tblwrap"><table class="upgtb"><thead><tr><th>Level</th><th>${icon('ui/attack', 'Attack', 16)} Attack</th><th>Def. infantry</th><th>Def. cavalry</th><th>Upgrade cost</th><th>Time</th></tr></thead><tbody>
+      ${levels.map(
+        (l) => html`<tr class="${l === 0 ? 'base' : ''}"><td class="num">${l}</td>
+          <td class="num">${fmt1(upgradedStat(u, u.attack, l))}${l > 0 && u.attack > 0 ? html` <span class="small good">+${pctUp(u, u.attack, l)}</span>` : ''}</td>
+          <td class="num">${fmt1(upgradedStat(u, u.defInf, l))}</td>
+          <td class="num">${fmt1(upgradedStat(u, u.defCav, l))}</td>
+          <td class="small cost">${l === 0 ? html`<span class="none">base</span>` : costRow(smithyCost(u, l))}</td>
+          <td class="num small">${l === 0 ? '' : fmtDuration(smithyTimeMs(u, l, config.WORLD_SPEED))}</td></tr>`,
+      )}
+    </tbody></table></div>`;
+}
+
+function pctUp(u: UnitDef, stat: number, level: number): string {
+  return `${Math.round(((upgradedStat(u, stat, level) / stat) - 1) * 1000) / 10}%`;
 }
 
 export function unitsIndexView(d: { tribe: TribeId | null }): SafeHtml {
