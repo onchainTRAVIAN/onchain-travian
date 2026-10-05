@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.1 — unreleased
+- Messages list has numbered pages; the shop's "Change your player name" link works again.
+- Design pass in progress: shared panel/tab helpers; soldier art being redrawn (`scripts/art/`).
+
 ## 0.16.0 — 2026-10-05 — audit round
 Fixes from a full review of the rules and loopholes:
 - **Gold market:** lowering an offer now walks the difference back to the village (like cancelling) instead of returning it instantly, so the market can't hide goods from an incoming attack.
