@@ -79,7 +79,7 @@ communityRouter.get('/alliances', (req, res) => {
       leaders: all.slice(0, 3),
       offset: (p - 1) * PER,
       page: p,
-      hasMore: all.length > p * PER,
+      pages: Math.max(1, Math.ceil(all.length / PER)),
       mine: mine ? { id: mine.id, rank: myIndex + 1, total: all.length, tag: mine.tag, value: value(mine) } : null,
       perPage: PER,
     }),

@@ -1060,3 +1060,49 @@ input.tickerin { width: 100%; box-sizing: border-box; font-size: 14px; padding: 
 .advcard .advfoot .good { white-space: nowrap; }
 .paybox::after { display: none; }
 .sp-head .sph { color: #2f2a17; font-weight: bold; font-size: 13px; }
+/* Reports (Legends-style folder) */
+.gbtn.green { background: linear-gradient(#8fcf3c, #4f8f17); border-color: #2f5e0b; color: #fff; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45); font-size: 12px; }
+.gbtn.green:hover { background: linear-gradient(#a2dc52, #5ea21f); }
+.rtop, .rbottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.rbtns { display: flex; gap: 8px; }
+.rtop .routc { margin: 0; }
+.rsel { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; font-size: 13px; }
+.rsel label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.rselact button { margin-left: 4px; }
+.rlist { width: 100%; background: #fff; }
+.rlist th { text-align: left; }
+.rlist .chk { width: 22px; text-align: center; }
+.rlist .rico { width: 20px; }
+.rlist .rrecv { width: 110px; text-align: right; }
+.rlist th.rrecv a { color: #4b7d00; }
+.rlist tr.unread td a { font-weight: bold; }
+.rlist .rnone { text-align: center; color: #888; padding: 12px; }
+.rnew { display: inline-block; padding: 0 5px; font-size: 10px; line-height: 15px; color: #fff; background: #d9534f; border-radius: 7px; vertical-align: 1px; }
+.rnote { margin: 10px 0 0; }
+.pager { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; }
+.pager a, .pager b, .pager span { min-width: 22px; padding: 2px 5px; text-align: center; border-radius: 3px; }
+.pager a { color: #4b7d00; font-weight: bold; }
+.pager a:hover { background: #eef6dc; }
+.pager b { background: #4b7d00; color: #fff; }
+.pager .off { color: #ccc; }
+.pager .pgap { color: #999; min-width: 0; }
+/* Statistics (Legends-style: wooden tabs, green sub tabs, airy rows, helmets) */
+.pilltabs { display: flex; flex-wrap: wrap; gap: 3px; margin: 0 0 10px; border-bottom: 1px solid #d6cdb0; }
+.pilltabs a { padding: 4px 12px; font-size: 13px; color: #555; background: #ece8dc; border: 1px solid #d6cdb0; border-bottom: 0; border-radius: 4px 4px 0 0; }
+.pilltabs a:hover { background: #f6f3ea; color: #2b6a00; }
+.pilltabs a.on { background: #8cc63f; color: #fff; border-color: #6fa62a; }
+.woodbody.statbody table.ranks { width: 100%; background: #fff; border-collapse: collapse; border: 1px solid #ddd6c0; margin-bottom: 10px; }
+.woodbody.statbody table.ranks thead tr:first-child th { text-align: left; padding: 6px 12px; font-size: 14px; color: #2f3a22; background: #dde8d6; border: 0; border-bottom: 6px solid #fff; border-radius: 0; }
+.woodbody.statbody table.ranks thead td { padding: 6px 8px; background: #fff; border: 0; border-bottom: 1px solid #ddd6c0; }
+.woodbody.statbody table.ranks tbody td { padding: 9px 8px; border: 0; border-bottom: 1px solid #ebe6d6; }
+.woodbody.statbody table.ranks tbody tr:last-child td { border-bottom: 0; }
+.woodbody.statbody table.ranks td.pla a { font-weight: bold; }
+.woodbody.statbody table.ranks tr.hl td { background: #e4f0d2; }
+img.helm { vertical-align: middle; margin: -3px 4px -3px 0; }
+.woodbody.statbody .rankfoot { margin: 0; background: #ece8dc; border: 1px solid #ddd6c0; border-radius: 4px; padding: 6px 10px; }
+.woodbody.statbody .fame { margin-top: 4px; }
+.ranksearch { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ranksearch .gbtn { padding: 3px 14px; }
+.weekbar::before, .weekbar::after, .mebar::before, .mebar::after { width: 16px; height: 16px; background-size: 16px 16px; }
+.weekbar { padding-left: 18px; padding-right: 18px; }
+.lastweek table.plain { margin: 6px 12px 4px; width: calc(100% - 24px); }

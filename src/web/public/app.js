@@ -481,6 +481,8 @@
     if (!all.hasAttribute || !all.hasAttribute('data-checkall')) return;
     var boxes = all.form ? all.form.querySelectorAll('input[type=checkbox][name=ids]') : [];
     for (var i = 0; i < boxes.length; i++) boxes[i].checked = all.checked;
+    var alls = all.form ? all.form.querySelectorAll('[data-checkall]') : [];
+    for (var j = 0; j < alls.length; j++) alls[j].checked = all.checked;
   });
   // Buttons with data-confirm ask first (e.g. "Delete all").
   document.addEventListener('click', function (e) {

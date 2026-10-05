@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.14.2 — 2026-10-05
+- **Reports** redesigned:
+  - wooden folder tabs: All, Offensive, Defensive, Scouting, Trade, Other;
+  - "Mark all as read" and "Delete all" buttons at the top and bottom;
+  - "Select all" above and below the list;
+  - click "Received" to sort newest or oldest first;
+  - numbered pages.
+- **Statistics** redesigned:
+  - wooden tabs with green sub tabs;
+  - airy rows with a tribe helmet before each name;
+  - a "The largest players" header;
+  - numbered pages;
+  - a "Rank or name" search bar.
+
 ## 0.14.1 — 2026-10-05
 - **New Gold shop** with tabs: Buy Gold, Advantages, Specials, History.
   - **Buy Gold:** 6 packages in dollars: 36 Gold for $1.99, 114 for $4.99, 280 for $9.99, 680 for $19.99 (best seller), 1,815 for $49.99 and 3,750 for $99.99 (best value). Each shows its ETH price at the live ETH/USD rate; click a package, then pay with your wallet.

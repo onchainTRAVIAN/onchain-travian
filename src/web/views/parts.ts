@@ -228,6 +228,21 @@ export function hasTroops(c: UnitCounts): boolean {
   return totalUnits(c) > 0;
 }
 
+/** Numbered pages like « ‹ 1 … 8 9 10 … 40 › ». `base` gets &page=N. */
+export function pager(base: string, page: number, pages: number): SafeHtml {
+  if (pages <= 1) return html``;
+  const sep = base.includes('?') ? '&' : '?';
+  const href = (n: number) => `${base}${sep}page=${n}`;
+  const nums = new Set([1, pages, page - 1, page, page + 1].filter((n) => n >= 1 && n <= pages));
+  const list = [...nums].sort((a, b) => a - b);
+  const out: SafeHtml[] = [];
+  list.forEach((n, i) => {
+    if (i > 0 && n - list[i - 1]! > 1) out.push(html`<span class="pgap">…</span>`);
+    out.push(n === page ? html`<b aria-current="page">${n}</b>` : html`<a href="${href(n)}">${n}</a>`);
+  });
+  return html`<nav class="pager" aria-label="Pages">${page > 1 ? html`<a href="${href(1)}" title="First page">«</a><a href="${href(page - 1)}" title="Previous page">‹</a>` : html`<span class="off">«</span><span class="off">‹</span>`}${out}${page < pages ? html`<a href="${href(page + 1)}" title="Next page">›</a><a href="${href(pages)}" title="Last page">»</a>` : html`<span class="off">›</span><span class="off">»</span>`}</nav>`;
+}
+
 export function paginate(base: string, page: number, hasMore: boolean): SafeHtml {
   if (page <= 1 && !hasMore) return html``;
   const sep = base.includes('?') ? '&' : '?';

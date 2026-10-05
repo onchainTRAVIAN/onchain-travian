@@ -20,7 +20,9 @@ import { endgameView } from '../views/endgame.js';
 import { WEEKLY_CATEGORIES, lastWinners, medalsOf, weekStart, weeklyStandings } from '../../game/actions/weekly.js';
 import { deleteMessage, deleteMessages, inbox, markMessagesRead, outbox, readMessage, sendMessage } from '../../game/actions/messages.js';
 import { battleOutcome, parseReport } from '../../game/engine/reports.js';
-import { heroRankings, playerProfile, playerRank, rankOf, rankings, reportList, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
+import { heroRankings, playerProfile, playerRank, rankOf, rankings, reportList,
+  reportCount,
+  rankingTotals, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
 import { authed, setFlash } from '../session.js';
 import { reportListView, reportView } from '../views/reports.js';
 import { FAQ, FAQ_CATEGORIES, faqTopic, searchFaq } from '../../game/rules/faq.js';
@@ -40,9 +42,12 @@ socialRouter.get('/reports', requireAuth, (req, res) => {
   const f = typeof req.query.f === 'string' && req.query.f in REPORT_FILTERS ? (req.query.f as ReportFilter) : 'all';
   const p = pageParam(req.query.page);
   const o = (['none', 'some', 'all'] as const).find((x) => x === req.query.o) ?? null;
-  const rows = reportList(db, ctx.user.id, f, PAGE + 1, (p - 1) * PAGE, o);
-  const listed = rows.slice(0, PAGE).map(({ data, ...r }) => ({ ...r, outcome: battleOutcome(data, ctx.user.id) }));
-  sendPage(req, res, 'Reports', reportListView({ rows: listed, outcome: o, filter: f, page: p, hasMore: rows.length > PAGE, now: ctx.now, csrf: ctx.csrf }), {
+  const oldest = req.query.sort === 'old';
+  const total = reportCount(db, ctx.user.id, f, o);
+  const pages = Math.max(1, Math.ceil(total / PAGE));
+  const rows = reportList(db, ctx.user.id, f, PAGE, (Math.min(p, pages) - 1) * PAGE, o, oldest);
+  const listed = rows.map(({ data, ...r }) => ({ ...r, outcome: battleOutcome(data, ctx.user.id) }));
+  sendPage(req, res, 'Reports', reportListView({ rows: listed, outcome: o, filter: f, oldest, page: Math.min(p, pages), pages, total, now: ctx.now, csrf: ctx.csrf }), {
     nav: 'reports',
     chrome: page.chrome,
   });
@@ -269,7 +274,7 @@ socialRouter.get('/stats', (req, res) => {
       rows: rows.slice(0, PAGE),
       offset: (p - 1) * PAGE,
       page: p,
-      hasMore: rows.length > PAGE,
+      pages: Math.max(1, Math.ceil(rankingTotals(db).players / PAGE)),
       myId: me,
       findId,
       leaders: rankings(db, kind, 3, 0),
@@ -288,14 +293,14 @@ socialRouter.get('/stats/villages', (req, res) => {
   const p = pageParam(req.query.page);
   const rows = villageRankings(db, PAGE + 1, (p - 1) * PAGE);
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
-  sendPage(req, res, 'Statistics', villageRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE, myId: req.ctx.user?.id ?? null }), { nav: 'stats', chrome });
+  sendPage(req, res, 'Statistics', villageRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, pages: Math.max(1, Math.ceil(rankingTotals(db).villages / PAGE)), myId: req.ctx.user?.id ?? null }), { nav: 'stats', chrome });
 });
 
 socialRouter.get('/stats/heroes', (req, res) => {
   const p = pageParam(req.query.page);
   const rows = heroRankings(db, PAGE + 1, (p - 1) * PAGE);
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
-  sendPage(req, res, 'Statistics', heroRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, hasMore: rows.length > PAGE, myId: req.ctx.user?.id ?? null }), { nav: 'stats', chrome });
+  sendPage(req, res, 'Statistics', heroRankingView({ rows: rows.slice(0, PAGE), offset: (p - 1) * PAGE, page: p, pages: Math.max(1, Math.ceil(rankingTotals(db).heroes / PAGE)), myId: req.ctx.user?.id ?? null }), { nav: 'stats', chrome });
 });
 
 socialRouter.get('/player/:id', (req, res) => {

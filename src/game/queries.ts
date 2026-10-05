@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import type { Q } from '../db/index.js';
 import { allianceMembers, alliances, heroes, messages, movements, reports, tiles, troops, users, villages } from '../db/schema.js';
 import { config } from '../config.js';
@@ -278,18 +278,25 @@ export type ReportFilter = keyof typeof REPORT_FILTERS;
 
 export type ReportOutcomeFilter = 'none' | 'some' | 'all';
 
-export function reportList(q: Q, userId: number, filter: ReportFilter, limit: number, offset: number, outcome?: ReportOutcomeFilter | null) {
+function reportCond(userId: number, filter: ReportFilter, outcome?: ReportOutcomeFilter | null) {
   const kinds = REPORT_FILTERS[filter];
-  const cond = and(
+  return and(
     eq(reports.userId, userId),
     kinds.length > 0 ? inArray(reports.kind, [...kinds]) : undefined,
     outcome ? eq(reports.outcome, outcome) : undefined,
   );
+}
+
+export function reportCount(q: Q, userId: number, filter: ReportFilter, outcome?: ReportOutcomeFilter | null): number {
+  return q.select({ n: count() }).from(reports).where(reportCond(userId, filter, outcome)).get()?.n ?? 0;
+}
+
+export function reportList(q: Q, userId: number, filter: ReportFilter, limit: number, offset: number, outcome?: ReportOutcomeFilter | null, oldestFirst = false) {
   return q
     .select({ id: reports.id, kind: reports.kind, title: reports.title, isRead: reports.isRead, createdAt: reports.createdAt, data: reports.data })
     .from(reports)
-    .where(cond)
-    .orderBy(desc(reports.createdAt), desc(reports.id))
+    .where(reportCond(userId, filter, outcome))
+    .orderBy(...(oldestFirst ? [asc(reports.createdAt), asc(reports.id)] : [desc(reports.createdAt), desc(reports.id)]))
     .limit(limit)
     .offset(offset)
     .all();
@@ -299,6 +306,14 @@ export function playerProfile(q: Q, userId: number) {
   const user = q.select().from(users).where(eq(users.id, userId)).get();
   if (!user) return undefined;
   return { user, villages: userVillages(q, userId) };
+}
+
+export function rankingTotals(q: Q): { players: number; villages: number; heroes: number } {
+  return {
+    players: q.get<{ n: number }>(sql`select count(*) as n from users u where u.banned = 0`)?.n ?? 0,
+    villages: q.select({ n: count() }).from(villages).get()?.n ?? 0,
+    heroes: q.select({ n: count() }).from(heroes).get()?.n ?? 0,
+  };
 }
 
 export function villageRankings(q: Q, limit: number, offset: number) {

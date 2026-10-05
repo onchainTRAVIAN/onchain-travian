@@ -5,7 +5,7 @@ import type { ReportFilter } from '../../game/queries.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, icon, resIcon } from './layout.js';
-import { paginate, unitIcon, unitsTable } from './parts.js';
+import { pager, unitIcon, unitsTable } from './parts.js';
 
 const KIND_ICON: Record<string, [string, string]> = {
   attack_won: ['ui/win', 'Won as attacker'],
@@ -42,8 +42,8 @@ function outcomeIcon(o: 'none' | 'some' | 'all'): SafeHtml {
 
 const FILTERS: { key: ReportFilter; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'attacks', label: 'Attacks' },
-  { key: 'defense', label: 'Defence' },
+  { key: 'attacks', label: 'Offensive' },
+  { key: 'defense', label: 'Defensive' },
   { key: 'scouting', label: 'Scouting' },
   { key: 'trade', label: 'Trade' },
   { key: 'other', label: 'Other' },
@@ -53,37 +53,53 @@ export function reportListView(d: {
   rows: { id: number; kind: string; title: string; isRead: boolean; createdAt: number; outcome?: 'none' | 'some' | 'all' | null }[];
   filter: ReportFilter;
   outcome?: 'none' | 'some' | 'all' | null;
+  oldest: boolean;
   page: number;
-  hasMore: boolean;
+  pages: number;
+  total: number;
   now: number;
   csrf: string;
 }): SafeHtml {
-  return html`<h1>📜 Reports</h1>
-    <nav class="tabs" aria-label="Report filter">${FILTERS.map(
-      (f) => html`<a href="/reports?f=${f.key}${d.outcome ? `&o=${d.outcome}` : ''}" class="${f.key === d.filter ? 'on' : ''}">${f.label}</a>`,
+  const q = (o: { f?: ReportFilter; o?: string | null; old?: boolean }) => {
+    const p = new URLSearchParams();
+    p.set('f', o.f ?? d.filter);
+    const oc = o.o === undefined ? d.outcome : o.o;
+    if (oc) p.set('o', oc);
+    if (o.old ?? d.oldest) p.set('sort', 'old');
+    return `/reports?${p.toString()}`;
+  };
+  const buttons = html`<div class="rbtns"><button type="submit" name="act" value="readall" class="gbtn green">Mark all as read</button>
+    <button type="submit" name="act" value="deleteall" class="gbtn green" data-confirm="Delete all ${d.filter === 'all' ? '' : 'these '}reports? This can't be undone.">Delete all${d.filter === 'all' ? '' : ' in this tab'}</button></div>`;
+  const selRow = (id: string) => html`<div class="rsel"><label><input type="checkbox" id="${id}" data-checkall> Select all</label>
+    <span class="rselact"><button type="submit" name="act" value="read" class="small secondary">Mark as read</button> <button type="submit" name="act" value="delete" class="small secondary">Delete</button></span></div>`;
+  return html`<h1>Reports</h1>
+    <nav class="woodtabs" aria-label="Report folders">${FILTERS.map(
+      (f) => html`<a href="${q({ f: f.key })}" class="${f.key === d.filter ? 'on' : ''}"${f.key === d.filter ? html` aria-current="page"` : ''}>${f.label}</a>`,
     )}</nav>
-    <p class="routc small">Losses: ${[
-      { key: null, label: 'any', ico: '' },
-      { key: 'none', label: 'none', ico: 'ui/rep-g' },
-      { key: 'some', label: 'some', ico: 'ui/rep-y' },
-      { key: 'all', label: 'all troops', ico: 'ui/rep-r' },
-    ].map(
-      (o) => html`<a href="/reports?f=${d.filter}${o.key ? `&o=${o.key}` : ''}" class="${(d.outcome ?? null) === o.key ? 'on' : ''}">${o.ico ? icon(o.ico, '', 14) : ''} ${o.label}</a>`,
-    )}</p>
-    ${d.rows.length === 0
-      ? html`<p class="muted">${d.outcome ? 'No reports match this filter.' : 'No reports yet. Battles, scouting and reinforcements show up here.'}</p>`
-      : html`<form method="post" action="/reports/bulk" class="bulk">${csrfField(d.csrf)}<input type="hidden" name="f" value="${d.filter}">
-        <table class="tb"><thead><tr><th class="chk"><label class="sr" for="chkall">Select all</label><input type="checkbox" id="chkall" data-checkall title="Select all"></th><th></th><th>Subject:</th><th>Sent:</th></tr></thead><tbody>${d.rows.map(
-          (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td class="chk"><label class="sr" for="r${r.id}">Select</label><input type="checkbox" id="r${r.id}" name="ids" value="${r.id}"></td><td>${r.outcome ? outcomeIcon(r.outcome) : kindIcon(r.kind)}</td>
-            <td><a href="/reports/${r.id}">${r.title}</a>${r.isRead ? '' : html` <span class="small bad">(new)</span>`}</td><td class="nowrap">${fmtAgo(r.createdAt, d.now)}</td></tr>`,
-        )}</tbody></table>
-        <p class="bulkbar"><button type="submit" name="act" value="delete" class="small">Delete selected</button>
-          <button type="submit" name="act" value="read" class="small secondary">Mark selected as read</button>
-          <span class="sep"></span>
-          <button type="submit" name="act" value="readall" class="small secondary">Mark all as read</button>
-          <button type="submit" name="act" value="deleteall" class="small secondary" data-confirm="Delete all ${d.filter === 'all' ? '' : 'these '}reports? This can't be undone.">Delete all${d.filter === 'all' ? '' : ' in this tab'}</button></p>
-        </form>`}
-    ${paginate(`/reports?f=${d.filter}${d.outcome ? `&o=${d.outcome}` : ''}`, d.page, d.hasMore)}`;
+    <div class="woodbody">
+    <form method="post" action="/reports/bulk" class="bulk">${csrfField(d.csrf)}<input type="hidden" name="f" value="${d.filter}">
+      <div class="rtop">${buttons}
+        <p class="routc small">Losses: ${[
+          { key: null, label: 'any', ico: '' },
+          { key: 'none', label: 'none', ico: 'ui/rep-g' },
+          { key: 'some', label: 'some', ico: 'ui/rep-y' },
+          { key: 'all', label: 'all', ico: 'ui/rep-r' },
+        ].map((o) => html`<a href="${q({ o: o.key })}" class="${(d.outcome ?? null) === o.key ? 'on' : ''}">${o.ico ? icon(o.ico, '', 14) : ''} ${o.label}</a>`)}</p></div>
+      ${selRow('chkall')}
+      <table class="tb rlist"><thead><tr><th class="chk"></th><th class="rico"></th><th>Subject:</th>
+        <th class="rrecv"><a href="${q({ old: !d.oldest })}" title="${d.oldest ? 'Oldest first — click for newest first' : 'Newest first — click for oldest first'}">Received ${d.oldest ? '▲' : '▼'}</a></th></tr></thead><tbody>
+      ${d.rows.length === 0
+        ? html`<tr><td colspan="4" class="rnone">${d.outcome ? 'No reports match this filter.' : 'There are no reports available.'}</td></tr>`
+        : d.rows.map(
+            (r) => html`<tr class="${r.isRead ? '' : 'unread'}"><td class="chk"><label class="sr" for="r${r.id}">Select</label><input type="checkbox" id="r${r.id}" name="ids" value="${r.id}"></td><td class="rico">${r.outcome ? outcomeIcon(r.outcome) : kindIcon(r.kind)}</td>
+              <td><a href="/reports/${r.id}">${r.title}</a>${r.isRead ? '' : html` <span class="rnew">new</span>`}</td><td class="nowrap rrecv">${fmtAgo(r.createdAt, d.now)}</td></tr>`,
+          )}
+      </tbody></table>
+      ${selRow('chkall2')}
+      <div class="rbottom">${buttons}${pager(q({}), d.page, d.pages)}</div>
+    </form>
+    <p class="small muted rnote">${fmtNum(d.total)} report${d.total === 1 ? '' : 's'} in this folder. Unread reports are bold; the coloured dot shows your losses (green none, yellow some, red all).</p>
+    </div>`;
 }
 
 type HeroLine = NonNullable<BattleReportData['heroes']>[number];

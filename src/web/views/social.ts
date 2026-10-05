@@ -5,6 +5,7 @@ import { TRIBES, type TribeId } from '../../game/rules/units.js';
 import type { RankKind } from '../../game/queries.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
+import { pager as numPager } from './parts.js';
 import { csrfField, timer } from './layout.js';
 import { avatarUrl } from '../../game/actions/avatar.js';
 import { WEEK_MS, WEEKLY_CATEGORIES, WEEKLY_LABEL, WEEKLY_PRIZES, type MedalView, type WeeklyCategory, type WeeklyRow } from '../../game/actions/weekly.js';
@@ -93,12 +94,12 @@ function statsTabs(main: 'players' | 'alliances' | 'villages' | 'heroes' | 'week
   const t = (href: string, on: boolean, label: string) => html`<a href="${href}" class="${on ? 'on' : ''}"${on ? html` aria-current="page"` : ''}>${label}</a>`;
   const subNav =
     main === 'players'
-      ? html`<nav class="fsub" aria-label="Ranking">${RANK_TABS.map((r) => t(`/stats?k=${r.key}`, r.key === sub, r.label))}</nav>`
+      ? html`<nav class="pilltabs" aria-label="Ranking">${RANK_TABS.map((r) => t(`/stats?k=${r.key}`, r.key === sub, r.label))}</nav>`
       : main === 'alliances'
-        ? html`<nav class="fsub" aria-label="Ranking">${ALLY_TABS.map((r) => t(`/alliances?k=${r.key}`, r.key === sub, r.label))}</nav>`
-        : html`<div class="fsub empty"></div>`;
-  return html`<nav class="ftabs" aria-label="Statistics">${t('/stats', main === 'players', 'Players')}${t('/alliances', main === 'alliances', 'Alliances')}${t('/stats/villages', main === 'villages', 'Villages')}${t('/stats/heroes', main === 'heroes', 'Heroes')}${t('/stats/week', main === 'week', 'Top 10')}${t('/endgame', false, 'Wonders')}</nav>
-    ${subNav}`;
+        ? html`<nav class="pilltabs" aria-label="Ranking">${ALLY_TABS.map((r) => t(`/alliances?k=${r.key}`, r.key === sub, r.label))}</nav>`
+        : html``;
+  return html`<nav class="woodtabs" aria-label="Statistics">${t('/stats', main === 'players', 'Players')}${t('/alliances', main === 'alliances', 'Alliances')}${t('/stats/villages', main === 'villages', 'Villages')}${t('/stats/heroes', main === 'heroes', 'Heroes')}${t('/stats/week', main === 'week', 'Top 10')}${t('/endgame', false, 'Wonders')}</nav>
+    <div class="woodbody statbody">${subNav}`;
 }
 
 const ALLY_TABS: { key: AllianceRankKind; label: string; title: string; col: string }[] = [
@@ -124,7 +125,7 @@ export function allianceRankingView(d: {
   leaders: { id: number; name: string; tag: string; members: number; pop: number; off: number; def: number }[];
   offset: number;
   page: number;
-  hasMore: boolean;
+  pages: number;
   mine: { id: number; rank: number; total: number; tag: string; value: number } | null;
   perPage: number;
 }): SafeHtml {
@@ -159,21 +160,15 @@ export function allianceRankingView(d: {
               <td class="val">${fmtNum(value(r))}${vbar(value(r), top)}</td></tr>`,
           )}
     </tbody></table>
-    ${rankFoot(html``, pager(`/alliances?k=${d.kind}`, d.page, d.hasMore))}`;
+    ${rankFoot(html``, numPager(`/alliances?k=${d.kind}`, d.page, d.pages))}</div>`;
 }
 
 /** "Rank / Name" search under a ranking, like the original. */
 function rankSearch(action: string, kind?: string): SafeHtml {
   return html`<form method="get" action="${action}" class="ranksearch">${kind ? html`<input type="hidden" name="k" value="${kind}">` : ''}
     <label>Rank <input type="number" name="rank" min="1" class="w30" inputmode="numeric"></label>
-    <label>Name <input type="text" name="name" maxlength="20" class="w120"></label>
-    <button type="submit" class="small">Find</button></form>`;
-}
-
-function pager(base: string, page: number, hasMore: boolean): SafeHtml {
-  if (page <= 1 && !hasMore) return html``;
-  const sep = base.includes('?') ? '&' : '?';
-  return html`<span class="pager">${page > 1 ? html`<a href="${base}${sep}page=${page - 1}">« back</a>` : html`<span class="none">« back</span>`} | ${hasMore ? html`<a href="${base}${sep}page=${page + 1}">forward »</a>` : html`<span class="none">forward »</span>`}</span>`;
+    <label>or name: <input type="text" name="name" maxlength="20" class="w120"></label>
+    <button type="submit" class="gbtn green">OK</button></form>`;
 }
 
 function rankFoot(form: SafeHtml, pages: SafeHtml): SafeHtml {
@@ -192,7 +187,7 @@ function rankCell(rank: number): SafeHtml {
 }
 
 function tribeMark(tribe: TribeId): SafeHtml {
-  return tribe === 'nature' ? html`` : html`<img src="/static/img/units/${tribe}-1.svg" width="14" height="14" alt="${TRIBES[tribe].name}" title="${TRIBES[tribe].name}" class="tmark">`;
+  return tribe === 'nature' ? html`` : html`<img src="/static/img/tribe/${tribe}.svg" width="20" height="20" alt="${TRIBES[tribe].name}" title="${TRIBES[tribe].name}" class="helm">`;
 }
 
 interface Plaque { href: string; name: string; avatar: string; sub: SafeHtml; value: string; label: string }
@@ -242,10 +237,10 @@ export function weeklyView(d: {
             ? html`<span class="none">-</span>`
             : w.map((r) => html`<span class="nowrap">${medalImg(r.rank, 14)} <a href="/player/${r.userId}">${r.username}</a> <span class="small muted">(${fmtNum(r.value)})</span></span> `)}</td></tr>`;
         })}</tbody></table></section>`
-      : ''}`;
+      : ''}</div>`;
 }
 
-export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; hasMore: boolean; myId?: number | null; top?: number }): SafeHtml {
+export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; pages: number; myId?: number | null; top?: number }): SafeHtml {
   const top = d.top ?? (d.page === 1 ? d.rows[0]?.pop ?? 0 : 0);
   return html`<h1>Statistics</h1>${statsTabs('villages')}
     <table class="ranks"><thead><tr><th colspan="4">The largest villages</th></tr><tr><td></td><td>Village</td><td>Player</td><td>Population</td></tr></thead><tbody>
@@ -254,10 +249,10 @@ export function villageRankingView(d: { rows: { id: number; name: string; x: num
         <td class="vil"><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.name}</a> <span class="co">(${r.x}|${r.y})</span></td>
         <td class="pla">${r.ownerId ? html`<a href="/player/${r.ownerId}">${r.owner}</a>` : '-'}</td><td class="val">${fmtNum(r.pop)}${vbar(r.pop, top)}</td></tr>`,
     )}</tbody></table>
-    ${rankFoot(html``, pager('/stats/villages', d.page, d.hasMore))}`;
+    ${rankFoot(html``, numPager('/stats/villages', d.page, d.pages))}</div>`;
 }
 
-export function heroRankingView(d: { rows: { name: string; level: number; xp: number; owner: string; ownerId: number; tribe: TribeId }[]; offset: number; page: number; hasMore: boolean; myId?: number | null }): SafeHtml {
+export function heroRankingView(d: { rows: { name: string; level: number; xp: number; owner: string; ownerId: number; tribe: TribeId }[]; offset: number; page: number; pages: number; myId?: number | null }): SafeHtml {
   const top = d.page === 1 ? d.rows[0]?.xp ?? 0 : 0;
   return html`<h1>Statistics</h1>${statsTabs('heroes')}
     <table class="ranks"><thead><tr><th colspan="5">The most experienced heroes</th></tr><tr><td></td><td>Hero</td><td>Player</td><td>Level</td><td>Experience</td></tr></thead><tbody>
@@ -265,9 +260,9 @@ export function heroRankingView(d: { rows: { name: string; level: number; xp: nu
       ? html`<tr><td colspan="5" class="none center">No heroes yet.</td></tr>`
       : d.rows.map(
           (r, i) => html`<tr class="${r.ownerId === d.myId ? 'hl' : ''}">${rankCell(d.offset + i + 1)}<td class="pla"><img src="/static/img/units/hero.svg" width="16" height="16" alt="" class="tmark"> ${r.name}</td>
-            <td class="pla"><a href="/player/${r.ownerId}">${r.owner}</a> ${tribeMark(r.tribe)}</td><td class="num">${r.level}</td><td class="val">${fmtNum(r.xp)}${vbar(r.xp, top)}</td></tr>`,
+            <td class="pla">${tribeMark(r.tribe)} <a href="/player/${r.ownerId}">${r.owner}</a></td><td class="num">${r.level}</td><td class="val">${fmtNum(r.xp)}${vbar(r.xp, top)}</td></tr>`,
         )}</tbody></table>
-    ${rankFoot(html``, pager('/stats/heroes', d.page, d.hasMore))}`;
+    ${rankFoot(html``, numPager('/stats/heroes', d.page, d.pages))}</div>`;
 }
 
 export function rankingView(d: {
@@ -275,7 +270,7 @@ export function rankingView(d: {
   rows: { id: number; username: string; tribe: TribeId; pop: number; villages: number; off: number; def: number; loot: number; avatarAt: number; allianceId: number | null; allianceTag: string | null }[];
   offset: number;
   page: number;
-  hasMore: boolean;
+  pages: number;
   myId: number | null;
   findId?: number | null;
   /** The top three (for the hall of fame) and the leader's value (for bars). */
@@ -307,14 +302,14 @@ export function rankingView(d: {
         ? html`<tr><td colspan="5" class="none center">No players yet.</td></tr>`
         : d.rows.map(
             (r, i) => html`<tr class="${r.id === d.myId ? 'hl' : ''}${r.id === d.findId ? ' found' : ''}"${r.id === d.myId ? html` id="me"` : r.id === d.findId ? html` id="found"` : ''}>${rankCell(d.offset + i + 1)}
-              <td class="pla"><img class="av" src="${avatarUrl({ id: r.id, tribe: r.tribe, avatarAt: r.avatarAt })}" width="20" height="20" alt=""> <a href="/player/${r.id}">${r.username}</a> ${tribeMark(r.tribe)}</td>
+              <td class="pla">${tribeMark(r.tribe)} <a href="/player/${r.id}">${r.username}</a></td>
               <td class="al">${r.allianceId && r.allianceTag ? html`<a href="/alliance/${r.allianceId}" class="atag">${r.allianceTag}</a>` : html`<span class="none">-</span>`}</td>
               ${isPop
                 ? html`<td class="val">${fmtNum(r.pop)}${vbar(r.pop, top)}</td><td class="num">${r.villages}</td>`
                 : html`<td class="num">${fmtNum(r.pop)}</td><td class="val">${fmtNum(value(r))}${vbar(value(r), top)}</td>`}</tr>`,
           )}
     </tbody></table>
-    ${rankFoot(rankSearch('/stats', d.kind), pager(`/stats?k=${d.kind}`, d.page, d.hasMore))}`;
+    ${rankFoot(rankSearch('/stats', d.kind), numPager(`/stats?k=${d.kind}`, d.page, d.pages))}</div>`;
 }
 
 export interface ProfileUser {
