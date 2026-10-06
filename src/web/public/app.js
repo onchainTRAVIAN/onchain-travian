@@ -217,11 +217,11 @@
       .then(function (j) { masks = j.masks; })
       .catch(function () { masks = null; });
     var maskFor = function (img) {
-      var m = /\/static\/img\/(.+\.svg)/.exec(img.getAttribute('src') || '');
+      var m = /\/static\/img\/(.+\.(?:svg|webp))/.exec(img.getAttribute('src') || '');
       if (!m || !masks) return null;
       var size = '@' + img.offsetWidth + 'x' + img.offsetHeight;
       // Stage pictures (e.g. main-3.svg) fall back to the base outline if their own mask is missing.
-      return masks[m[1] + size] || masks[m[1].replace(/-\d\.svg$/, '.svg') + size] || null;
+      return masks[m[1] + size] || masks[m[1].replace(/-\d\.(svg|webp)$/, '.svg') + size] || null;
     };
     var drawnAt = function (img, fx, fy) {
       var mk = maskFor(img);

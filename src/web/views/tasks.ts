@@ -3,7 +3,7 @@ import type { TaskStatus } from '../../game/actions/tasks.js';
 import { TASK_CHAPTERS, type TaskReward } from '../../game/rules/tasks.js';
 import { faqTopic } from '../../game/rules/faq.js';
 import type { TribeId } from '../../game/rules/units.js';
-import { hasAsset, assetUrl } from '../assets.js';
+import { assetUrl, hasAsset, pic } from '../assets.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, icon, resIcon } from './layout.js';
@@ -21,7 +21,7 @@ function claimForm(s: TaskStatus, csrf: string, cls = ''): SafeHtml {
 }
 
 export function advisorSrc(tribe: TribeId): string {
-  return hasAsset(`img/advisor/${tribe}.svg`) ? assetUrl(`img/advisor/${tribe}.svg`) : assetUrl(`img/units/big/${tribe}-1.svg`);
+  return hasAsset(`img/advisor/${tribe}.svg`) ? assetUrl(`img/advisor/${tribe}.svg`) : pic(`img/units/big/${tribe}-1`);
 }
 
 /** Right-hand "Task overview" panel: advisor, current task, progress and reward. */

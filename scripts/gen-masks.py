@@ -17,6 +17,11 @@ SCALE = 2   # render at 2x
 jobs = []  # (key, file url, w, h)
 for f in sorted((IMG / 'buildings').glob('*.svg')):
     jobs.append((f'buildings/{f.name}@75x100', f, 75, 100))
+for f in sorted((IMG / 'buildings').glob('*.webp')):
+    if f.name.startswith('rally-'):
+        jobs.append((f'buildings/{f.name}@69x120', f, 69, 120))
+    else:
+        jobs.append((f'buildings/{f.name}@75x100', f, 75, 100))
 for name in ('rally.svg', 'construction.svg', 'empty.svg'):
     jobs.append((f'buildings/{name}@69x120', IMG / 'buildings' / name, 69, 120))
 for f in sorted((IMG / 'walls').glob('*.svg')):
@@ -27,7 +32,8 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     pg = b.new_page(device_scale_factor=SCALE, viewport={'width': 600, 'height': 500})
     for key, f, w, h in jobs:
-        uri = 'data:image/svg+xml;base64,' + base64.b64encode(f.read_bytes()).decode()
+        mime = 'image/webp' if f.suffix == '.webp' else 'image/svg+xml'
+        uri = f'data:{mime};base64,' + base64.b64encode(f.read_bytes()).decode()
         pg.set_content(f'<html><body style="margin:0;background:transparent"><img id="i" src="{uri}" width="{w}" height="{h}" style="display:block"></body></html>')
         pg.wait_for_function('document.getElementById("i").complete && document.getElementById("i").naturalWidth > 0')
         png = pg.locator('#i').screenshot(omit_background=True)

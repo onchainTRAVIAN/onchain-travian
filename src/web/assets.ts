@@ -30,11 +30,21 @@ export function levelStage(level: number): number {
  * otherwise the nearest lower stage, otherwise the base `<stem>.svg`.
  */
 export function stagedImage(dir: string, stem: string, level: number): string {
+  // Painted art (kie.ai, scripts/art/kie): <stem>-<stage>.webp for every stage, preferred when present.
+  for (let stage = levelStage(level); stage >= 1; stage--) {
+    const webp = `img/${dir}/${stem}-${stage}.webp`;
+    if (has(webp)) return assetUrl(webp);
+  }
   for (let stage = levelStage(level); stage >= 2; stage--) {
     const rel = `img/${dir}/${stem}-${stage}.svg`;
     if (has(rel)) return assetUrl(rel);
   }
   return assetUrl(`img/${dir}/${stem}.svg`);
+}
+
+/** A picture by path without extension: the painted WebP when present, else the SVG. */
+export function pic(relNoExt: string): string {
+  return has(`${relNoExt}.webp`) ? assetUrl(`${relNoExt}.webp`) : assetUrl(`${relNoExt}.svg`);
 }
 
 /** Wall overlay: wooden spikes for every tribe at levels 1–4, then the tribe's own wall by stage. */

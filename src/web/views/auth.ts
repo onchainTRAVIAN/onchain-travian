@@ -1,5 +1,5 @@
 import { panel } from './parts.js';
-import { assetUrl } from '../assets.js';
+import { assetUrl, pic } from '../assets.js';
 import { config } from '../../config.js';
 import { TRIBES, TRIBE_IDS } from '../../game/rules/units.js';
 import { fmtNum } from '../format.js';
@@ -63,7 +63,7 @@ export function registerView(csrf: string, values: { username?: string; tribe?: 
       <legend><b>Choose your tribe</b> <span class="muted small">(this cannot be changed later)</span></legend>
       ${TRIBE_IDS.map((id) => {
         const t = TRIBES[id];
-        return html`<div class="choice tribepick"><label for="tribe-${id}"><img src="${assetUrl(`img/units/big/${id}-1.svg`)}" width="60" height="70" alt=""><input id="tribe-${id}" type="radio" name="tribe" value="${id}"${id === selected ? html` checked` : ''}>
+        return html`<div class="choice tribepick"><label for="tribe-${id}"><img src="${pic(`img/units/big/${id}-1`)}" width="60" height="70" alt=""><input id="tribe-${id}" type="radio" name="tribe" value="${id}"${id === selected ? html` checked` : ''}>
           <strong>${t.name}</strong> <span class="muted small">— ${t.tagline}</span></label>
           <div class="small">${t.description}</div>
           <ul class="small">${t.strengths.map((s) => html`<li>${s}</li>`)}</ul>
