@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.0 — 2026-10-06 — painted art (AI-generated)
+- **All buildings (5 stages each), troops and tribe heroes repainted** with AI image generation (kie.ai, Nano Banana) in one consistent hand-painted style; the small unit and hero icons are made from the same art.
+- **Phones:** the menu and Info box fold behind a "☰ Menu" button so pages start with their content; urgent notices (incoming attacks) stay visible; tab rows swipe; the simulator's troop tables scroll.
+
 ## 0.17.1 — 2026-10-06
 - **Heroes keep their progress:** training a new hero after yours died (even from another unit) keeps its level, experience and skill points; only the unit it fights as changes.
 - **Troops on the way** on every village and oasis page: your attacks, raids, scouts and reinforcements heading there, troops coming back from there, and attacks from that village on yours — each with a countdown.
