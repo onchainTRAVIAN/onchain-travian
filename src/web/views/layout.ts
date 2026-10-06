@@ -1,6 +1,6 @@
 import type { TaskStatus } from '../../game/actions/tasks.js';
 import { taskPanel } from './tasks.js';
-import { assetUrl, hasAsset } from '../assets.js';
+import { assetUrl, hasAsset, pic } from '../assets.js';
 import { config } from '../../config.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, type Resources } from '../../game/rules/resources.js';
 import type { Economy, VillageRow } from '../../game/engine/state.js';
@@ -63,7 +63,7 @@ export interface PageOpts {
 
 /** <img> for one of the game's SVG icons. */
 export function icon(path: string, alt: string, w = 16, h = w): SafeHtml {
-  return html`<img src="${assetUrl(`img/${path}.svg`)}" width="${w}" height="${h}" alt="${alt}" title="${alt}">`;
+  return html`<img src="${pic(`img/${path}`)}" width="${w}" height="${h}" alt="${alt}" title="${alt}">`;
 }
 
 /** Classic 18×12 resource icon. */

@@ -1,3 +1,4 @@
+import { pic } from '../assets.js';
 import { NAME_CHANGE_PRICE } from '../../game/actions/account.js';
 import type { AllianceRankKind } from '../../game/actions/alliance.js';
 import { config } from '../../config.js';
@@ -261,7 +262,7 @@ export function heroRankingView(d: { rows: { name: string; level: number; xp: nu
     ${d.rows.length === 0
       ? html`<tr><td colspan="5" class="none center">No heroes yet.</td></tr>`
       : d.rows.map(
-          (r, i) => html`<tr class="${r.ownerId === d.myId ? 'hl' : ''}">${rankCell(d.offset + i + 1)}<td class="pla"><img src="/static/img/${heroIconPath(r.tribe)}.svg" width="16" height="16" alt="" class="tmark"> ${r.name}</td>
+          (r, i) => html`<tr class="${r.ownerId === d.myId ? 'hl' : ''}">${rankCell(d.offset + i + 1)}<td class="pla"><img src="${pic(`img/${heroIconPath(r.tribe)}`)}" width="16" height="16" alt="" class="tmark"> ${r.name}</td>
             <td class="pla">${tribeMark(r.tribe)} <a href="/player/${r.ownerId}">${r.owner}</a></td><td class="num">${r.level}</td><td class="val">${fmtNum(r.xp)}${vbar(r.xp, top)}</td></tr>`,
         )}</tbody></table>
     ${rankFoot(html``, numPager('/stats/heroes', d.page, d.pages))}</div>`;

@@ -22,7 +22,7 @@ export function unitName(tribe: TribeId, slot: number): string {
 
 /** The tribe's own small hero icon when drawn, else the generic one. */
 export function heroIconPath(tribe: TribeId): string {
-  return hasAsset(`img/units/hero-${tribe}.svg`) ? `units/hero-${tribe}` : 'units/hero';
+  return hasAsset(`img/units/hero-${tribe}.webp`) || hasAsset(`img/units/hero-${tribe}.svg`) ? `units/hero-${tribe}` : 'units/hero';
 }
 
 /** 16px unit icon (slot 10 = hero), linking to the troop's information page unless `link` is false. */
