@@ -127,6 +127,15 @@ mapRouter.get('/map/chunk', (req, res) => {
   res.set('Cache-Control', 'no-store').json({ r: CHUNK_R, tiles });
 });
 
+/** Your troops' current movements, as tile marks ("x|y" → kinds), for the live map to refresh. */
+mapRouter.get('/map/marks', (req, res) => {
+  const ctx = authed(req);
+  const myIds = db.select({ id: villages.id }).from(villages).where(eq(villages.userId, ctx.user.id)).all().map((v) => v.id);
+  const marks: Record<string, MoveMark[]> = {};
+  for (const [k, set] of movementMarks(myIds)) marks[k] = [...set];
+  res.set('Cache-Control', 'no-store').json(marks);
+});
+
 /** The whole world for the minimap: one character per tile ('.' empty, '~' oasis, m/a/n/o villages), rows north to south. */
 mapRouter.get('/map/mini', (req, res) => {
   const ctx = authed(req);

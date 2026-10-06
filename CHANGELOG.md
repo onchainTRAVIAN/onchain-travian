@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.16.5 — 2026-10-06
+- **Live map shows your troop movements again:** a red marker on tiles your attacks/raids are heading to, green for reinforcements, blue for settlers, brown for troops coming back; they refresh every 15 seconds.
 - Training queue: the extra "All" finish button is gone (it cost the same and did the same as the last batch's button); the last batch's button is now labelled "All".
 
 ## 0.16.4 — 2026-10-05

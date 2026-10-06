@@ -1185,3 +1185,11 @@ a.binfo:hover img { filter: drop-shadow(0 0 3px #9cc66a); }
 .ftlv { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
 .ftlv img { width: 48px; height: auto; }
 .qfinish { display: flex; align-items: center; gap: 10px; margin: 0; }
+.mvk { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px 0 8px; vertical-align: -1px; background: #888; }
+.mvk.attack { background: #d22; }
+.mvk.support { background: #3a9a1a; }
+.mvk.settle { background: #2a6fc9; }
+.mvk.back { background: #8a6a3a; }
+.lt-m .mvk { position: relative; width: 16px; height: 16px; margin: 0; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+.lt-m .mvk::after { content: '›'; position: absolute; inset: 0; color: #fff; font: bold 14px/12px Verdana, sans-serif; text-align: center; }
+.lt-m .mvk.back::after { content: '‹'; }

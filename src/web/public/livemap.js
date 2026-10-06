@@ -100,16 +100,35 @@
     el.firstChild.src = '/static/img/map/flat/' + t.i + '.svg';
     el.className = 'lt' + (t.r ? ' rel-' + t.r : '') + (t.k === 'o' ? ' oas' : '');
     while (el.childNodes.length > 1) el.removeChild(el.lastChild);
-    if (t.m) {
-      var box = document.createElement('span');
-      box.className = 'lt-m';
-      for (var i = 0; i < t.m.length; i++) {
-        var s = document.createElement('span');
-        s.className = 'mvk ' + t.m[i];
-        box.appendChild(s);
-      }
-      el.appendChild(box);
+    drawMarks(el);
+  };
+
+  /* ---------- Your troop movements (refreshed every 15 s) ---------- */
+  var marks = {};
+  var MARK_TITLE = { attack: 'Your attack or raid is heading here', support: 'Your reinforcements are heading here', settle: 'Your settlers are heading here', back: 'Your troops are coming back from here' };
+  var drawMarks = function (el) {
+    var old = el.querySelector('.lt-m');
+    if (old) el.removeChild(old);
+    var m = marks[key(el.getAttribute('data-x'), el.getAttribute('data-y'))];
+    if (!m || !m.length) return;
+    var box = document.createElement('span');
+    box.className = 'lt-m';
+    for (var i = 0; i < m.length; i++) {
+      var s = document.createElement('span');
+      s.className = 'mvk ' + m[i];
+      s.title = MARK_TITLE[m[i]] || '';
+      box.appendChild(s);
     }
+    el.appendChild(box);
+  };
+  var loadMarks = function () {
+    fetch('/map/marks', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (j) {
+        marks = j || {};
+        for (var k in els) drawMarks(els[k]);
+      })
+      .catch(function () { /* keep the old marks */ });
   };
   var make = function (lx, ly) {
     var wx = wrap(lx);
@@ -464,5 +483,7 @@
   window.addEventListener('resize', dirty);
 
   loadMini();
+  loadMarks();
+  setInterval(function () { if (!document.hidden) loadMarks(); }, 15000);
   render();
 })();
