@@ -30,12 +30,12 @@ from scipy import ndimage
 
 # Roof colour family per building: (target hue deg, saturation factor, value factor, dark-grout hue deg).
 ROOF = {
-    'civic': (5, 0.92, 0.94, 12),       # muted brick red: main, townhall, residence, palace, embassy, treasury...
-    'military': (212, 0.22, 0.80, 212),  # slate grey-blue
-    'craft': (24, 0.58, 0.80, 18),       # brown wooden shingles
-    'trade': (23, 1.00, 1.00, 16),      # orange clay tiles
-    'farm': (36, 1.00, 1.00, 24),        # golden thatch / straw
-    'stone': (32, 0.07, 0.90, 30),       # grey stone roofs
+    'civic': (9, 0.95, 1.08, 14),        # warm light red tiles: main, townhall, residence, palace, embassy, treasury...
+    'military': (210, 0.26, 0.98, 210),  # light slate grey-blue
+    'craft': (27, 0.88, 1.06, 22),       # orange-brown wooden shingles
+    'trade': (30, 1.00, 1.12, 24),       # light orange clay tiles
+    'farm': (47, 1.18, 1.14, 36),        # golden-yellow thatch / straw (the classic T3 roof)
+    'stone': (36, 0.09, 1.04, 32),       # light grey stone roofs
 }
 FAMILY = {
     **dict.fromkeys(['main', 'townhall', 'residence', 'palace', 'embassy', 'treasury', 'heromansion', 'academy'], 'civic'),
@@ -45,16 +45,18 @@ FAMILY = {
     **dict.fromkeys(['granary', 'greatgranary', 'grainmill', 'bakery', 'horsetrough', 'cranny'], 'farm'),
     **dict.fromkeys(['warehouse', 'greatwarehouse', 'wonder'], 'stone'),
 }
-OUTLINE = (70, 50, 30)       # warm dark brown
-OUTLINE_ALPHA = (150, 70)    # edge neighbours, diagonal-only neighbours
+OUTLINE = (46, 32, 18)       # dark brown, crisp like T3's thin outline
+OUTLINE_ALPHA = (205, 95)    # edge neighbours, diagonal-only neighbours
 SHADOW = (84, 72, 48)        # contact shadow from the cut-out haze
 SHADOW_MAX_ALPHA = 56
-CREAM = np.array([0.88, 0.82, 0.68])  # warm light stone hue for pale surfaces
-PALE_FROM, PALE_KEEP, CREAM_MIX = 0.66, 0.55, 0.35  # pale (low-sat) values above PALE_FROM compress: 1.0 -> 0.85
+CREAM = np.array([0.92, 0.86, 0.70])  # warm light stone hue for pale surfaces
+PALE_FROM, PALE_KEEP, CREAM_MIX = 0.66, 0.68, 0.45  # pale (low-sat) values above PALE_FROM compress: 1.0 -> 0.89, beige
 SPECK_MAX = 12               # pale components up to this many px inside the building are filled
-CONTRAST, GAMMA, SATURATION = 1.08, 0.91, 0.97
+CONTRAST, GAMMA, SATURATION = 1.04, 0.86, 1.06
+OCHRE_HUE, OCHRE_PULL, WARM_SAT, WARM_LIFT = 41, 0.55, 1.1, 1.3  # sunny(): timber/brick -> honey ochre
+SUN_HUE, STONE_DESAT = 5, 0.35  # extra hue (deg) on sunlit faces; desaturation of light brick/stone
 WALL_TONE = (1.05, 0.88, 1.06)  # walls are smooth SVG renders: a little more light, less contrast
-ROLL_START, ROLL_TOP = 0.80, 0.95  # highlights above ROLL_START compress smoothly towards ROLL_TOP
+ROLL_START, ROLL_TOP = 0.84, 0.97  # highlights above ROLL_START compress smoothly towards ROLL_TOP
 
 
 def rgb_to_hsv(rgb: np.ndarray) -> np.ndarray:
@@ -159,6 +161,27 @@ def recolour(rgb: np.ndarray, a: np.ndarray, fam: str) -> np.ndarray:
     new = hsv_to_rgb(np.stack([nh, ns, nv], -1))
     out = rgb.copy()
     out[roof] = new[roof]
+    return out, roof
+
+
+def sunny(rgb: np.ndarray, a: np.ndarray, roof: np.ndarray) -> np.ndarray:
+    """Classic T3 look: timber and brick move from reddish brown towards light honey/ochre, warm colours get
+    lighter and a little more saturated. Dark lines stay brown (capped hue, so they never turn olive)."""
+    hsv = rgb_to_hsv(rgb)
+    h, s, v = hsv[..., 0] * 360, hsv[..., 1], hsv[..., 2]
+    warm = (a >= 0.5) & ~roof & (s > 0.18) & (h >= 4) & (h <= 46)
+    ramp = np.clip((h - 4) / 8, 0, 1)  # deep reds (flags, fruit) barely move
+    nh = h + (OCHRE_HUE - h) * OCHRE_PULL * ramp
+    lit = np.clip((v - 0.6) / 0.3, 0, 1)  # sunlit faces lean further to golden yellow
+    nh = nh + SUN_HUE * lit * ramp
+    nh = np.where(v < 0.35, np.minimum(nh, 34), nh)
+    ns = np.clip(s * WARM_SAT * (1 + 0.1 * lit), 0, 1)
+    stone = np.clip((0.42 - s) / 0.2, 0, 1) * np.clip((v - 0.6) / 0.2, 0, 1)  # light brick/stone -> beige
+    ns = ns * (1 - STONE_DESAT * stone)
+    nv = 1 - (1 - v) ** WARM_LIFT
+    new = hsv_to_rgb(np.stack([nh / 360, ns, nv], -1))
+    out = rgb.copy()
+    out[warm] = new[warm]
     return out
 
 
@@ -195,7 +218,8 @@ def process(img: Image.Image, fam: str | None) -> Image.Image:
     rgb, a = clean_alpha(rgb, a)
     rgb = fix_whites(rgb, a)
     if fam:
-        rgb = recolour(rgb, a, fam)
+        rgb, roof = recolour(rgb, a, fam)
+        rgb = sunny(rgb, a, roof)
     rgb = tone(rgb) if fam else tone(rgb, WALL_TONE)
     rgb, a = outline(rgb, a)
     rgb[a == 0] = 0
