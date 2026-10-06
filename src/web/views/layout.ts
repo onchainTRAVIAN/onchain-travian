@@ -63,7 +63,7 @@ export interface PageOpts {
 
 /** <img> for one of the game's SVG icons. */
 export function icon(path: string, alt: string, w = 16, h = w): SafeHtml {
-  return html`<img src="/static/img/${path}.svg" width="${w}" height="${h}" alt="${alt}" title="${alt}">`;
+  return html`<img src="${assetUrl(`img/${path}.svg`)}" width="${w}" height="${h}" alt="${alt}" title="${alt}">`;
 }
 
 /** Classic 18×12 resource icon. */

@@ -1,3 +1,4 @@
+import { assetUrl } from '../assets.js';
 import { config } from '../../config.js';
 import { needsResearch } from '../../game/actions/research.js';
 import { BUILDINGS } from '../../game/rules/buildings.js';
@@ -47,7 +48,7 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
       (x, i) => html`<a href="/unit/${d.tribe}/${i + 1}" class="${i === d.slot ? 'on' : ''}" title="${x.name}"${i === d.slot ? html` aria-current="page"` : ''}>${unitIcon(d.tribe, i, 16, false)}</a>`,
     )}</nav>
     <div class="unitinfo spanel pad"><h2 class="unitname">${u.name}</h2>
-      <img class="unitbig" src="/static/img/units/big/${d.tribe}-${n}.svg" width="120" height="140" alt="${u.name}">
+      <img class="unitbig" src="${assetUrl(`img/units/big/${d.tribe}-${n}.svg`)}" width="120" height="140" alt="${u.name}">
       <div class="unitstats">
         <p><b>${UNIT_GUIDE[u.id]?.kind ?? ''}</b> — ${UNIT_GUIDE[u.id]?.use ?? u.description}</p>
         <table><tbody>

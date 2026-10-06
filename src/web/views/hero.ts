@@ -1,4 +1,4 @@
-import { hasAsset } from '../assets.js';
+import { hasAsset, assetUrl } from '../assets.js';
 import type { HeroRow } from '../../game/engine/hero.js';
 import { HERO_BONUS_PER_POINT, HERO_SKILL_MAX, heroCombat, heroPoints, heroRegenPerDay, heroReviveCost, heroTrainCost, heroTrainTimeMs, xpForLevel } from '../../game/rules/hero.js';
 import { config } from '../../config.js';
@@ -90,9 +90,9 @@ export function heroView(d: {
   const where = h.status === 'away' && d.locationName ? `in ${d.locationName}` : h.status === 'home' ? `in ${d.homeName}` : '';
   return html`<div class="vtitle"><h1>Hero</h1><span class="vmeta">${h.name} · level ${h.level}</span></div>
     <div class="spanel herocard">
-      <div class="portrait"><img class="bd" src="/static/img/hero/backdrop-${heroStage(h.level)}.svg" width="120" height="150" alt="">
-        <img class="fig" src="${hasAsset(`img/hero/${d.tribe}-${heroStage(h.level)}.svg`) ? `/static/img/hero/${d.tribe}-${heroStage(h.level)}.svg` : `/static/img/units/big/${d.tribe}-${h.unitSlot + 1}.svg`}" width="120" height="140" alt="${h.name}">
-        <img class="fr" src="/static/img/hero/frame-${heroStage(h.level)}.svg" width="120" height="150" alt=""><span class="lvlbadge" title="Level">${h.level}</span></div>
+      <div class="portrait"><img class="bd" src="${assetUrl(`img/hero/backdrop-${heroStage(h.level)}.svg`)}" width="120" height="150" alt="">
+        <img class="fig" src="${hasAsset(`img/hero/${d.tribe}-${heroStage(h.level)}.svg`) ? assetUrl(`img/hero/${d.tribe}-${heroStage(h.level)}.svg`) : assetUrl(`img/units/big/${d.tribe}-${h.unitSlot + 1}.svg`)}" width="120" height="140" alt="${h.name}">
+        <img class="fr" src="${assetUrl(`img/hero/frame-${heroStage(h.level)}.svg`)}" width="120" height="150" alt=""><span class="lvlbadge" title="Level">${h.level}</span></div>
       <div class="hinfo">
         <div class="hname"><b>${h.name}</b> <span class="muted">level ${h.level}</span></div>
         <div class="hsub">${unitIcon(d.tribe, h.unitSlot, 16, false)} trained from ${unit.name} · ${TRIBES[d.tribe].name}</div>

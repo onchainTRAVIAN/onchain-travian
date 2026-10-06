@@ -18,7 +18,7 @@ import { instantPrice, workLeft } from '../../game/actions/credits.js';
 import { fmtClock, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { TOWN_SPOTS } from './spots.js';
-import { levelStage, stagedImage, wallImage } from '../assets.js';
+import { levelStage, stagedImage, wallImage, assetUrl } from '../assets.js';
 import { csrfField, icon, resIcon, timer } from './layout.js';
 import { buildingImg, buildingLabel, movementSummary, unitIcon } from './parts.js';
 
@@ -143,7 +143,7 @@ export function fieldsView(d: VillageViewData & { layout: string }): SafeHtml {
       // Fields look busier every 5 levels: a stage picture over the field (levels 5, 10, 15, 20).
       const stage = levelStage(s.level);
       const kind = FIELD_KIND[s.building ?? ''];
-      const deco = stage >= 2 && kind ? html`<img class="fo ra${s.slot}" src="/static/img/fields/stage/${kind}-${stage}.svg" width="46" height="40" alt="">` : '';
+      const deco = stage >= 2 && kind ? html`<img class="fo ra${s.slot}" src="${assetUrl(`img/fields/stage/${kind}-${stage}.svg`)}" width="46" height="40" alt="">` : '';
       const hinted = d.hint?.slot === s.slot;
       return html`${deco}<a class="ra ra${s.slot}" href="/slot/${s.slot}" title="${label}" aria-label="${label}"></a><span class="rf rf${s.slot} ${badgeClass(d, s.slot, s.level, cap)}${hinted ? ' hint' : ''}">${s.level}</span>${hinted ? html`<span class="hintbub rf${s.slot}">${d.hint?.text} — click here</span>` : ''}`;
     })}
@@ -178,7 +178,7 @@ export function townView(d: VillageViewData): SafeHtml {
     const src = s.slot === RALLY_SLOT && !built && !pending ? 'empty' : file;
     labels.set(s.slot, label);
     // Built buildings look grander every 5 levels (stage pictures), others show the plain picture.
-    const img = built && src === id && id ? stagedImage('buildings', id, s.level) : `/static/img/buildings/${src}.svg`;
+    const img = built && src === id && id ? stagedImage('buildings', id, s.level) : assetUrl(`img/buildings/${src}.svg`);
     return html`<span class="bld b${s.slot}"><img src="${img}" width="75" height="100" alt=""></span>`;
   });
   labels.set(WALL_SLOT, wall && wall.level > 0 ? `${TRIBES[tribe].wallName} level ${wall.level}` : `Build a ${TRIBES[tribe].wallName}`);

@@ -14,7 +14,7 @@ import type { MovementView } from '../../game/queries.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon, timer } from './layout.js';
-import { hasAsset, stagedImage } from '../assets.js';
+import { hasAsset, stagedImage, assetUrl } from '../assets.js';
 
 export function unitName(tribe: TribeId, slot: number): string {
   return TRIBES[tribe].units[slot]?.name ?? '?';
@@ -230,9 +230,9 @@ export function buildingInfoImg(id: string, alt?: string, level = 1): SafeHtml {
 export function buildingImg(id: string | null, alt?: string, floated = false, level = 1): SafeHtml {
   const label = alt ?? buildingLabel(id).name;
   const cls = floated ? 'building' : '';
-  if (id && FIELD_ART[id]) return html`<img class="${cls} fld" src="/static/img/fields/${FIELD_ART[id]}.svg" width="75" height="100" alt="${label}">`;
-  if (id && WALL_ART[id]) return html`<img class="${cls}" src="/static/img/buildings/wall-${WALL_ART[id]}.svg" width="75" height="100" alt="${label}">`;
-  return html`<img class="${cls}" src="${id ? stagedImage('buildings', id, level) : '/static/img/buildings/empty.svg'}" width="75" height="100" alt="${label}">`;
+  if (id && FIELD_ART[id]) return html`<img class="${cls} fld" src="${assetUrl(`img/fields/${FIELD_ART[id]}.svg`)}" width="75" height="100" alt="${label}">`;
+  if (id && WALL_ART[id]) return html`<img class="${cls}" src="${assetUrl(`img/buildings/wall-${WALL_ART[id]}.svg`)}" width="75" height="100" alt="${label}">`;
+  return html`<img class="${cls}" src="${id ? stagedImage('buildings', id, level) : assetUrl('img/buildings/empty.svg')}" width="75" height="100" alt="${label}">`;
 }
 
 export function hasTroops(c: UnitCounts): boolean {

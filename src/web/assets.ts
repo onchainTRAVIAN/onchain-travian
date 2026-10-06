@@ -32,14 +32,14 @@ export function levelStage(level: number): number {
 export function stagedImage(dir: string, stem: string, level: number): string {
   for (let stage = levelStage(level); stage >= 2; stage--) {
     const rel = `img/${dir}/${stem}-${stage}.svg`;
-    if (has(rel)) return `/static/${rel}`;
+    if (has(rel)) return assetUrl(rel);
   }
-  return `/static/img/${dir}/${stem}.svg`;
+  return assetUrl(`img/${dir}/${stem}.svg`);
 }
 
 /** Wall overlay: wooden spikes for every tribe at levels 1–4, then the tribe's own wall by stage. */
 export function wallImage(stem: string, level: number): string {
-  if (level >= 1 && level < 5 && has('img/walls/spikes.svg')) return '/static/img/walls/spikes.svg';
+  if (level >= 1 && level < 5 && has('img/walls/spikes.svg')) return assetUrl('img/walls/spikes.svg');
   return stagedImage('walls', stem, level);
 }
 
