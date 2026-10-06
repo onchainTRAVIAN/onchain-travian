@@ -30,10 +30,12 @@ export function levelStage(level: number): number {
  * otherwise the nearest lower stage, otherwise the base `<stem>.svg`.
  */
 export function stagedImage(dir: string, stem: string, level: number): string {
-  // Painted art (kie.ai, scripts/art/kie): <stem>-<stage>.webp for every stage, preferred when present.
+  // Raster art (scripts/art/kie): <stem>-<stage>.png (old-school buildings) or .webp, preferred when present.
   for (let stage = levelStage(level); stage >= 1; stage--) {
-    const webp = `img/${dir}/${stem}-${stage}.webp`;
-    if (has(webp)) return assetUrl(webp);
+    for (const ext of ['png', 'webp']) {
+      const rel = `img/${dir}/${stem}-${stage}.${ext}`;
+      if (has(rel)) return assetUrl(rel);
+    }
   }
   for (let stage = levelStage(level); stage >= 2; stage--) {
     const rel = `img/${dir}/${stem}-${stage}.svg`;

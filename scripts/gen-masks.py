@@ -15,9 +15,13 @@ CELL = 2.5  # css px per mask cell
 SCALE = 2   # render at 2x
 
 jobs = []  # (key, file url, w, h)
+raster = {p.stem.rsplit('-', 1)[0] for p in [*(IMG / 'buildings').glob('*.png'), *(IMG / 'buildings').glob('*.webp')]}
 for f in sorted((IMG / 'buildings').glob('*.svg')):
+    if f.stem.rsplit('-', 1)[0] in raster and f.stem not in ('construction', 'empty'):
+        continue  # replaced by raster art
     jobs.append((f'buildings/{f.name}@75x100', f, 75, 100))
-for f in sorted((IMG / 'buildings').glob('*.webp')):
+# Raster building art (png/webp) replaces the SVG stage pictures; only mask what the game shows.
+for f in sorted([*(IMG / 'buildings').glob('*.png'), *(IMG / 'buildings').glob('*.webp')]):
     if f.name.startswith('rally-'):
         jobs.append((f'buildings/{f.name}@69x120', f, 69, 120))
     else:
@@ -32,7 +36,7 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     pg = b.new_page(device_scale_factor=SCALE, viewport={'width': 600, 'height': 500})
     for key, f, w, h in jobs:
-        mime = 'image/webp' if f.suffix == '.webp' else 'image/svg+xml'
+        mime = {'.webp': 'image/webp', '.png': 'image/png'}.get(f.suffix, 'image/svg+xml')
         uri = f'data:{mime};base64,' + base64.b64encode(f.read_bytes()).decode()
         pg.set_content(f'<html><body style="margin:0;background:transparent"><img id="i" src="{uri}" width="{w}" height="{h}" style="display:block"></body></html>')
         pg.wait_for_function('document.getElementById("i").complete && document.getElementById("i").naturalWidth > 0')
