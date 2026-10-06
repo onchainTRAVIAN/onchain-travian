@@ -75,20 +75,15 @@ export function trainingQueue(orders: TrainOrderRow[], tribe: TribeId, now: numb
   const finish = (o: TrainOrderRow, label: SafeHtml | string, title: string) =>
     html`<form method="post" action="/shop/finish/train">${csrfField(csrf ?? '')}<input type="hidden" name="orderId" value="${o.id}">
       <button type="submit" class="small gold" title="${title}">${label}${icon('res/gold', 'Gold', 18, 12)} ${instantPrice(endOf(o) - now)}</button></form>`;
-  const lastIdx = orders.length - 1;
-  return html`<section class="spanel queue"><h3 class="sp-head">Training<span>${orders.length}</span></h3><table class="tb"><thead><tr><th>Unit</th><th>Duration</th><th>Finished</th>${csrf ? html`<th></th>` : ''}</tr></thead><tbody>${orders.map((o, i) => {
+  const last = orders[orders.length - 1] as TrainOrderRow;
+  return html`<section class="spanel queue"><h3 class="sp-head">Training<span>${orders.length}</span></h3><table class="tb"><thead><tr><th>Unit</th><th>Duration</th><th>Finished</th></tr></thead><tbody>${orders.map((o) => {
     const u = TRIBES[tribe].units[o.unitSlot];
     const end = endOf(o);
     return html`<tr><td>${unitIcon(tribe, o.unitSlot)} ${fmtNum(o.total - o.done)} ${u?.name ?? '?'}</td>
-      <td class="num">${timer(end, now)}</td><td class="num">${fmtClock(end)}</td>
-      ${csrf
-        ? html`<td>${i > 0 && i === lastIdx
-            ? finish(o, 'All ', 'Finish the whole queue now (this batch and every batch above it)')
-            : finish(o, '', i === 0 ? 'Finish this batch now' : 'Finish this batch and every batch above it now')}</td>`
-        : ''}</tr>`;
+      <td class="num">${timer(end, now)}</td><td class="num">${fmtClock(end)}</td></tr>`;
   })}
-  ${csrf && orders.length > 1 ? html`<tr class="finishall"><td colspan="${csrf ? 4 : 3}" class="small muted">The queue trains in order: finishing a batch also finishes every batch above it, and the price is the time until that batch is done.</td></tr>` : ''}
-  </tbody></table></section>`;
+  </tbody></table>
+  ${csrf ? html`<div class="qfinish pad">${finish(last, 'Finish all ', 'Finish the whole queue now')}<span class="small muted">Priced by the time until the last batch is done.</span></div>` : ''}</section>`;
 }
 
 const FIELD_KIND: Record<string, string> = { woodcutter: 'wood', claypit: 'clay', ironmine: 'iron', cropland: 'crop' };

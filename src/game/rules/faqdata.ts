@@ -2100,7 +2100,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     body: [
       { p: 'Click the Gold button next to the job. The price is based on how long the work would take on a normal x1 world: 1 Gold per 100 minutes there, which is 1 Gold per minute here.' },
       { p: 'Example: 10 minutes left costs 10 Gold. 30 seconds left costs 2 Gold.' },
-      { p: '**Training**: the button on a row finishes that batch **and every batch above it** in the same building. The price is the time in its Duration column, so prices grow down the list. "Finish all" finishes the whole queue. Batches behind move up.' },
+      { p: '**Training**: one **Finish all** button under each building\'s queue finishes every batch in it. The price is the time until the last batch is done (its Duration).' },
       { p: 'A job waiting in a queue is priced only for its own work, not for the waiting time.' },
     ],
     related: ['building-queue', 'training', 'what-is-gold'],

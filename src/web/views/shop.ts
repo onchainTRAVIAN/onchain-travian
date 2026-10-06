@@ -169,7 +169,7 @@ function specialsTab(d: {
     <section class="spanel special">${head('ticker', 'ticker', 'News ticker', `${config.TICKER_PRICE_PER_HOUR} Gold per hour`)}
       <div class="pad"><p class="small">Put your message on the scrolling news line at the top of every player's screen.</p><a class="btn" href="/shop/ticker">Book a time slot</a></div></section>
     <section class="spanel special"><h3 class="sp-head">Finish immediately</h3>
-      <div class="pad"><p class="small">Tap the <b>finish now</b> button (with the Gold coin) next to any construction, training or research to finish it now. The price follows the time left: ${config.WORLD_SPEED !== 1 ? `on this x${config.WORLD_SPEED} world about 1 Gold per ${Math.max(1, Math.round(100 / config.WORLD_SPEED))} minute${Math.round(100 / config.WORLD_SPEED) === 1 ? '' : 's'} left` : '1 Gold per 100 minutes left'}, at least 2. A training row also finishes the batches above it.</p>
+      <div class="pad"><p class="small">Tap the <b>finish now</b> button (with the Gold coin) next to any construction, training or research to finish it now. The price follows the time left: ${config.WORLD_SPEED !== 1 ? `on this x${config.WORLD_SPEED} world about 1 Gold per ${Math.max(1, Math.round(100 / config.WORLD_SPEED))} minute${Math.round(100 / config.WORLD_SPEED) === 1 ? '' : 's'} left` : '1 Gold per 100 minutes left'}, at least 2. In a training queue one <b>Finish all</b> button finishes the whole queue.</p>
       <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold. » <a href="/account">Change your player name</a> (${fmtNum(NAME_CHANGE_PRICE)} Gold).</p></div></section>`;
 }
 
