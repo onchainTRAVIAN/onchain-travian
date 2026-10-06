@@ -1155,6 +1155,30 @@ export const FAQ_TOPICS: FaqTopic[] = [
     links: [{ href: '/troops', label: 'Rally Point' }],
   },
   {
+    id: 'auto-training',
+    category: 'troops',
+    title: 'Auto training',
+    keywords: ['auto training', 'auto train', 'automatic training', 'train troops automatically', 'queue troops', 'troops per hour', 'training bot', 'mass training'],
+    summary: 'On the Train troops page, set how many units each building trains per hour and run it for 1 to 8 hours. It trains as many as it can when resources are short, and stops by itself when the time is up.',
+    body: [
+      {
+        steps: [
+          'Open [Train troops](/troops/train#auto) and scroll to **Auto training**.',
+          'Pick how long it runs: 1 to 8 hours.',
+          'Enter units **per hour** for each unit, or press a **Quick setup** (strongest attack, strongest defence, most loot) or **max** on a row.',
+          'Check the numbers below the table, then press **Start auto training**.',
+        ],
+      },
+      { p: 'Every minute the game queues what is due. If the village can\'t pay for it at that moment, it trains **as many as it can** and counts the rest as "short of resources".' },
+      { p: 'A building can only train so many units per hour (its **Max/h**). The bar next to each building shows how busy your plan keeps it; above 100% the plan is refused.' },
+      { p: 'The table shows your **income per hour**, the **cost per hour**, how much of it your income covers, the total for the whole run, how long your stock pays the gap, and how much extra crop the new troops will eat.' },
+      { p: '**Quick setup** picks, for each building, the unit that gives the most attack, defence or carrying capacity per resource, and keeps all chosen buildings equally busy within your income plus your stock spread over the hours (it keeps room for the crop the new troops eat).' },
+      { note: 'When the time is up auto training stops and the Info box tells you. Your settings are kept: open Train troops and press **Start** again. Settlers and chiefs are never auto-trained.' },
+    ],
+    related: ['send-troops', 'farm-lists'],
+    links: [{ href: '/troops/train#auto', label: 'Train troops' }],
+  },
+  {
     id: 'farm-lists',
     category: 'combat',
     title: 'Farm lists (Gold Club)',

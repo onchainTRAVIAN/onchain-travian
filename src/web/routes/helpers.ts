@@ -1,3 +1,4 @@
+import { finishedAutoTrains } from '../../game/actions/autotrain.js';
 import type { NextFunction, Request, Response } from 'express';
 import type { z } from 'zod';
 import { taskStatus } from '../../game/actions/tasks.js';
@@ -60,6 +61,9 @@ export function loadGamePage(req: Request): GamePage {
           const p = PRODUCTS.find((x) => `shop:${x.id}` === b.source);
           out.push({ kind: 'warn', text: html`${p?.name ?? 'A boost'} ends in ${timer(b.expiresAt ?? ctx.now, ctx.now, false)}`, href: '/shop?tab=adv' });
         }
+      }
+      for (const f of finishedAutoTrains(db, ctx.user.id)) {
+        out.push({ kind: 'warn', text: `Auto training finished in ${f.name} — set it again`, href: `/troops/auto/${f.villageId}` });
       }
       const unread = unreadCounts(db, ctx.user.id);
       if (unread.reports > 0) out.push({ kind: 'info', text: `${unread.reports} new report${unread.reports === 1 ? '' : 's'}`, href: '/reports' });

@@ -9,6 +9,7 @@ import { processNatarAttacks } from './game/actions/natars.js';
 import { backfillReportOutcomes, backfillReportPlaces } from './game/engine/reports.js';
 import { processFarmLists, processTradeRoutes } from './game/actions/goldclub.js';
 import { processOasisRaiders } from './game/actions/raider.js';
+import { processAutoTrains } from './game/actions/autotrain.js';
 import { createApp } from './app.js';
 import { startCryptoWorkers } from './crypto/worker.js';
 
@@ -51,6 +52,12 @@ const worker = setInterval(() => {
     if (n > 0) console.log(`Natars launched ${n} attack(s)`);
   } catch (err) {
     console.error('Natar attacks failed:', err);
+  }
+  try {
+    // Auto training (Train troops page): queue what each running plan is due, once a minute.
+    processAutoTrains(db, clock.now());
+  } catch (err) {
+    console.error('Auto training failed:', err);
   }
   try {
     // Gold Club: automatic farm-list raids and trade-route deliveries.

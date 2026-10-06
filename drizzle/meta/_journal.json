@@ -134,6 +134,13 @@
       "when": 1791239295384,
       "tag": "0018_report_places",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1791273579412,
+      "tag": "0019_auto_train",
+      "breakpoints": true
     }
   ]
 }

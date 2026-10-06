@@ -560,4 +560,104 @@
       if (payBtn) payBtn.setAttribute('data-units', r.getAttribute('data-units'));
     });
   });
+
+  // Auto training: live formulas, "max" per row, quick-setup links follow the chosen hours.
+  var atForm = document.getElementById('at-form');
+  if (atForm) {
+    var atNums = function (v) { return (v || '').split(',').map(Number); };
+    var atIncome = atNums(atForm.getAttribute('data-income'));
+    var atStock = atNums(atForm.getAttribute('data-stock'));
+    var atInputs = Array.prototype.slice.call(atForm.querySelectorAll('.at-in'));
+    var atFmt = function (n) { return Math.round(n).toLocaleString('en-US'); };
+    var atHours = function () { var r = atForm.querySelector('input[name=hours]:checked'); return r ? Number(r.value) : 4; };
+    var atBar = function (cell, pct, bad) {
+      var svg = cell.querySelector('svg.meter');
+      if (svg) {
+        svg.setAttribute('class', 'meter ' + (bad ? 'atbad' : 'atok'));
+        var fg = svg.querySelector('rect.fg');
+        if (!fg) { fg = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); fg.setAttribute('class', 'fg'); fg.setAttribute('height', '6'); fg.setAttribute('rx', '3'); svg.appendChild(fg); }
+        fg.setAttribute('width', String(Math.max(0, Math.min(100, Math.round(pct)))));
+      }
+      var sp = cell.querySelector('span'); if (sp) sp.textContent = Math.round(pct) + '%';
+    };
+    var atCalc = function () {
+      var h = atHours();
+      var cph = [0, 0, 0, 0], units = 0, upkeep = 0, load = {};
+      atInputs.forEach(function (inp) {
+        var n = Math.max(0, Math.floor(Number(inp.value) || 0));
+        if (!n) return;
+        var c = atNums(inp.getAttribute('data-cost'));
+        for (var k = 0; k < 4; k++) cph[k] += n * c[k];
+        units += n; upkeep += n * Number(inp.getAttribute('data-up'));
+        var b = inp.getAttribute('data-b');
+        load[b] = (load[b] || 0) + n * Number(inp.getAttribute('data-time')) / 3600000;
+      });
+      var rowSet = function (id, vals) {
+        var cells = document.querySelectorAll('#' + id + ' td');
+        for (var k = 0; k < cells.length; k++) cells[k].textContent = atFmt(vals[k]);
+      };
+      rowSet('at-cph', cph);
+      rowSet('at-total', cph.map(function (v) { return v * h; }));
+      var cph2 = document.querySelectorAll('#at-cph td');
+      var cover = document.querySelectorAll('#at-cover td');
+      var lasts = Infinity;
+      for (var k = 0; k < 4; k++) {
+        var cov = cph[k] <= 0 ? 1 : Math.max(0, Math.min(1, atIncome[k] / cph[k]));
+        if (cover[k]) atBar(cover[k], cov * 100, cov < 1);
+        if (cph2[k]) cph2[k].className = 'num' + (cph[k] > atIncome[k] ? ' bad' : '');
+        var gap = cph[k] - atIncome[k];
+        if (gap > 0) lasts = Math.min(lasts, Math.max(0, atStock[k]) / gap);
+      }
+      document.getElementById('at-uph').textContent = atFmt(units);
+      document.getElementById('at-h').textContent = String(h);
+      document.getElementById('at-units').textContent = atFmt(units * h);
+      var hm = function (x) { return x >= 1 ? Math.floor(x) + ' h ' + Math.round((x % 1) * 60) + ' min' : Math.round(x * 60) + ' min'; };
+      var li = document.getElementById('at-lasts');
+      if (units === 0) li.textContent = 'Enter units per hour to see how long your resources last.';
+      else if (isFinite(lasts)) li.innerHTML = 'Income doesn’t cover it all: your stock pays the gap for about <b>' + hm(lasts) + '</b>' + (lasts < h ? ' — after that it trains as many as income allows.' : ' — enough for the whole run.');
+      else li.innerHTML = '<b class="ok">Your income pays for everything</b> — your stock is not touched.';
+      var extra = upkeep * h;
+      document.getElementById('at-crop').innerHTML = 'New troops eat <b>+' + atFmt(extra) + '</b> crop per hour after the run (crop income then about <b>' + atFmt(atIncome[3] - extra) + '</b>/h).';
+      Array.prototype.forEach.call(document.querySelectorAll('[data-load-b]'), function (el) {
+        var l = load[el.getAttribute('data-load-b')] || 0;
+        atBar(el, l * 100, l > 1);
+        var sp = el.querySelector('span'); if (sp) sp.textContent = Math.round(l * 100) + '% busy' + (l > 1 ? ' — too many' : '');
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-at-goal]'), function (a) {
+        a.setAttribute('href', '/troops/train?auto=' + a.getAttribute('data-at-goal') + '&hours=' + h + '#auto');
+      });
+    };
+    atForm.addEventListener('input', atCalc);
+    atForm.addEventListener('change', atCalc);
+    Array.prototype.forEach.call(atForm.querySelectorAll('[data-at-max]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.getAttribute('data-at-max');
+        var me = atForm.querySelector('.at-in[data-key="' + key + '"]');
+        if (!me) return;
+        var h = atHours();
+        var budget = [0, 0, 0, 0], busy = 0;
+        for (var k = 0; k < 4; k++) budget[k] = Math.max(0, atIncome[k] + Math.max(0, atStock[k]) / h);
+        atInputs.forEach(function (inp) {
+          if (inp === me) return;
+          var n = Math.max(0, Math.floor(Number(inp.value) || 0));
+          if (!n) return;
+          var c = atNums(inp.getAttribute('data-cost'));
+          for (var k = 0; k < 4; k++) budget[k] -= n * c[k];
+          budget[3] -= n * Number(inp.getAttribute('data-up')) * h / 2;
+          if (inp.getAttribute('data-b') === me.getAttribute('data-b')) busy += n * Number(inp.getAttribute('data-time')) / 3600000;
+        });
+        var c = atNums(me.getAttribute('data-cost'));
+        var up = Number(me.getAttribute('data-up')) * h / 2;
+        var best = Math.floor(Math.max(0, 1 - busy) * Number(me.getAttribute('data-cap')));
+        for (var k = 0; k < 4; k++) {
+          var per = c[k] + (k === 3 ? up : 0);
+          if (per > 0) best = Math.min(best, Math.floor(Math.max(0, budget[k]) / per));
+        }
+        me.value = best > 0 ? String(best) : '';
+        atCalc();
+      });
+    });
+    var atClear = document.querySelector('[data-at-clear]');
+    if (atClear) atClear.addEventListener('click', function (e) { e.preventDefault(); atInputs.forEach(function (i) { i.value = ''; }); atCalc(); });
+  }
 })();

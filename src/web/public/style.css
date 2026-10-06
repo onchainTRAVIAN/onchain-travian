@@ -1214,3 +1214,35 @@ a.binfo:hover img { filter: drop-shadow(0 0 3px #9cc66a); }
   .simarmy input[type=number] { width: 34px; }
   .row { flex-wrap: wrap; }
 }
+
+/* ---------- Auto training ---------- */
+.autotrain .at-status { margin: 0 0 10px; padding: 8px 10px; border: 1px solid #d8cfae; border-radius: 6px; background: #fffaf0; }
+.autotrain .at-status.on { border-color: #9ccc65; background: #f4fae8; }
+.autotrain .at-status p { margin: 0 0 6px; }
+.autotrain .ok { color: #3f8f00; }
+.autotrain .bad { color: #c62828; font-weight: bold; }
+.at-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 8px 0 10px; }
+.at-goals { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.at-hours { display: flex; flex-wrap: wrap; gap: 4px; border: 0; padding: 0; margin: 0 0 10px; align-items: center; }
+.at-hours legend { float: left; font-weight: bold; margin-right: 8px; padding: 0; }
+.at-hours label { position: relative; }
+.at-hours input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.at-hours span { display: inline-block; min-width: 34px; padding: 4px 8px; text-align: center; border: 1px solid #b9a77a; border-radius: 4px; background: #f6efd9; font-weight: bold; color: #5a4a22; }
+.at-hours input:checked + span { background: linear-gradient(#ffe27a, #f0b92b); border-color: #b58712; color: #3a2a06; }
+.at-hours input:focus-visible + span { outline: 2px solid #71d000; outline-offset: 1px; }
+.at-table td, .at-table th { vertical-align: middle; }
+.at-table .at-bhead th { text-align: left; background: #efe6c9; }
+.at-table tr.na { opacity: 0.6; }
+.at-cost span { white-space: nowrap; margin-right: 6px; }
+.at-cost img { vertical-align: middle; margin-right: 2px; }
+.at-load { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; font-weight: normal; font-size: 11px; color: #6b5b33; }
+.at-load svg, .at-res svg { width: 70px; height: 6px; vertical-align: middle; }
+.at-res td span { margin-left: 4px; font-size: 11px; }
+.at-res th { text-align: left; white-space: nowrap; }
+.at-sum { margin: 10px 0; }
+.at-facts { margin: 8px 0 0; padding-left: 18px; }
+.at-facts li { margin: 3px 0; }
+.at-progress { margin-bottom: 8px; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+svg.meter.atok .fg { fill: #71d000; }
+svg.meter.atbad .fg { fill: #e06030; }

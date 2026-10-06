@@ -1,3 +1,4 @@
+import { AUTO_GOALS, AUTO_TRAIN_MAX_HOURS, AUTO_TRAIN_MIN_HOURS, autoPreset, autoTrainOf, autoUnitRows, itemKey, markAutoTrainSeen, parseItems, planInputs, startAutoTrain, stopAutoTrain, summarizePlan, type AutoGoal } from '../../game/actions/autotrain.js';
 import { config } from '../../config.js';
 import { getModifiers } from '../../game/modifiers.js';
 import { Router, type Request } from 'express';
@@ -280,16 +281,70 @@ villageRouter.get('/troops/train', (req, res) => {
       queue: trainOrdersOf(db, state.village.id).filter((o) => o.building === s.building),
     }))
     .sort((a, b) => TRAIN_ORDER.indexOf(a.building) - TRAIN_ORDER.indexOf(b.building));
+  markAutoTrainSeen(db, state.village.id);
+  const rows = autoUnitRows(db, state, ctx.now);
+  const { income, stock } = planInputs(db, state, ctx.now);
+  const plan = autoTrainOf(db, state.village.id);
+  const goal = typeof req.query.auto === 'string' && req.query.auto in AUTO_GOALS ? (req.query.auto as AutoGoal) : null;
+  const hoursQ = Number(req.query.hours);
+  const hours = Number.isInteger(hoursQ) && hoursQ >= AUTO_TRAIN_MIN_HOURS && hoursQ <= AUTO_TRAIN_MAX_HOURS ? hoursQ : (plan?.hours ?? 4);
+  const values: Record<string, number> = goal
+    ? autoPreset(rows, goal, income, stock, hours)
+    : Object.fromEntries(parseItems(plan?.items).map((i) => [itemKey(i.building, i.slot), i.perHour]));
   sendPage(
     req,
     res,
     'Train troops',
-    trainAllView({ tribe: state.tribe, groups, have: stockOf(state.village), home: troopsAt(db, state.village.id, state.village.id), owned: ownedTroopTotals(db, state.village.id), academySlot: state.slots.find((s) => s.building === 'academy')?.slot ?? null, csrf: ctx.csrf, now: ctx.now }),
+    trainAllView({
+      tribe: state.tribe, groups, have: stockOf(state.village), home: troopsAt(db, state.village.id, state.village.id), owned: ownedTroopTotals(db, state.village.id), academySlot: state.slots.find((s) => s.building === 'academy')?.slot ?? null, csrf: ctx.csrf, now: ctx.now,
+      auto: { rows, income, stock, hours, values, goal, plan: plan ? { ...plan, items: parseItems(plan.items) } : null, summary: summarizePlan(rows, values, income, stock, hours) },
+    }),
     { nav: 'train', chrome: page.chrome },
   );
 });
 
 const TRAIN_ORDER: BuildingId[] = ['barracks', 'greatbarracks', 'stable', 'greatstable', 'workshop', 'residence', 'palace'];
+
+villageRouter.post('/train/auto', (req, res, next) =>
+  formAction(z.object({ hours: z.coerce.number().int() }).catchall(z.string()), (rq, rs, d) => {
+    const ctx = authed(rq);
+    const perHour: Record<string, number> = {};
+    for (const [key, raw] of Object.entries(d as Record<string, unknown>)) {
+      const m = /^a_([a-z]+_\d)$/.exec(key);
+      if (!m || typeof raw !== 'string') continue;
+      const n = raw.trim() === '' ? 0 : Math.floor(Number(raw));
+      if (!Number.isFinite(n) || n < 0) throw new GameError('Enter whole numbers of units per hour');
+      if (n > 0) perHour[m[1] ?? ''] = n;
+    }
+    const plan = startAutoTrain(db, ctx.user.id, ctx.villageId, d.hours, perHour, ctx.now);
+    const n = parseItems(plan.items).reduce((a, i) => a + i.perHour, 0);
+    setFlash(rs, 'ok', `Auto training started: about ${n} units per hour for ${plan.hours} hour${plan.hours === 1 ? '' : 's'}. It stops by itself — start it again when it ends.`);
+    rs.redirect(303, '/troops/train#auto');
+  }, '/troops/train#auto')(req, res, next),
+);
+
+/** Info box link: open Train troops of the village whose auto training just ended. */
+villageRouter.get('/troops/auto/:villageId', (req, res) => {
+  const ctx = authed(req);
+  const id = Number(req.params.villageId);
+  try {
+    ownedVillage(db, ctx.user.id, id);
+    setActiveVillage(req, id);
+  } catch {
+    /* not yours: just show your current village */
+  }
+  res.redirect(303, '/troops/train#auto');
+});
+
+villageRouter.post(
+  '/train/auto/stop',
+  formAction(z.object({}), (req, res) => {
+    const ctx = authed(req);
+    stopAutoTrain(db, ctx.user.id, ctx.villageId, ctx.now);
+    setFlash(res, 'ok', 'Auto training stopped. Units already queued keep training.');
+    res.redirect(303, '/troops/train#auto');
+  }, '/troops/train#auto'),
+);
 
 villageRouter.post('/train/all', (req, res, next) =>
   formAction(z.object({}).catchall(z.string()), (rq, rs, d) => {

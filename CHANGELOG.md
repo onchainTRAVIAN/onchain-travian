@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.0 — 2026-10-06 — auto training
+- **Auto training** on the Train troops page: units per hour per building for 1–8 hours; every minute it queues what is due and trains as many as it can when resources are short; stops by itself (Info box tells you, settings kept). Quick setups (strongest attack / defence / most loot), a "max" per row, and live numbers: income vs cost per hour, coverage, building load, totals, how long the stock lasts, extra crop upkeep.
+
 ## 0.18.2 — 2026-10-06 — clearer village
 - **Buildings stand out:** roof colours by building type (red civic, slate military, golden thatch farm, brown workshops), calmer walls, crisp dark outline against the ground.
 - **Village walls** redrawn in the same old-school colours with an outline.

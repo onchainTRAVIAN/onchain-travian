@@ -686,3 +686,22 @@ export const celebrations = sqliteTable(
   },
   (t) => [index('celebrations_finish_idx').on(t.finishAt), index('celebrations_village_idx').on(t.villageId)],
 );
+
+/** Auto training (Train troops page): one plan per village, runs 1-8 h, then must be started again. */
+export const autoTrains = sqliteTable(
+  'auto_trains',
+  {
+    villageId: integer('village_id').primaryKey().references(() => villages.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    active: integer('active', { mode: 'boolean' }).notNull().default(false),
+    hours: integer('hours').notNull(),
+    startedAt: integer('started_at').notNull(),
+    endsAt: integer('ends_at').notNull(),
+    lastRunAt: integer('last_run_at').notNull(),
+    /** JSON AutoTrainItem[]: what to train per hour, with progress. */
+    items: text('items').notNull(),
+    /** False after a run ends until the player looks at the Train troops page (Info box notice). */
+    seen: integer('seen', { mode: 'boolean' }).notNull().default(true),
+  },
+  (t) => [index('auto_trains_active_idx').on(t.active)],
+);
