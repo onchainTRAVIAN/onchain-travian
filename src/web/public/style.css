@@ -1193,3 +1193,24 @@ a.binfo:hover img { filter: drop-shadow(0 0 3px #9cc66a); }
 .lt-m .mvk { position: relative; width: 16px; height: 16px; margin: 0; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
 .lt-m .mvk::after { content: '›'; position: absolute; inset: 0; color: #fff; font: bold 14px/12px Verdana, sans-serif; text-align: center; }
 .lt-m .mvk.back::after { content: '‹'; }
+
+/* ---------- Phones ---------- */
+#mobbar { display: none; }
+@media (max-width: 760px) {
+  #mobbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 8px; }
+  .mobmenu { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font: bold 14px Verdana, sans-serif; color: #3a2a12; background: linear-gradient(#f6e7c1, #dcc08a); border: 1px solid #7a5a2c; border-radius: 6px; }
+  .mobcount { min-width: 18px; padding: 0 5px; border-radius: 9px; background: #d9534f; color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+  .mobalert { flex: 1 1 auto; padding: 6px 10px; border-radius: 6px; background: #fbe3e1; border: 1px solid #e4a19b; color: #a01d10; font-weight: bold; font-size: 12px; }
+  .js #side_left:not(.open) { display: none; }
+  #side_left.open { margin-bottom: 12px; }
+  /* tab rows become one swipeable row */
+  .woodtabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .woodtabs::-webkit-scrollbar { display: none; }
+  .woodtabs a { flex: 0 0 auto; padding: 7px 10px; font-size: 12px; }
+  .pilltabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .pilltabs a { flex: 0 0 auto; }
+  .woodbody { padding: 8px; }
+  .simwrap .simarmy { min-width: 520px; }
+  .simarmy input[type=number] { width: 34px; }
+  .row { flex-wrap: wrap; }
+}

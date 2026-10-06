@@ -130,6 +130,14 @@ function tile(href: string, ico: string, label: string): SafeHtml {
 }
 
 /** Info box under the menu: what needs your attention right now. */
+/** Phones only: a slim bar with the menu toggle and the urgent notices (the full menu folds away). */
+function mobileBar(c: Chrome): SafeHtml {
+  const n = c.notices ?? [];
+  const urgent = n.filter((x) => x.kind === 'bad');
+  return html`<div id="mobbar"><button type="button" class="mobmenu" data-mobmenu aria-expanded="false" aria-controls="side_left">☰ Menu${n.length ? html` <span class="mobcount">${n.length}</span>` : ''}</button>
+    ${urgent.map((x) => html`<a class="mobalert" href="${x.href ?? '#'}">${x.text}</a>`)}</div>`;
+}
+
 function infoBox(c: Chrome): SafeHtml {
   const n = c.notices ?? [];
   if (n.length === 0) return html``;
@@ -213,6 +221,7 @@ export function layout(o: PageOpts): SafeHtml {
   ${c ? resourceBar(c.village, c.eco, o.now, c.credits) : ''}
   ${tickerBar(o.ticker ?? [], o.announcement)}
   <div id="mid">
+    ${c ? mobileBar(c) : ''}
     <div id="side_left">${sideNavi(c, o.csrf, o.nav)}${c ? infoBox(c) : ''}</div>
     <div id="content">
       ${o.flash ? html`<div class="flash ${o.flash.type}" role="${o.flash.type === 'error' ? 'alert' : 'status'}">${o.flash.text}</div>` : ''}

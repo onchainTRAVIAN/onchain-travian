@@ -8,6 +8,16 @@
     var hms = (d > 0 ? pad(h) : h) + ':' + pad(m) + ':' + pad(s);
     return d > 0 ? d + 'd ' + hms : hms;
   }
+  // Phones: the side menu and info box fold behind the "Menu" button.
+  document.documentElement.classList.add('js');
+  var mobBtn = document.querySelector('[data-mobmenu]');
+  var sideLeft = document.getElementById('side_left');
+  if (mobBtn && sideLeft) {
+    mobBtn.addEventListener('click', function () {
+      var open = sideLeft.classList.toggle('open');
+      mobBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
   // Server time offset so countdowns are right even if the phone clock is off.
   var serverNow = Number(document.body.getAttribute('data-now')) || Date.now();
   var skew = serverNow - Date.now();

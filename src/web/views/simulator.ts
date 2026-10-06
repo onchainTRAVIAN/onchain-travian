@@ -31,7 +31,7 @@ function armyInputs(p: string, a: SimArmy, role: 'attacker' | 'defender', title:
   const lvlLabel = role === 'attacker' ? 'Blacksmith' : 'Armoury';
   const lvlShort = 'Level';
   const canLevel = a.tribe !== 'nature' && a.tribe !== 'natars';
-  return html`<table class="simarmy">
+  return html`<div class="tblwrap simwrap"><table class="simarmy">
     <thead><tr><th colspan="11"><span class="simside ${role === 'attacker' ? 'att' : 'def'}">${title}</span> ${tribeSelect(`${p}_t`, a.tribe, playable)}</th></tr></thead>
     <tbody>
       <tr><td class="lbl"></td>${units.map((u, i) => html`<td>${unitIcon(a.tribe, i, 16, false)}<span class="sr">${u.name}</span></td>`)}</tr>
@@ -45,7 +45,7 @@ function armyInputs(p: string, a: SimArmy, role: 'attacker' | 'defender', title:
           <label>${role === 'attacker' ? 'attack' : 'defence'} points <input type="number" name="${p}hp" value="${v(a.hero?.points ?? 0)}" min="0" class="w30" inputmode="numeric"></label>
           <label>${role === 'attacker' ? 'off' : 'def'} bonus points <input type="number" name="${p}hb" value="${v(a.hero?.bonus ?? 0)}" min="0" max="100" class="w30" inputmode="numeric"></label></td></tr>`
         : ''}
-    </tbody></table>`;
+    </tbody></table></div>`;
 }
 
 function lossTable(tribe: TribeId, title: string, role: 'att' | 'def', units: UnitCounts, losses: UnitCounts, hero: boolean, heroDied: boolean, trapped?: UnitCounts): SafeHtml {
