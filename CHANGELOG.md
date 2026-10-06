@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.1 — 2026-10-06
+- **Heroes keep their progress:** training a new hero after yours died (even from another unit) keeps its level, experience and skill points; only the unit it fights as changes.
+- **Troops on the way** on every village and oasis page: your attacks, raids, scouts and reinforcements heading there, troops coming back from there, and attacks from that village on yours — each with a countdown.
+
 ## 0.17.0 — 2026-10-06 — new painted art
 - **All buildings repainted** in a soft painted style (like Travian Legends), each growing visibly over 5 stages (levels 1, 5, 10, 15, 20) — from wood and thatch to stone, towers and gold trim; new village walls for all three tribes, a new building site and Wonder construction stages.
 - **All troops repainted** with real anatomy, faces, shining metal, fur, cloth and horses.

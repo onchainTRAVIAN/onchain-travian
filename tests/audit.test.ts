@@ -227,3 +227,17 @@ describe('attack again', () => {
     expect(finishConstructionNow(db, a.userId, o.id, clock.now())).toBeGreaterThan(0);
   });
 });
+
+describe('hero retraining', () => {
+  it('a hero trained again after dying keeps its level, experience and skill points', () => {
+    const h0 = db.select().from(heroes).where(eq(heroes.userId, b.userId)).get()!;
+    db.update(heroes).set({ status: 'dead', level: 12, xp: 9000, strength: 20, defPoints: 15, offBonus: 5, defBonus: 10, regen: 10, locationId: null }).where(eq(heroes.id, h0.id)).run();
+    rich(b.villageId);
+    db.update(villages).set({ research: '[1,1,1,1,1,1,1,1,1,1]' }).where(eq(villages.id, b.villageId)).run();
+    setSlot(b.villageId, 34, 'heromansion', 1);
+    setTroopsAt(db, b.villageId, b.villageId, units(1, 5));
+    const h = trainHero(db, b.userId, b.villageId, 1, clock.now());
+    expect(h.unitSlot).toBe(1);
+    expect([h.level, h.xp, h.strength, h.defPoints, h.offBonus, h.defBonus, h.regen]).toEqual([12, 9000, 20, 15, 5, 10, 10]);
+  });
+});

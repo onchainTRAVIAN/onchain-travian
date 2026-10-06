@@ -9,7 +9,7 @@ import { againLink } from '../views/reports.js';
 import { oasisAnimals, oasisStock, type TileRow } from '../../game/engine/oasis.js';
 import { config } from '../../config.js';
 import { troopsAt } from '../../game/engine/state.js';
-import { dist, mapWindow, tileInfo } from '../../game/queries.js';
+import { dist, mapWindow, tileInfo, villageMovements } from '../../game/queries.js';
 import { travelTimeMs, wrapCoord } from '../../game/rules/map.js';
 import { TRIBES } from '../../game/rules/units.js';
 import { authed } from '../session.js';
@@ -202,6 +202,11 @@ mapRouter.get('/map/tile', (req, res) => {
               .filter((g) => g.owner.userId === ctx.user.id || (t.tile.villageId !== null && oasisOwnerInfo(t.tile)?.userId === ctx.user.id))
               .map((g) => ({ owner: g.owner.username, village: g.owner.name, tribe: g.owner.tribe, units: g.units }))
           : [],
+      // Your troops heading here or coming back from here, and attacks from this village on yours.
+      movements: page.chrome.villages
+        .flatMap((v) => villageMovements(db, v.id))
+        .filter((m) => m.otherX === x && m.otherY === y && m.kind !== 'trade' && m.kind !== 'merchant_return' && m.kind !== 'delivery')
+        .sort((a, b) => a.arriveAt - b.arriveAt),
       reports: reportsAt(db, ctx.user.id, x, y, 10).map(({ data, ...r }) => ({ ...r, again: againLink(parseReport(data), ctx.user.id) })),
       canReinforce: t.tile.kind === 'oasis' && t.tile.villageId !== null && (oasisOwnerInfo(t.tile)?.userId === ctx.user.id || (oasisOwnerInfo(t.tile)?.userId != null && attackBlockedBy(db, ctx.user.id, oasisOwnerInfo(t.tile)?.userId ?? null) !== null)),
       travel,
