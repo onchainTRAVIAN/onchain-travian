@@ -592,19 +592,16 @@
         var b = inp.getAttribute('data-b');
         load[b] = (load[b] || 0) + n * Number(inp.getAttribute('data-time')) / 3600000;
       });
-      var rowSet = function (id, vals) {
-        var cells = document.querySelectorAll('#' + id + ' td');
-        for (var k = 0; k < cells.length; k++) cells[k].textContent = atFmt(vals[k]);
-      };
-      rowSet('at-cph', cph);
-      rowSet('at-total', cph.map(function (v) { return v * h; }));
-      var cph2 = document.querySelectorAll('#at-cph td');
-      var cover = document.querySelectorAll('#at-cover td');
+      var keys = ['wood', 'clay', 'iron', 'crop'];
       var lasts = Infinity;
       for (var k = 0; k < 4; k++) {
+        var cphEl = document.querySelector('[data-at-cph="' + keys[k] + '"]');
+        if (cphEl) { cphEl.textContent = atFmt(cph[k]) + '/h'; cphEl.className = cph[k] > atIncome[k] ? 'bad' : ''; }
+        var totEl = document.querySelector('[data-at-total="' + keys[k] + '"]');
+        if (totEl) totEl.textContent = atFmt(cph[k] * h);
         var cov = cph[k] <= 0 ? 1 : Math.max(0, Math.min(1, atIncome[k] / cph[k]));
-        if (cover[k]) atBar(cover[k], cov * 100, cov < 1);
-        if (cph2[k]) cph2[k].className = 'num' + (cph[k] > atIncome[k] ? ' bad' : '');
+        var covEl = document.querySelector('[data-at-cover="' + keys[k] + '"]');
+        if (covEl) atBar(covEl, cov * 100, cov < 1);
         var gap = cph[k] - atIncome[k];
         if (gap > 0) lasts = Math.min(lasts, Math.max(0, atStock[k]) / gap);
       }
