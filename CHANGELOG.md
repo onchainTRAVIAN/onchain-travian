@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.20.2 — 2026-10-06 — original buildings back
+- Village buildings and walls are the original drawn SVG art again (the user prefers them over every AI/repaint version). The raster versions are kept as sources in `scripts/art/src/` and `scripts/art/kie/`.
+
 ## 0.20.1 — 2026-10-06 — classic T3 building colours
 - Buildings and walls moved toward the classic Travian 3 look: lighter and sunnier, golden thatch roofs, honey/ochre timber, lighter slate and red tiles, crisp thin dark outline (style inspired by the T3 wiki pictures; original art).
 
