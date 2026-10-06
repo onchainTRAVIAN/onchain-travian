@@ -120,7 +120,8 @@ function specialUnitRoom(q: Q, state: VillageState, slot: number, unit: UnitDef)
   return Math.max(0, remaining);
 }
 
-export function startTraining(db: DB, userId: number, villageId: number, building: BuildingId, unitSlot: number, count: number, now: number): TrainOrderRow {
+/** `merge`: add to the last order of this building when it is the same unit (auto training keeps one queue line). */
+export function startTraining(db: DB, userId: number, villageId: number, building: BuildingId, unitSlot: number, count: number, now: number, merge = false): TrainOrderRow {
   assertGame(Number.isInteger(count) && count > 0, 'Enter how many units to train');
   assertGame(count <= MAX_TRAIN_BATCH, 'Too many units at once');
   return db.transaction((tx) => {
@@ -139,6 +140,10 @@ export function startTraining(db: DB, userId: number, villageId: number, buildin
     const queue = trainOrdersOf(tx, villageId).filter((o) => o.building === building);
     const queueEnd = queue.reduce((end, o) => Math.max(end, o.startAt + o.total * o.perUnitMs), now);
     setResources(tx, villageId, subRes(stockOf(state.village), scaleRes(option.cost, count)));
+    const tail = queue.reduce<TrainOrderRow | undefined>((t, o) => (!t || o.startAt + o.total * o.perUnitMs >= t.startAt + t.total * t.perUnitMs ? o : t), undefined);
+    if (merge && tail && tail.unitSlot === unitSlot && tail.perUnitMs === option.timeMs && tail.startAt + tail.total * tail.perUnitMs === queueEnd) {
+      return tx.update(trainOrders).set({ total: tail.total + count }).where(eq(trainOrders.id, tail.id)).returning().get();
+    }
     return tx
       .insert(trainOrders)
       .values({ villageId, building, unitSlot, total: count, done: 0, perUnitMs: option.timeMs, startAt: queueEnd })

@@ -289,8 +289,8 @@ villageRouter.get('/troops/train', (req, res) => {
   const hoursQ = Number(req.query.hours);
   const hours = Number.isInteger(hoursQ) && hoursQ >= AUTO_TRAIN_MIN_HOURS && hoursQ <= AUTO_TRAIN_MAX_HOURS ? hoursQ : (plan?.hours ?? 4);
   const values: Record<string, number> = goal
-    ? autoPreset(rows, goal, income, stock, hours)
-    : Object.fromEntries(parseItems(plan?.items).map((i) => [itemKey(i.building, i.slot), i.perHour]));
+    ? autoPreset(rows, goal)
+    : Object.fromEntries(parseItems(plan?.items).map((i) => [itemKey(i.building, i.slot), i.share]));
   sendPage(
     req,
     res,
@@ -313,12 +313,12 @@ villageRouter.post('/train/auto', (req, res, next) =>
       const m = /^a_([a-z]+_\d)$/.exec(key);
       if (!m || typeof raw !== 'string') continue;
       const n = raw.trim() === '' ? 0 : Math.floor(Number(raw));
-      if (!Number.isFinite(n) || n < 0) throw new GameError('Enter whole numbers of units per hour');
+      if (!Number.isFinite(n) || n < 0 || n > 100) throw new GameError('Shares are whole percentages from 0 to 100');
       if (n > 0) perHour[m[1] ?? ''] = n;
     }
     const plan = startAutoTrain(db, ctx.user.id, ctx.villageId, d.hours, perHour, ctx.now);
-    const n = parseItems(plan.items).reduce((a, i) => a + i.perHour, 0);
-    setFlash(rs, 'ok', `Auto training started: about ${n} units per hour for ${plan.hours} hour${plan.hours === 1 ? '' : 's'}. It stops by itself — start it again when it ends.`);
+    const n = parseItems(plan.items).reduce((a, i) => a + i.trained, 0);
+    setFlash(rs, 'ok', `Auto training started for ${plan.hours} hour${plan.hours === 1 ? '' : 's'}: ${n.toLocaleString('en-US')} units queued from your stock right away; every minute it spends new resources by your shares. It stops by itself — start it again when it ends.`);
     rs.redirect(303, '/troops/train#auto');
   }, '/troops/train#auto')(req, res, next),
 );

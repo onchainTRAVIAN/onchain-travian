@@ -80,11 +80,12 @@ const n0 = (n: number): string => fmtNum(Math.round(n));
 const RES_LABEL = { wood: 'Wood', clay: 'Clay', iron: 'Iron', crop: 'Crop' } as const;
 const hm = (h: number): string => (h >= 1 ? `${Math.floor(h)} h ${Math.round((h % 1) * 60)} min` : `${Math.round(h * 60)} min`);
 
-/** Auto training: units per hour for 1-8 hours, quick setups and live formulas (app.js recalculates as you type). */
+/** Auto training: % shares of the village's resources per troop, 1-8 hours, quick setups and live forecasts (app.js recalculates as you type). */
 function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: number): SafeHtml {
   const p = a.plan;
   const sm = a.summary;
   const running = !!p?.active;
+  const fc = new Map(sm.units.map((u) => [u.key, u]));
   const byBuilding = new Map<string, AutoUnitRow[]>();
   for (const r of a.rows) byBuilding.set(r.building, [...(byBuilding.get(r.building) ?? []), r]);
   const status = p
@@ -92,20 +93,20 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
         ${running
           ? html`<p><b class="ok">Running</b> · ends in ${timer(p.endsAt, now)} · started for ${p.hours} h</p>`
           : html`<p><b>Finished</b> ${fmtDuration(Math.max(0, now - p.endsAt))} ago (${p.hours} h run). Your settings are kept below — press <b>Start</b> to run it again.</p>`}
-        <table class="build_details at-progress"><thead><tr><th>Unit</th><th>Per hour</th><th title="Units put into the training queue by this run">Queued so far</th><th title="How many units the run is behind its pace, e.g. while resources were short">Behind</th></tr></thead><tbody>
-        ${p.items.map((i) => html`<tr><td>${unitIcon(tribe, i.slot)} ${a.rows.find((r) => r.building === i.building && r.slot === i.slot)?.unit.name ?? ''} <span class="small muted">(${BUILDINGS[i.building].name})</span></td><td class="num">${fmtNum(i.perHour)}/h</td><td class="num"><b>${fmtNum(i.trained)}</b></td><td class="num${i.short ? ' bad' : ''}">${fmtNum(i.short)}</td></tr>`)}
+        <table class="build_details at-progress"><thead><tr><th>Unit</th><th>Share</th><th title="Units put into the training queues by this run">Queued so far</th></tr></thead><tbody>
+        ${p.items.map((i) => html`<tr><td>${unitIcon(tribe, i.slot)} ${a.rows.find((r) => r.building === i.building && r.slot === i.slot)?.unit.name ?? ''} <span class="small muted">(${BUILDINGS[i.building].name})</span></td><td class="num">${i.share}%</td><td class="num"><b>${fmtNum(i.trained)}</b></td></tr>`)}
         </tbody></table>
         ${running ? html`<form method="post" action="/train/auto/stop" class="inl">${csrfField(csrf)}<button type="submit" class="gbtn secondary">Stop auto training</button></form>` : ''}
       </div>`
     : '';
-  const hoursLinks = (goal: AutoGoal) => `/troops/train?auto=${goal}&hours=${a.hours}#auto`;
+  const goalLink = (goal: AutoGoal) => `/troops/train?auto=${goal}&hours=${a.hours}#auto`;
   return html`<section class="spanel autotrain" id="auto">
     <h3 class="sp-head">Auto training<span>${running ? 'running' : 'off'}</span></h3>
     <div class="pad">
       ${status}
-      <p class="small">Set how many units each building should train <b>per hour</b> and for how long (1–8 hours). Like a player would, it puts a batch of about <b>30 minutes</b> of training into each building's queue (you see it under <a href="#queue">In training</a>) and tops it up when half is used. If the village can't pay for a whole batch, it queues <b>as many as it can</b>. When the time is up it stops — you start it again yourself.</p>
-      <div class="at-quick"><b>Quick setup</b> <span class="small">fills the best unit for each building, keeps them equally busy, paid from your income plus your stock spread over the hours:</span>
-        <span class="at-goals">${(Object.keys(AUTO_GOALS) as AutoGoal[]).map((g) => html`<a class="gbtn${a.goal === g ? '' : ' secondary'}" data-at-goal="${g}" href="${hoursLinks(g)}">${AUTO_GOALS[g]}</a>`)}<a class="small" href="/troops/train#auto" data-at-clear>clear</a></span></div>
+      <p class="small">Give the troops you want a <b>share of your resources</b> (in %). Every minute auto training spends what the village has: each troop gets its share of your current stock and as many as that buys go into the queue (see <a href="#queue">In training</a>); what's left over is split again. Shares below 100% keep the rest in stock. It runs for the hours you choose, then stops — you start it again yourself.</p>
+      <div class="at-quick"><b>Quick setup</b> <span class="small">best unit for each building, shares sized so all buildings stay about equally busy:</span>
+        <span class="at-goals">${(Object.keys(AUTO_GOALS) as AutoGoal[]).map((g) => html`<a class="gbtn${a.goal === g ? '' : ' secondary'}" data-at-goal="${g}" href="${goalLink(g)}">${AUTO_GOALS[g]}</a>`)}<a class="small" href="/troops/train#auto" data-at-clear>clear</a></span></div>
       <form method="post" action="/train/auto" id="at-form" data-income="${RESOURCE_KEYS.map((k) => Math.round(a.income[k])).join(',')}" data-stock="${RESOURCE_KEYS.map((k) => Math.floor(a.stock[k])).join(',')}">${csrfField(csrf)}
         <fieldset class="at-hours"><legend>Run for</legend>${Array.from({ length: AUTO_TRAIN_MAX_HOURS - AUTO_TRAIN_MIN_HOURS + 1 }, (_, i) => i + AUTO_TRAIN_MIN_HOURS).map(
           (h) => html`<label><input type="radio" name="hours" value="${h}"${h === a.hours ? html` checked` : ''}><span>${h} h</span></label>`,
@@ -113,33 +114,38 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
         <div class="at-list">
         ${[...byBuilding].map(([b, rows]) => {
           const load = sm.load[b as keyof typeof sm.load] ?? 0;
-          return html`<div class="at-bhead"><b>${BUILDINGS[b as keyof typeof BUILDINGS].name}</b><span class="at-load" data-load-b="${b}">${svgBar(load * 100, load > 1 ? 'atbad' : 'atok')}<span>${Math.round(load * 100)}% busy</span></span></div>
-          ${rows.map((r) => html`<div class="at-unit${r.available ? '' : ' na'}">
+          return html`<div class="at-bhead"><b>${BUILDINGS[b as keyof typeof BUILDINGS].name}</b><span class="at-load" data-load-b="${b}" title="How busy your income keeps this building">${svgBar(load * 100, load > 1 ? 'atbad' : 'atok')}<span>${Math.round(load * 100)}% busy</span></span></div>
+          ${rows.map((r) => {
+            const f = fc.get(r.key);
+            return html`<div class="at-unit${r.available ? '' : ' na'}">
             <div class="at-uinfo">${unitIcon(tribe, r.slot)} <b>${r.unit.name}</b>
-              <div class="at-meta">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.cost[k])}</span>`)}<span title="crop eaten per hour">${icon('res/cropuse', 'Crop consumption', 18, 12)}${r.unit.upkeep}</span><span title="training time per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(r.timeMs)}</span><span class="muted" title="most this building can finish per hour">up to ${fmtNum(r.capPerHour)}/h</span></div>
+              <div class="at-meta">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.cost[k])}</span>`)}<span title="crop eaten per hour">${icon('res/cropuse', 'Crop consumption', 18, 12)}${r.unit.upkeep}</span><span title="training time per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(r.timeMs)}</span></div>
+              <div class="at-fc small" data-fc="${r.key}">${f ? html`now <b>${fmtNum(f.now)}</b> · then <b>${fmtNum(f.perHour)}</b>/h${f.limitedBy ? html` <span class="muted">(${RES_LABEL[f.limitedBy].toLowerCase()} limits)</span>` : ''}` : ''}</div>
               ${r.available ? '' : html`<div class="none small">${r.reason}</div>`}</div>
             ${r.available
-              ? html`<div class="at-uin"><label class="sr" for="a_${r.key}">${r.unit.name} per hour</label><input class="at-in" id="a_${r.key}" name="a_${r.key}" type="number" min="0" max="${r.capPerHour}" inputmode="numeric" placeholder="0" value="${a.values[r.key] ? String(a.values[r.key]) : ''}"
-                  data-key="${r.key}" data-b="${r.building}" data-cost="${RESOURCE_KEYS.map((k) => r.cost[k]).join(',')}" data-up="${r.unit.upkeep}" data-time="${r.timeMs}" data-cap="${r.capPerHour}"><span class="small muted">/h</span>
-                <button type="button" class="at-max" data-at-max="${r.key}" title="As many per hour as your income + stock and this building's free time allow, next to the other rows">max</button></div>`
+              ? html`<div class="at-uin"><label class="sr" for="a_${r.key}">${r.unit.name}: % of resources</label><input class="at-in" id="a_${r.key}" name="a_${r.key}" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="0" value="${a.values[r.key] ? String(a.values[r.key]) : ''}"
+                  data-key="${r.key}" data-b="${r.building}" data-cost="${RESOURCE_KEYS.map((k) => r.cost[k]).join(',')}" data-up="${r.unit.upkeep}" data-time="${r.timeMs}"><span class="at-pct">%</span>
+                <button type="button" class="at-max" data-at-rest="${r.key}" title="Give this troop all the % not assigned yet">rest</button></div>`
               : ''}
-          </div>`)}`;
+          </div>`;
+          })}`;
         })}
         </div>
         <div class="at-sum" id="at-sum">
+          <p class="at-assigned" id="at-assigned">Assigned: <b>${sm.assigned}%</b>${sm.assigned < 100 ? html` · <span class="muted">${100 - sm.assigned}% stays in your stock</span>` : ''}${sm.assigned > 100 ? html` · <b class="bad">more than 100%</b>` : ''}</p>
           <div class="at-cards">${RESOURCE_KEYS.map((k) => html`<div class="at-card">
             <div class="at-chead">${resIcon(k)} ${RES_LABEL[k]}</div>
+            <div class="at-line"><span>Stock</span><b>${n0(a.stock[k])}</b></div>
             <div class="at-line"><span>Income</span><b>${n0(a.income[k])}/h</b></div>
-            <div class="at-line"><span>Cost</span><b data-at-cph="${k}" class="${sm.costPerHour[k] > a.income[k] ? 'bad' : ''}">${n0(sm.costPerHour[k])}/h</b></div>
-            <div class="at-cover" data-at-cover="${k}" title="Share of the cost per hour your production pays">${svgBar(sm.coverage[k] * 100, sm.coverage[k] < 1 ? 'atbad' : 'atok')}<span>${Math.round(sm.coverage[k] * 100)}%</span></div>
-            <div class="at-line muted"><span>Stock</span><span>${n0(a.stock[k])}</span></div>
-            <div class="at-line"><span>Total</span><span data-at-total="${k}">${n0(sm.totalCost[k])}</span></div>
+            <div class="at-line"><span>Used</span><b data-at-used="${k}">${n0(sm.usedPerHour[k])}/h</b></div>
+            <div class="at-cover" data-at-cover="${k}" title="Share of this resource's income the plan uses">${svgBar(a.income[k] > 0 ? (sm.usedPerHour[k] / a.income[k]) * 100 : 0, 'atok')}<span>${a.income[k] > 0 ? Math.round((sm.usedPerHour[k] / a.income[k]) * 100) : 0}%</span></div>
           </div>`)}</div>
           <ul class="at-facts">
-            <li>Units per hour: <b id="at-uph">${fmtNum(sm.unitsPerHour)}</b> · in <b id="at-h">${a.hours}</b> h: <b id="at-units">${fmtNum(Math.round(sm.totalUnits))}</b> units</li>
-            <li id="at-lasts">${sm.costPerHour.wood + sm.costPerHour.clay + sm.costPerHour.iron + sm.costPerHour.crop === 0 ? 'Enter units per hour to see how long your resources last.' : Number.isFinite(sm.stockLastsH) ? html`Income doesn't cover it all: your stock pays the gap for about <b>${hm(sm.stockLastsH)}</b>${sm.stockLastsH < a.hours ? ' — after that it trains as many as income allows' : ' — enough for the whole run'}.` : html`<b class="ok">Your income pays for everything</b> — your stock is not touched.`}</li>
-            <li id="at-crop">New troops eat <b>+${fmtNum(Math.round(sm.extraUpkeep))}</b> crop per hour after the run (crop income then about <b>${fmtNum(Math.round(a.income.crop - sm.extraUpkeep))}</b>/h).</li>
+            <li>Right away from your stock: <b id="at-now">${fmtNum(sm.units.reduce((x, u) => x + u.now, 0))}</b> units · then about <b id="at-uph">${fmtNum(sm.units.reduce((x, u) => x + u.perHour, 0))}</b> per hour from income</li>
+            <li>In <b id="at-h">${a.hours}</b> h about <b id="at-units">${fmtNum(Math.round(sm.totalUnits))}</b> units (if the buildings keep up — see the busy bars)</li>
+            <li id="at-crop">They eat <b>+${fmtNum(Math.round(sm.extraUpkeep))}</b> crop per hour (crop income then about <b>${fmtNum(Math.round(a.income.crop - sm.extraUpkeep))}</b>/h).</li>
           </ul>
+          <p class="small muted">"Used" is what your income pays for at these shares. A troop is limited by its scarcest resource, so some of the others can stay unused — mix troops with different costs to use more of everything.</p>
         </div>
         <p><button type="submit" class="gbtn green">${running ? 'Restart with these settings' : 'Start auto training'}</button> <span class="small muted">Settlers and chiefs are never auto-trained. You can still train by hand at the same time.</span></p>
       </form>

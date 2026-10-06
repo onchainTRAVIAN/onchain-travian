@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
-import { autoTrains, slots, trainOrders, users } from '../src/db/schema.js';
+import { slots, trainOrders, users } from '../src/db/schema.js';
 import { clock } from '../src/clock.js';
 import { ensureWorld } from '../src/game/engine/world.js';
 import { catchUp, setResources } from '../src/game/engine/state.js';
@@ -17,6 +17,7 @@ import {
   processAutoTrains,
   startAutoTrain,
   stopAutoTrain,
+  splitPercent,
   summarizePlan,
 } from '../src/game/actions/autotrain.js';
 import { GameError } from '../src/game/errors.js';
@@ -31,6 +32,7 @@ const queued = () =>
     .all()
     .reduce((a, o) => a + o.total, 0);
 const state = () => catchUp(db, p.villageId, clock.now())!;
+const clearQueue = () => db.delete(trainOrders).where(eq(trainOrders.villageId, p.villageId)).run();
 
 beforeAll(async () => {
   clock.freeze(Date.UTC(2026, 10, 5));
@@ -38,6 +40,8 @@ beforeAll(async () => {
   p = await registerPlayer(db, { username: 'Autotrainer', password: 'password123', tribe: 'romans' }, clock.now());
   db.update(users).set({ protectedUntil: 0 }).where(eq(users.id, p.userId)).run();
   db.update(slots).set({ building: 'barracks', level: 10 }).where(and(eq(slots.villageId, p.villageId), eq(slots.slot, 20))).run();
+  db.update(slots).set({ building: 'warehouse', level: 20 }).where(and(eq(slots.villageId, p.villageId), eq(slots.slot, 21))).run();
+  db.update(slots).set({ building: 'granary', level: 20 }).where(and(eq(slots.villageId, p.villageId), eq(slots.slot, 22))).run();
   setResources(db, p.villageId, RICH);
 });
 
@@ -50,94 +54,75 @@ describe('Auto training', () => {
   });
 
   it('rejects bad plans', () => {
-    expect(() => startAutoTrain(db, p.userId, p.villageId, 9, { barracks_0: 10 }, clock.now())).toThrow(GameError);
+    expect(() => startAutoTrain(db, p.userId, p.villageId, 9, { barracks_0: 50 }, clock.now())).toThrow(GameError);
     expect(() => startAutoTrain(db, p.userId, p.villageId, 2, {}, clock.now())).toThrow(GameError);
-    const cap = autoUnitRows(db, state(), clock.now()).find((r) => r.key === 'barracks_0')!.capPerHour;
-    expect(() => startAutoTrain(db, p.userId, p.villageId, 2, { barracks_0: cap * 2 }, clock.now())).toThrow(/busy/);
+    expect(() => startAutoTrain(db, p.userId, p.villageId, 2, { barracks_0: 70, barracks_1: 40 }, clock.now())).toThrow(/110%/);
     expect(() => startAutoTrain(db, p.userId, p.villageId, 2, { stable_3: 5 }, clock.now())).toThrow(GameError);
   });
 
-  it('keeps a 30-minute batch in the queue like a player, as many as it can when short, then stops', () => {
-    const cap = autoUnitRows(db, state(), clock.now()).find((r) => r.key === 'barracks_0')!.capPerHour;
-    const perHour = Math.max(4, Math.floor(cap / 2));
-    const batch = Math.ceil(perHour / 2);
-    const waiting = () =>
-      db
-        .select()
-        .from(trainOrders)
-        .where(eq(trainOrders.villageId, p.villageId))
-        .all()
-        .reduce((a, o) => a + o.total - o.done, 0);
+  it('spends the stock by the shares right away and keeps the rest; then spends new resources each minute', () => {
+    const rows = autoUnitRows(db, state(), clock.now());
+    const leg = rows.find((r) => r.key === 'barracks_0')!;
+    clearQueue();
+    // Stock for exactly 20 Legionnaires; 50% share → 10 right away, half the stock stays.
+    const stock = { wood: leg.cost.wood * 20, clay: leg.cost.clay * 20, iron: leg.cost.iron * 20, crop: leg.cost.crop * 20 };
+    setResources(db, p.villageId, stock);
+    startAutoTrain(db, p.userId, p.villageId, 8, { barracks_0: 50 }, clock.now());
     const item = () => parseItems(autoTrainOf(db, p.villageId)!.items)[0]!;
-    const minutes = (n: number) => {
-      for (let i = 0; i < n; i++) {
-        clock.advance(AUTO_TRAIN_STEP_MS);
-        processAutoTrains(db, clock.now());
-      }
-    };
-    // Starting fills the queue at once with a batch of half an hour.
-    startAutoTrain(db, p.userId, p.villageId, 4, { barracks_0: perHour }, clock.now());
-    expect(item().trained).toBe(batch);
-    expect(waiting()).toBe(batch);
-    // Topped up in chunks that keep the pace: at most perHour × (elapsed + 30 min).
-    minutes(5);
-    expect(item().trained).toBe(batch);
-    minutes(25);
-    expect(item().trained).toBeGreaterThan(batch);
-    expect(item().trained).toBeLessThanOrEqual(perHour);
-    expect(waiting()).toBeGreaterThanOrEqual(0);
+    expect(item().trained).toBe(10);
+    expect(Math.round(state().village.wood)).toBeGreaterThanOrEqual(Math.floor(stock.wood / 2) - leg.cost.wood);
+    // Next minute: 50% of what is there now (the kept half + a minute of income).
+    clock.advance(AUTO_TRAIN_STEP_MS);
+    processAutoTrains(db, clock.now());
+    expect(item().trained).toBeGreaterThanOrEqual(14);
+    // Merged into one queue line instead of one order per minute.
+    expect(db.select().from(trainOrders).where(eq(trainOrders.villageId, p.villageId)).all().length).toBe(1);
+    stopAutoTrain(db, p.userId, p.villageId, clock.now());
+  });
 
-    // Only enough for 1 Legionnaire at the next top-up: it queues that one.
-    const leg = autoUnitRows(db, state(), clock.now()).find((r) => r.key === 'barracks_0')!.cost;
-    setResources(db, p.villageId, { wood: 0, clay: 0, iron: 0, crop: 0 });
-    minutes(90); // queue runs dry, nothing affordable: the run falls behind
-    const before = item().trained;
-    expect(item().short).toBeGreaterThan(0);
-    setResources(db, p.villageId, { wood: leg.wood, clay: leg.clay, iron: leg.iron, crop: leg.crop });
-    minutes(1);
-    expect(item().trained).toBe(before + 1);
-
-    // Never more than perHour × hours in total; the run ends and tells the player once.
+  it('with 100% it uses nearly everything, split between troops by share', () => {
+    const rows = autoUnitRows(db, state(), clock.now());
+    const leg = rows.find((r) => r.key === 'barracks_0')!;
+    clearQueue();
     setResources(db, p.villageId, RICH);
-    minutes(240);
-    const row = autoTrainOf(db, p.villageId)!;
-    expect(row.active).toBe(false);
-    expect(item().trained).toBeLessThanOrEqual(perHour * 4);
+    const before = queued();
+    startAutoTrain(db, p.userId, p.villageId, 8, { barracks_0: 100 }, clock.now());
+    const left = state().village;
+    // Whatever stays is less than one more Legionnaire in its scarcest resource (or the run's time is full).
+    const timeFull = queued() - before >= Math.floor((8 * 3_600_000) / leg.timeMs) - 1;
+    expect(timeFull || ['wood', 'clay', 'iron', 'crop'].some((k) => (left as unknown as Record<string, number>)[k]! < (leg.cost as unknown as Record<string, number>)[k]!)).toBe(true);
+    stopAutoTrain(db, p.userId, p.villageId, clock.now());
+  });
+
+  it('runs out after its hours, never queues past the end, and tells the player once', () => {
+    clearQueue();
+    setResources(db, p.villageId, RICH);
+    startAutoTrain(db, p.userId, p.villageId, 1, { barracks_0: 100 }, clock.now());
+    const end = autoTrainOf(db, p.villageId)!.endsAt;
+    const lastEnd = () => db.select().from(trainOrders).where(eq(trainOrders.villageId, p.villageId)).all().reduce((m, o) => Math.max(m, o.startAt + o.total * o.perUnitMs), 0);
+    expect(lastEnd()).toBeLessThanOrEqual(end);
+    for (let i = 0; i < 70; i++) {
+      clock.advance(AUTO_TRAIN_STEP_MS);
+      processAutoTrains(db, clock.now());
+    }
+    expect(autoTrainOf(db, p.villageId)!.active).toBe(false);
     expect(finishedAutoTrains(db, p.userId).length).toBe(1);
     markAutoTrainSeen(db, p.villageId);
     expect(finishedAutoTrains(db, p.userId).length).toBe(0);
-    const after = item().trained;
-    minutes(10);
-    expect(item().trained).toBe(after);
-    expect(queued()).toBeGreaterThanOrEqual(0);
   });
 
-  it('can be stopped and restarted with the same settings', () => {
-    startAutoTrain(db, p.userId, p.villageId, 3, { barracks_0: 1 }, clock.now());
-    expect(autoTrainOf(db, p.villageId)!.active).toBe(true);
-    stopAutoTrain(db, p.userId, p.villageId, clock.now());
-    const row = db.select().from(autoTrains).where(eq(autoTrains.villageId, p.villageId)).get()!;
-    expect(row.active).toBe(false);
-    expect(parseItems(row.items)[0]!.perHour).toBe(1);
-    expect(() => stopAutoTrain(db, p.userId, p.villageId, clock.now())).toThrow(GameError);
-  });
-
-  it('quick setup stays within budget and building time; formulas add up', () => {
+  it('quick setup splits 100% across buildings; forecasts add up', () => {
     const rows = autoUnitRows(db, state(), clock.now());
-    const income = { wood: 2000, clay: 2000, iron: 2000, crop: 1500 };
-    const stock = { wood: 0, clay: 0, iron: 0, crop: 0 };
-    const v = autoPreset(rows, 'offence', income, stock, 4);
-    const keys = Object.keys(v);
-    expect(keys.length).toBe(1); // one building → one unit
-    const s = summarizePlan(rows, v, income, stock, 4);
-    for (const k of ['wood', 'clay', 'iron'] as const) expect(s.costPerHour[k]).toBeLessThanOrEqual(income[k]);
-    expect(s.load.barracks ?? 0).toBeLessThanOrEqual(1);
-    expect(s.totalUnits).toBe(s.unitsPerHour * 4);
-    expect(s.stockLastsH).toBe(Infinity);
-    // Twice the cost of income: stock (1 h of the gap) runs out after 1 hour.
+    const v = autoPreset(rows, 'offence');
+    expect(Object.values(v).reduce((a, b) => a + b, 0)).toBe(100);
+    expect(splitPercent({ a: 1, b: 1, c: 1 })).toEqual({ a: 34, b: 33, c: 33 });
     const leg = rows.find((r) => r.key === 'barracks_0')!;
-    const s2 = summarizePlan(rows, { barracks_0: 10 }, { wood: leg.cost.wood * 5, clay: 1e9, iron: 1e9, crop: 1e9 }, { wood: leg.cost.wood * 5, clay: 0, iron: 0, crop: 0 }, 4);
-    expect(s2.stockLastsH).toBeCloseTo(1);
-    expect(s2.extraUpkeep).toBe(10 * leg.unit.upkeep * 4);
+    const income = { wood: leg.cost.wood * 10, clay: 1e9, iron: 1e9, crop: 1e9 };
+    const s = summarizePlan(rows, { barracks_0: 50 }, income, { wood: leg.cost.wood * 4, clay: 1e9, iron: 1e9, crop: 1e9 }, 3);
+    expect(s.units[0]!.perHour).toBe(5);
+    expect(s.units[0]!.now).toBe(2);
+    expect(s.units[0]!.limitedBy).toBe('wood');
+    expect(s.totalUnits).toBe(2 + 5 * 3);
+    expect(s.assigned).toBe(50);
   });
 });

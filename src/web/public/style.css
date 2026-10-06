@@ -1263,3 +1263,8 @@ svg.meter.atbad .fg { fill: #e06030; }
 .at-cover { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 11px; }
 .at-cover svg { flex: 1; height: 6px; }
 @media (max-width: 600px) { .at-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.at-fc { margin-top: 2px; color: #3f6f00; }
+.at-fc:empty { display: none; }
+.at-uin .at-in { width: 52px; }
+.at-pct { font-weight: bold; color: #6b5b33; }
+.at-assigned { margin: 8px 0; font-size: 13px; }

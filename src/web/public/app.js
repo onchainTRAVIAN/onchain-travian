@@ -561,15 +561,22 @@
     });
   });
 
-  // Auto training: live formulas, "max" per row, quick-setup links follow the chosen hours.
+  // Auto training: live forecasts for % shares, "rest" per row, quick-setup links follow the chosen hours.
   var atForm = document.getElementById('at-form');
   if (atForm) {
     var atNums = function (v) { return (v || '').split(',').map(Number); };
     var atIncome = atNums(atForm.getAttribute('data-income'));
     var atStock = atNums(atForm.getAttribute('data-stock'));
     var atInputs = Array.prototype.slice.call(atForm.querySelectorAll('.at-in'));
+    var atKeys = ['wood', 'clay', 'iron', 'crop'];
     var atFmt = function (n) { return Math.round(n).toLocaleString('en-US'); };
     var atHours = function () { var r = atForm.querySelector('input[name=hours]:checked'); return r ? Number(r.value) : 4; };
+    var atShare = function (inp) { return Math.max(0, Math.min(100, Math.floor(Number(inp.value) || 0))); };
+    var atBuy = function (budget, cost) {
+      var n = Infinity;
+      for (var k = 0; k < 4; k++) if (cost[k] > 0) n = Math.min(n, Math.floor(Math.max(0, budget[k]) / cost[k]));
+      return isFinite(n) ? n : 0;
+    };
     var atBar = function (cell, pct, bad) {
       var svg = cell.querySelector('svg.meter');
       if (svg) {
@@ -578,47 +585,43 @@
         if (!fg) { fg = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); fg.setAttribute('class', 'fg'); fg.setAttribute('height', '6'); fg.setAttribute('rx', '3'); svg.appendChild(fg); }
         fg.setAttribute('width', String(Math.max(0, Math.min(100, Math.round(pct)))));
       }
-      var sp = cell.querySelector('span'); if (sp) sp.textContent = Math.round(pct) + '%';
     };
     var atCalc = function () {
-      var h = atHours();
-      var cph = [0, 0, 0, 0], units = 0, upkeep = 0, load = {};
+      var h = atHours(), assigned = 0, nowAll = 0, phAll = 0, total = 0, upkeep = 0, used = [0, 0, 0, 0], load = {};
       atInputs.forEach(function (inp) {
-        var n = Math.max(0, Math.floor(Number(inp.value) || 0));
-        if (!n) return;
+        var sh = atShare(inp);
+        var fcEl = document.querySelector('[data-fc="' + inp.getAttribute('data-key') + '"]');
+        if (!sh) { if (fcEl) fcEl.textContent = ''; return; }
+        assigned += sh;
         var c = atNums(inp.getAttribute('data-cost'));
-        for (var k = 0; k < 4; k++) cph[k] += n * c[k];
-        units += n; upkeep += n * Number(inp.getAttribute('data-up'));
+        var now = atBuy(atStock.map(function (v) { return v * sh / 100; }), c);
+        var ph = atBuy(atIncome.map(function (v) { return v * sh / 100; }), c);
+        var lim = -1, best = Infinity;
+        for (var k = 0; k < 4; k++) if (c[k] > 0) { var v = atIncome[k] * sh / 100 / c[k]; if (v < best) { best = v; lim = k; } }
+        if (fcEl) fcEl.innerHTML = 'now <b>' + atFmt(now) + '</b> · then <b>' + atFmt(ph) + '</b>/h' + (lim >= 0 ? ' <span class="muted">(' + atKeys[lim] + ' limits)</span>' : '');
+        nowAll += now; phAll += ph; total += now + ph * h; upkeep += (now + ph * h) * Number(inp.getAttribute('data-up'));
+        for (var j = 0; j < 4; j++) used[j] += ph * c[j];
         var b = inp.getAttribute('data-b');
-        load[b] = (load[b] || 0) + n * Number(inp.getAttribute('data-time')) / 3600000;
+        load[b] = (load[b] || 0) + ph * Number(inp.getAttribute('data-time')) / 3600000;
       });
-      var keys = ['wood', 'clay', 'iron', 'crop'];
-      var lasts = Infinity;
+      var as = document.getElementById('at-assigned');
+      as.innerHTML = 'Assigned: <b>' + assigned + '%</b>' + (assigned < 100 ? ' · <span class="muted">' + (100 - assigned) + '% stays in your stock</span>' : '') + (assigned > 100 ? ' · <b class="bad">more than 100% — lower some shares</b>' : '');
       for (var k = 0; k < 4; k++) {
-        var cphEl = document.querySelector('[data-at-cph="' + keys[k] + '"]');
-        if (cphEl) { cphEl.textContent = atFmt(cph[k]) + '/h'; cphEl.className = cph[k] > atIncome[k] ? 'bad' : ''; }
-        var totEl = document.querySelector('[data-at-total="' + keys[k] + '"]');
-        if (totEl) totEl.textContent = atFmt(cph[k] * h);
-        var cov = cph[k] <= 0 ? 1 : Math.max(0, Math.min(1, atIncome[k] / cph[k]));
-        var covEl = document.querySelector('[data-at-cover="' + keys[k] + '"]');
-        if (covEl) atBar(covEl, cov * 100, cov < 1);
-        var gap = cph[k] - atIncome[k];
-        if (gap > 0) lasts = Math.min(lasts, Math.max(0, atStock[k]) / gap);
+        var u = document.querySelector('[data-at-used="' + atKeys[k] + '"]');
+        if (u) u.textContent = atFmt(used[k]) + '/h';
+        var cv = document.querySelector('[data-at-cover="' + atKeys[k] + '"]');
+        var pct = atIncome[k] > 0 ? used[k] / atIncome[k] * 100 : 0;
+        if (cv) { atBar(cv, pct, false); var sp = cv.querySelector('span'); if (sp) sp.textContent = Math.round(pct) + '%'; }
       }
-      document.getElementById('at-uph').textContent = atFmt(units);
+      document.getElementById('at-now').textContent = atFmt(nowAll);
+      document.getElementById('at-uph').textContent = atFmt(phAll);
       document.getElementById('at-h').textContent = String(h);
-      document.getElementById('at-units').textContent = atFmt(units * h);
-      var hm = function (x) { return x >= 1 ? Math.floor(x) + ' h ' + Math.round((x % 1) * 60) + ' min' : Math.round(x * 60) + ' min'; };
-      var li = document.getElementById('at-lasts');
-      if (units === 0) li.textContent = 'Enter units per hour to see how long your resources last.';
-      else if (isFinite(lasts)) li.innerHTML = 'Income doesn’t cover it all: your stock pays the gap for about <b>' + hm(lasts) + '</b>' + (lasts < h ? ' — after that it trains as many as income allows.' : ' — enough for the whole run.');
-      else li.innerHTML = '<b class="ok">Your income pays for everything</b> — your stock is not touched.';
-      var extra = upkeep * h;
-      document.getElementById('at-crop').innerHTML = 'New troops eat <b>+' + atFmt(extra) + '</b> crop per hour after the run (crop income then about <b>' + atFmt(atIncome[3] - extra) + '</b>/h).';
+      document.getElementById('at-units').textContent = atFmt(total);
+      document.getElementById('at-crop').innerHTML = 'They eat <b>+' + atFmt(upkeep) + '</b> crop per hour (crop income then about <b>' + atFmt(atIncome[3] - upkeep) + '</b>/h).';
       Array.prototype.forEach.call(document.querySelectorAll('[data-load-b]'), function (el) {
         var l = load[el.getAttribute('data-load-b')] || 0;
         atBar(el, l * 100, l > 1);
-        var sp = el.querySelector('span'); if (sp) sp.textContent = Math.round(l * 100) + '% busy' + (l > 1 ? ' — too many' : '');
+        var sp = el.querySelector('span'); if (sp) sp.textContent = Math.round(l * 100) + '% busy' + (l > 1 ? ' — can’t keep up, resources pile up' : '');
       });
       Array.prototype.forEach.call(document.querySelectorAll('[data-at-goal]'), function (a) {
         a.setAttribute('href', '/troops/train?auto=' + a.getAttribute('data-at-goal') + '&hours=' + h + '#auto');
@@ -626,31 +629,14 @@
     };
     atForm.addEventListener('input', atCalc);
     atForm.addEventListener('change', atCalc);
-    Array.prototype.forEach.call(atForm.querySelectorAll('[data-at-max]'), function (btn) {
+    Array.prototype.forEach.call(atForm.querySelectorAll('[data-at-rest]'), function (btn) {
       btn.addEventListener('click', function () {
-        var key = btn.getAttribute('data-at-max');
-        var me = atForm.querySelector('.at-in[data-key="' + key + '"]');
+        var me = atForm.querySelector('.at-in[data-key="' + btn.getAttribute('data-at-rest') + '"]');
         if (!me) return;
-        var h = atHours();
-        var budget = [0, 0, 0, 0], busy = 0;
-        for (var k = 0; k < 4; k++) budget[k] = Math.max(0, atIncome[k] + Math.max(0, atStock[k]) / h);
-        atInputs.forEach(function (inp) {
-          if (inp === me) return;
-          var n = Math.max(0, Math.floor(Number(inp.value) || 0));
-          if (!n) return;
-          var c = atNums(inp.getAttribute('data-cost'));
-          for (var k = 0; k < 4; k++) budget[k] -= n * c[k];
-          budget[3] -= n * Number(inp.getAttribute('data-up')) * h / 2;
-          if (inp.getAttribute('data-b') === me.getAttribute('data-b')) busy += n * Number(inp.getAttribute('data-time')) / 3600000;
-        });
-        var c = atNums(me.getAttribute('data-cost'));
-        var up = Number(me.getAttribute('data-up')) * h / 2;
-        var best = Math.floor(Math.max(0, 1 - busy) * Number(me.getAttribute('data-cap')));
-        for (var k = 0; k < 4; k++) {
-          var per = c[k] + (k === 3 ? up : 0);
-          if (per > 0) best = Math.min(best, Math.floor(Math.max(0, budget[k]) / per));
-        }
-        me.value = best > 0 ? String(best) : '';
+        var others = 0;
+        atInputs.forEach(function (i) { if (i !== me) others += atShare(i); });
+        var rest = Math.max(0, 100 - others);
+        me.value = rest > 0 ? String(rest) : '';
         atCalc();
       });
     });

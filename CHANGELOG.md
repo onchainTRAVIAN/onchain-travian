@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.20.0 — 2026-10-06 — auto training by resource shares
+- **Auto training now spends what you have:** give troops a % share of your resources; right away and every minute each troop gets its share of the current stock and as many as that buys are queued (left-overs re-split up to 3 times); unassigned % stays in stock; never queues past the run's end; same-troop orders merge into one queue line. Forecast per troop (now / per hour / limiting resource), income-use cards, building busy bars, quick setups split 100% so buildings stay equally busy, "rest" button.
+
 ## 0.19.3 — 2026-10-06 — comic troops
 - **All troops and heroes redrawn by hand** in the classic Travian 3 comic caricature style (bold outlines, flat bright colours, funny faces, cartoon horses); heroes grow grander every 5 levels; small icons are tiny 32×32 PNGs (~0.8 KB each).
 
