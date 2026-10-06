@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
-import { buildOrders, heroes, messages, movements, slots, tiles, users, villages } from '../src/db/schema.js';
+import { buildOrders, heroes, messages, movements, reports, slots, tiles, users, villages } from '../src/db/schema.js';
 import { clock } from '../src/clock.js';
 import { ensureWorld } from '../src/game/engine/world.js';
 import { processDue } from '../src/game/engine/events.js';
@@ -194,7 +194,11 @@ describe('reports on a tile', () => {
     // The attacker sees it on the target's tile, the defender on the attacker's tile.
     expect(reportsAt(db, a.userId, bv.x, bv.y).some((r) => r.kind.startsWith('attack'))).toBe(true);
     expect(reportsAt(db, b.userId, av.x, av.y).some((r) => r.kind.startsWith('defense'))).toBe(true);
-    expect(reportsAt(db, a.userId, bv.x + 1, bv.y)).toEqual([]);
+    // A tile nobody fought on has none (earlier tests raid oases next door, so pick a tile with no report).
+    const used = new Set(db.select().from(reports).where(eq(reports.userId, a.userId)).all().map((r) => `${r.toX}|${r.toY}`));
+    let free = { x: bv.x + 1, y: bv.y };
+    for (let dx = 1; used.has(`${free.x}|${free.y}`) && dx < 50; dx++) free = { x: bv.x + dx, y: bv.y + 3 };
+    expect(reportsAt(db, a.userId, free.x, free.y)).toEqual([]);
     expect(reportPlaces({ type: 'settle', success: true, x: 3, y: 4 }).to).toEqual({ x: 3, y: 4 });
   });
 });
