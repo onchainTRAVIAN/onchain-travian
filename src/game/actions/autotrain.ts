@@ -14,20 +14,21 @@ import { TRAINING_SITES, isTrainingSite, startTraining, trainOptions, trainOrder
 export const AUTO_TRAIN_STEP_MS = 60_000;
 export const AUTO_TRAIN_MIN_HOURS = 1;
 export const AUTO_TRAIN_MAX_HOURS = 8;
-/** A building whose queue already reaches this far ahead gets nothing new this step. */
-export const AUTO_TRAIN_BACKLOG_MS = 15 * 60_000;
-/** Downtime longer than this (server restart) is not made up in one burst. */
-const MAX_CATCH_UP_MS = 10 * 60_000;
+/** Like a player: each unit keeps about this much training time in its building's queue… */
+export const AUTO_TRAIN_AHEAD_MS = 30 * 60_000;
+/** …and is topped up once less than half of that is left. A building already busy this long gets nothing new. */
+export const AUTO_TRAIN_BACKLOG_MS = 2 * AUTO_TRAIN_AHEAD_MS;
 const HOUR = 3_600_000;
 
 export interface AutoTrainItem {
   building: BuildingId;
   slot: number;
   perHour: number;
-  /** Fraction of a unit carried to the next step. */
+  /** Unused (kept for old rows). */
   acc: number;
+  /** Units put into the queue by this run so far. */
   trained: number;
-  /** Units the plan wanted but the village could not afford at that moment. */
+  /** How far the run is behind its pace (units), e.g. while resources were short. */
   short: number;
 }
 
@@ -195,7 +196,7 @@ export const planSchema = z.object({
 /** Start (or restart) the village's auto training: the plan runs for `hours`, then stops. */
 export function startAutoTrain(db: DB, userId: number, villageId: number, hours: number, perHour: Record<string, number>, now: number): AutoTrainRow {
   assertGame(Number.isInteger(hours) && hours >= AUTO_TRAIN_MIN_HOURS && hours <= AUTO_TRAIN_MAX_HOURS, `Choose between ${AUTO_TRAIN_MIN_HOURS} and ${AUTO_TRAIN_MAX_HOURS} hours`);
-  return db.transaction((tx) => {
+  db.transaction((tx) => {
     ownedVillage(tx, userId, villageId);
     const state = catchUp(tx, villageId, now);
     assertGame(state, 'Village not found');
@@ -217,13 +218,17 @@ export function startAutoTrain(db: DB, userId: number, villageId: number, hours:
       if (l > 1.0001) throw new GameError(`The ${BUILDINGS[b].name} can't train that many per hour (${Math.round(l * 100)}% busy) — lower its numbers`);
     }
     const values = { userId, active: true, hours, startedAt: now, endsAt: now + hours * HOUR, lastRunAt: now, items: JSON.stringify(items), seen: true };
-    return tx
+    tx
       .insert(autoTrains)
       .values({ villageId, ...values })
       .onConflictDoUpdate({ target: autoTrains.villageId, set: values })
-      .returning()
-      .get();
+      .run();
   });
+  // Fill the queues right away, like a player pressing "Train".
+  const row = autoTrainOf(db, villageId);
+  assertGame(row, 'Auto training could not be saved');
+  runAutoTrain(db, row, now);
+  return autoTrainOf(db, villageId) ?? row;
 }
 
 export function stopAutoTrain(db: DB, userId: number, villageId: number, now: number): void {
@@ -232,41 +237,45 @@ export function stopAutoTrain(db: DB, userId: number, villageId: number, now: nu
   db.update(autoTrains).set({ active: false, endsAt: Math.min(row.endsAt, now), seen: true }).where(eq(autoTrains.villageId, villageId)).run();
 }
 
-/** One step of a running plan: queue what is due; if the village can't pay for it all, train as many as it can. */
+/**
+ * One step of a running plan, the way a player would do it: queue a batch of about AUTO_TRAIN_AHEAD_MS
+ * (perHour × 30 min) right away, then top up in chunks of at least half a batch so the run keeps its
+ * pace: by time t it has queued at most perHour × (t − start + 30 min). A batch the village can't pay
+ * for is cut to as many as it can afford. A run never queues more than perHour × hours in total.
+ */
 export function runAutoTrain(db: DB, row: AutoTrainRow, now: number): void {
   const items = parseItems(row.items);
   const until = Math.min(now, row.endsAt);
-  const elapsed = Math.max(0, Math.min(until - row.lastRunAt, MAX_CATCH_UP_MS));
+  const open = now < row.endsAt;
   for (const it of items) {
-    it.acc += (it.perHour * elapsed) / HOUR;
-    const want = Math.floor(it.acc);
-    if (want <= 0) continue;
-    it.acc -= want;
-    const opt = db.transaction((tx) => {
-      const state = catchUp(tx, row.villageId, now);
-      if (!state) return null;
-      const o = trainOptions(tx, state, it.building, now).find((x) => x.slot === it.slot);
-      const queueEnd = trainOrdersOf(tx, row.villageId)
-        .filter((x) => x.building === it.building)
-        .reduce((end, x) => Math.max(end, x.startAt + x.total * x.perUnitMs), now);
-      return o ? { ...o, busy: queueEnd - now > AUTO_TRAIN_BACKLOG_MS } : null;
-    });
-    if (!opt || !opt.available) {
-      it.short += want;
-      continue;
-    }
-    if (opt.busy) continue; // the building is already full for a while (e.g. manual orders)
-    const n = Math.min(want, opt.maxAffordable);
-    if (n > 0) {
-      try {
-        startTraining(db, row.userId, row.villageId, it.building, it.slot, n, now);
-        it.trained += n;
-      } catch (err) {
-        if (!(err instanceof GameError)) throw err;
-        it.short += n;
+    const planTotal = it.perHour * row.hours;
+    const batch = Math.max(1, Math.ceil((it.perHour * AUTO_TRAIN_AHEAD_MS) / HOUR));
+    if (open && it.trained < planTotal) {
+      const info = db.transaction((tx) => {
+        const state = catchUp(tx, row.villageId, now);
+        if (!state) return null;
+        const o = trainOptions(tx, state, it.building, now).find((x) => x.slot === it.slot);
+        const orders = trainOrdersOf(tx, row.villageId).filter((x) => x.building === it.building);
+        const queueEnd = orders.reduce((end, x) => Math.max(end, x.startAt + x.total * x.perUnitMs), now);
+        const waiting = orders.filter((x) => x.unitSlot === it.slot).reduce((a, x) => a + (x.total - x.done), 0);
+        return o ? { ...o, waiting, busy: queueEnd - now > AUTO_TRAIN_BACKLOG_MS } : null;
+      });
+      // On schedule: by now the run may have queued its pace so far plus one batch ahead.
+      const allowed = Math.min(planTotal, Math.floor((it.perHour * (now - row.startedAt + AUTO_TRAIN_AHEAD_MS)) / HOUR));
+      const due = allowed - it.trained;
+      if (info && info.available && !info.busy && due > 0 && (due * 2 >= batch || info.waiting === 0)) {
+        const n = Math.min(due, info.maxAffordable);
+        if (n > 0) {
+          try {
+            startTraining(db, row.userId, row.villageId, it.building, it.slot, n, now);
+            it.trained += n;
+          } catch (err) {
+            if (!(err instanceof GameError)) throw err;
+          }
+        }
       }
     }
-    it.short += want - n;
+    it.short = Math.max(0, Math.floor((it.perHour * (until - row.startedAt)) / HOUR) - it.trained);
   }
   const done = now >= row.endsAt;
   db.update(autoTrains)

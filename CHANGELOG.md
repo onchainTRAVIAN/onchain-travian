@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.2 — 2026-10-06 — auto training fills the queue
+- Auto training now works like a player: it puts a ~30-minute batch into each building's queue right away (visible under In training) and tops it up in chunks that keep the hourly pace; short of resources → as many as affordable; the run shows "queued so far" and how far it is "behind".
+- Auto-training table redesigned: compact unit rows with always-visible inputs and max, resource summary cards.
+
 ## 0.19.1 — 2026-10-06 — natural buildings
 - **Buildings and walls:** no more white gaps (clipped highlights and cut-out haze fixed), thin soft outline instead of heavy inking, more natural colours.
 

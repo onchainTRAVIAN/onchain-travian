@@ -57,40 +57,58 @@ describe('Auto training', () => {
     expect(() => startAutoTrain(db, p.userId, p.villageId, 2, { stable_3: 5 }, clock.now())).toThrow(GameError);
   });
 
-  it('queues what is due every minute, as many as it can when short, then stops', () => {
+  it('keeps a 30-minute batch in the queue like a player, as many as it can when short, then stops', () => {
     const cap = autoUnitRows(db, state(), clock.now()).find((r) => r.key === 'barracks_0')!.capPerHour;
+    const perHour = Math.max(4, Math.floor(cap / 2));
+    const batch = Math.ceil(perHour / 2);
+    const waiting = () =>
+      db
+        .select()
+        .from(trainOrders)
+        .where(eq(trainOrders.villageId, p.villageId))
+        .all()
+        .reduce((a, o) => a + o.total - o.done, 0);
+    const item = () => parseItems(autoTrainOf(db, p.villageId)!.items)[0]!;
     const minutes = (n: number) => {
       for (let i = 0; i < n; i++) {
         clock.advance(AUTO_TRAIN_STEP_MS);
         processAutoTrains(db, clock.now());
       }
     };
-    startAutoTrain(db, p.userId, p.villageId, 2, { barracks_0: cap }, clock.now());
-    expect(processAutoTrains(db, clock.now())).toBe(0); // not a minute yet
-    const trained = () => parseItems(autoTrainOf(db, p.villageId)!.items)[0]!.trained;
-    minutes(30);
-    expect(Math.abs(trained() - Math.floor(cap / 2))).toBeLessThanOrEqual(1);
+    // Starting fills the queue at once with a batch of half an hour.
+    startAutoTrain(db, p.userId, p.villageId, 4, { barracks_0: perHour }, clock.now());
+    expect(item().trained).toBe(batch);
+    expect(waiting()).toBe(batch);
+    // Topped up in chunks that keep the pace: at most perHour × (elapsed + 30 min).
+    minutes(5);
+    expect(item().trained).toBe(batch);
+    minutes(25);
+    expect(item().trained).toBeGreaterThan(batch);
+    expect(item().trained).toBeLessThanOrEqual(perHour);
+    expect(waiting()).toBeGreaterThanOrEqual(0);
 
-    // Only enough for 1 Legionnaire: it trains that one and counts the rest as short.
+    // Only enough for 1 Legionnaire at the next top-up: it queues that one.
     const leg = autoUnitRows(db, state(), clock.now()).find((r) => r.key === 'barracks_0')!.cost;
-    const before = trained();
+    setResources(db, p.villageId, { wood: 0, clay: 0, iron: 0, crop: 0 });
+    minutes(90); // queue runs dry, nothing affordable: the run falls behind
+    const before = item().trained;
+    expect(item().short).toBeGreaterThan(0);
     setResources(db, p.villageId, { wood: leg.wood, clay: leg.clay, iron: leg.iron, crop: leg.crop });
-    minutes(Math.ceil((3 * 60) / cap) + 1); // at least 3 units due
-    const it1 = parseItems(autoTrainOf(db, p.villageId)!.items)[0]!;
-    expect(it1.trained).toBe(before + 1);
-    expect(it1.short).toBeGreaterThanOrEqual(2);
+    minutes(1);
+    expect(item().trained).toBe(before + 1);
 
-    // The run ends after its hours and tells the player once.
+    // Never more than perHour × hours in total; the run ends and tells the player once.
     setResources(db, p.villageId, RICH);
-    minutes(120);
+    minutes(240);
     const row = autoTrainOf(db, p.villageId)!;
     expect(row.active).toBe(false);
+    expect(item().trained).toBeLessThanOrEqual(perHour * 4);
     expect(finishedAutoTrains(db, p.userId).length).toBe(1);
     markAutoTrainSeen(db, p.villageId);
     expect(finishedAutoTrains(db, p.userId).length).toBe(0);
-    const after = trained();
+    const after = item().trained;
     minutes(10);
-    expect(trained()).toBe(after);
+    expect(item().trained).toBe(after);
     expect(queued()).toBeGreaterThanOrEqual(0);
   });
 

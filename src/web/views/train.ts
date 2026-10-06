@@ -70,7 +70,7 @@ export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Re
     </form>
     ${d.auto && d.auto.rows.length ? autoTrainPanel(d.tribe, d.auto, d.csrf, d.now) : ''}
     ${d.groups.some((g) => g.queue.length)
-      ? html`<section class="spanel"><h3 class="sp-head">In training</h3><div class="pad">${d.groups
+      ? html`<section class="spanel" id="queue"><h3 class="sp-head">In training</h3><div class="pad">${d.groups
           .filter((g) => g.queue.length)
           .map((g) => html`<p class="small"><b>${BUILDINGS[g.building].name}</b></p>${trainingQueue(g.queue, d.tribe, d.now, d.csrf)}`)}</div></section>`
       : ''}`;
@@ -92,7 +92,7 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
         ${running
           ? html`<p><b class="ok">Running</b> · ends in ${timer(p.endsAt, now)} · started for ${p.hours} h</p>`
           : html`<p><b>Finished</b> ${fmtDuration(Math.max(0, now - p.endsAt))} ago (${p.hours} h run). Your settings are kept below — press <b>Start</b> to run it again.</p>`}
-        <table class="build_details at-progress"><thead><tr><th>Unit</th><th>Planned</th><th>Trained</th><th title="Units the plan wanted while the village couldn't pay for them">Short of resources</th></tr></thead><tbody>
+        <table class="build_details at-progress"><thead><tr><th>Unit</th><th>Per hour</th><th title="Units put into the training queue by this run">Queued so far</th><th title="How many units the run is behind its pace, e.g. while resources were short">Behind</th></tr></thead><tbody>
         ${p.items.map((i) => html`<tr><td>${unitIcon(tribe, i.slot)} ${a.rows.find((r) => r.building === i.building && r.slot === i.slot)?.unit.name ?? ''} <span class="small muted">(${BUILDINGS[i.building].name})</span></td><td class="num">${fmtNum(i.perHour)}/h</td><td class="num"><b>${fmtNum(i.trained)}</b></td><td class="num${i.short ? ' bad' : ''}">${fmtNum(i.short)}</td></tr>`)}
         </tbody></table>
         ${running ? html`<form method="post" action="/train/auto/stop" class="inl">${csrfField(csrf)}<button type="submit" class="gbtn secondary">Stop auto training</button></form>` : ''}
@@ -103,7 +103,7 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
     <h3 class="sp-head">Auto training<span>${running ? 'running' : 'off'}</span></h3>
     <div class="pad">
       ${status}
-      <p class="small">Set how many units each building should train <b>per hour</b> and for how long (1–8 hours). Every minute the game queues what is due. If the village can't pay for it at that moment, it trains <b>as many as it can</b>. When the time is up it stops — you start it again yourself.</p>
+      <p class="small">Set how many units each building should train <b>per hour</b> and for how long (1–8 hours). Like a player would, it puts a batch of about <b>30 minutes</b> of training into each building's queue (you see it under <a href="#queue">In training</a>) and tops it up when half is used. If the village can't pay for a whole batch, it queues <b>as many as it can</b>. When the time is up it stops — you start it again yourself.</p>
       <div class="at-quick"><b>Quick setup</b> <span class="small">fills the best unit for each building, keeps them equally busy, paid from your income plus your stock spread over the hours:</span>
         <span class="at-goals">${(Object.keys(AUTO_GOALS) as AutoGoal[]).map((g) => html`<a class="gbtn${a.goal === g ? '' : ' secondary'}" data-at-goal="${g}" href="${hoursLinks(g)}">${AUTO_GOALS[g]}</a>`)}<a class="small" href="/troops/train#auto" data-at-clear>clear</a></span></div>
       <form method="post" action="/train/auto" id="at-form" data-income="${RESOURCE_KEYS.map((k) => Math.round(a.income[k])).join(',')}" data-stock="${RESOURCE_KEYS.map((k) => Math.floor(a.stock[k])).join(',')}">${csrfField(csrf)}

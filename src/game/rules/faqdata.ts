@@ -1159,7 +1159,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     category: 'troops',
     title: 'Auto training',
     keywords: ['auto training', 'auto train', 'automatic training', 'train troops automatically', 'queue troops', 'troops per hour', 'training bot', 'mass training'],
-    summary: 'On the Train troops page, set how many units each building trains per hour and run it for 1 to 8 hours. It trains as many as it can when resources are short, and stops by itself when the time is up.',
+    summary: 'On the Train troops page, set how many units each building trains per hour and run it for 1 to 8 hours. It keeps a 30-minute batch in each queue, queues as many as it can when resources are short, and stops by itself when the time is up.',
     body: [
       {
         steps: [
@@ -1169,7 +1169,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
           'Check the numbers below the table, then press **Start auto training**.',
         ],
       },
-      { p: 'Every minute the game queues what is due. If the village can\'t pay for it at that moment, it trains **as many as it can** and counts the rest as "short of resources".' },
+      { p: 'It works like a player: it puts a batch of about **30 minutes** of training (units per hour ÷ 2) into each building\'s queue and tops it up once less than half is left, checking every minute. If the village can\'t pay for a whole batch, it queues **as many as it can**. "Behind" shows how far the run trails its pace while resources were short. A run never queues more than units per hour × hours in total.' },
       { p: 'A building can only train so many units per hour (its **Max/h**). The bar next to each building shows how busy your plan keeps it; above 100% the plan is refused.' },
       { p: 'The table shows your **income per hour**, the **cost per hour**, how much of it your income covers, the total for the whole run, how long your stock pays the gap, and how much extra crop the new troops will eat.' },
       { p: '**Quick setup** picks, for each building, the unit that gives the most attack, defence or carrying capacity per resource, and keeps all chosen buildings equally busy within your income plus your stock spread over the hours (it keeps room for the crop the new troops eat).' },
