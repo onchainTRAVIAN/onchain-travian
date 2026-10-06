@@ -44,9 +44,10 @@ export function stagedImage(dir: string, stem: string, level: number): string {
   return assetUrl(`img/${dir}/${stem}.svg`);
 }
 
-/** A picture by path without extension: the painted WebP when present, else the SVG. */
+/** A picture by path without extension: old-school PNG, then WebP, then the SVG. */
 export function pic(relNoExt: string): string {
-  return has(`${relNoExt}.webp`) ? assetUrl(`${relNoExt}.webp`) : assetUrl(`${relNoExt}.svg`);
+  for (const ext of ['png', 'webp']) if (has(`${relNoExt}.${ext}`)) return assetUrl(`${relNoExt}.${ext}`);
+  return assetUrl(`${relNoExt}.svg`);
 }
 
 /** Wall overlay: wooden spikes for every tribe at levels 1–4, then the tribe's own wall by stage. */

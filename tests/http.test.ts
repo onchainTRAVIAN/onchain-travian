@@ -40,7 +40,7 @@ describe('public pages', () => {
     }
     const leg = await request(app).get('/unit/romans/1');
     expect(leg.text).toContain('Legionnaire');
-    expect(leg.text).toMatch(/\/static\/img\/units\/big\/romans-1\.(svg|webp)/);
+    expect(leg.text).toMatch(/\/static\/img\/units\/big\/romans-1\.(svg|webp|png)/);
     expect(leg.text).toContain('Balanced infantry');
     const bad = await request(app).get('/unit/romans/99');
     expect(bad.status).toBe(303);

@@ -3,7 +3,7 @@
 ## 0.18.2 — 2026-10-06 — clearer village
 - **Buildings stand out:** roof colours by building type (red civic, slate military, golden thatch farm, brown workshops), calmer walls, crisp dark outline against the ground.
 - **Village walls** redrawn in the same old-school colours with an outline.
-- **Troop icons:** the small crop now finds the soldier's head instead of a raised axe, spear or banner (Axeman, Chief, Chieftain, heroes...).
+- **Troops and heroes restyled old-school** (flat colours, simple shapes, dark outline) to match the buildings; every small icon is now the whole figure, centred on the same baseline.
 
 ## 0.18.1 — 2026-10-06 — old-school buildings
 - **Buildings redrawn in a simple old-school style** (like classic Travian 3): clean, slightly cartoony, few details, sized to their plots, 5 stages each. Much lighter: about 8 KB per picture instead of 10–17 KB; troop and hero pictures are about a third lighter too.
