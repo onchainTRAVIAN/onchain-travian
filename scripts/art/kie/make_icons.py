@@ -23,16 +23,26 @@ WHOLE = {
 
 
 def bust(img: Image.Image) -> Image.Image:
-    a = img.getchannel('A').point(lambda v: 255 if v > 40 else 0)
+    """Head and shoulders, ignoring thin things that stick out (spears, axes, banners)."""
+    a = img.getchannel('A').point(lambda v: 255 if v > 60 else 0)
     x0, y0, x1, y1 = a.getbbox()
-    h = y1 - y0
-    # head position: horizontal centre of the drawn pixels in the top 12% of the figure
-    band = a.crop((x0, y0, x1, y0 + max(4, int(h * 0.12))))
-    cols = [i for i in range(band.width) if any(band.getpixel((i, j)) for j in range(band.height))]
-    cx = x0 + (sum(cols) / len(cols) if cols else band.width / 2)
-    side = int(h * 0.42)
+    px = a.load()
+    # torso column: the thickest vertical band of the figure (weapons are thin)
+    cols = [sum(1 for y in range(y0, y1) if px[x, y]) for x in range(img.width)]
+    win = max(6, (x1 - x0) // 6)
+    sm = [sum(cols[max(0, x - win): x + win]) for x in range(img.width)]
+    cx = max(range(img.width), key=lambda x: sm[x])
+    # head top: first row with a solid run of pixels near the torso column
+    half = max(4, (x1 - x0) // 10)
+    head = y0
+    for y in range(y0, y1):
+        if sum(1 for x in range(max(0, cx - half), min(img.width, cx + half)) if px[x, y]) > half * 0.8:
+            head = y
+            break
+    h = y1 - head
+    side = int(h * 0.46)
     left = int(max(0, min(img.width - side, cx - side / 2)))
-    top = max(0, y0 - int(side * 0.04))
+    top = max(0, head - int(side * 0.06))
     return img.crop((left, top, left + side, top + side))
 
 

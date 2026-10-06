@@ -28,7 +28,12 @@ for f in sorted([*(IMG / 'buildings').glob('*.png'), *(IMG / 'buildings').glob('
         jobs.append((f'buildings/{f.name}@75x100', f, 75, 100))
 for name in ('rally.svg', 'construction.svg', 'empty.svg'):
     jobs.append((f'buildings/{name}@69x120', IMG / 'buildings' / name, 69, 120))
+wall_png = {p.stem for p in (IMG / 'walls').glob('*.png')}
+for f in sorted((IMG / 'walls').glob('*.png')):
+    jobs.append((f'walls/{f.name}@540x448', f, 540, 448))
 for f in sorted((IMG / 'walls').glob('*.svg')):
+    if (f.stem if '-' in f.stem or f.stem == 'spikes' else f.stem + '-1') in wall_png:
+        continue  # replaced by the PNG wall
     jobs.append((f'walls/{f.name}@540x448', f, 540, 448))
 
 out = {'cell': CELL, 'masks': {}}

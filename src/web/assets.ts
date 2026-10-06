@@ -51,7 +51,10 @@ export function pic(relNoExt: string): string {
 
 /** Wall overlay: wooden spikes for every tribe at levels 1–4, then the tribe's own wall by stage. */
 export function wallImage(stem: string, level: number): string {
-  if (level >= 1 && level < 5 && has('img/walls/spikes.svg')) return assetUrl('img/walls/spikes.svg');
+  if (level >= 1 && level < 5) {
+    if (has('img/walls/spikes.png')) return assetUrl('img/walls/spikes.png');
+    if (has('img/walls/spikes.svg')) return assetUrl('img/walls/spikes.svg');
+  }
   return stagedImage('walls', stem, level);
 }
 
