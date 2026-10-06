@@ -14,15 +14,20 @@ import type { MovementView } from '../../game/queries.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon, timer } from './layout.js';
-import { stagedImage } from '../assets.js';
+import { hasAsset, stagedImage } from '../assets.js';
 
 export function unitName(tribe: TribeId, slot: number): string {
   return TRIBES[tribe].units[slot]?.name ?? '?';
 }
 
+/** The tribe's own small hero icon when drawn, else the generic one. */
+export function heroIconPath(tribe: TribeId): string {
+  return hasAsset(`img/units/hero-${tribe}.svg`) ? `units/hero-${tribe}` : 'units/hero';
+}
+
 /** 16px unit icon (slot 10 = hero), linking to the troop's information page unless `link` is false. */
 export function unitIcon(tribe: TribeId, slot: number, size = 16, link = true): SafeHtml {
-  const img = slot === 10 ? icon('units/hero', 'Hero', size) : icon(`units/${tribe}-${slot + 1}`, unitName(tribe, slot), size);
+  const img = slot === 10 ? icon(heroIconPath(tribe), 'Hero', size) : icon(`units/${tribe}-${slot + 1}`, unitName(tribe, slot), size);
   if (!link) return img;
   const href = slot === 10 ? '/hero' : `/unit/${tribe}/${slot + 1}`;
   return html`<a href="${href}" class="uico" title="${slot === 10 ? 'Hero' : unitName(tribe, slot)}">${img}</a>`;

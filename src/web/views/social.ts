@@ -5,7 +5,7 @@ import { TRIBES, type TribeId } from '../../game/rules/units.js';
 import type { RankKind } from '../../game/queries.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { goldBtn, pager as numPager, panel, svgBar, tribeMark, woodTabs } from './parts.js';
+import { goldBtn, heroIconPath, pager as numPager, panel, svgBar, tribeMark, woodTabs } from './parts.js';
 import { csrfField, timer } from './layout.js';
 import { avatarUrl } from '../../game/actions/avatar.js';
 import { WEEK_MS, WEEKLY_CATEGORIES, WEEKLY_LABEL, WEEKLY_PRIZES, type MedalView, type WeeklyCategory, type WeeklyRow } from '../../game/actions/weekly.js';
@@ -261,7 +261,7 @@ export function heroRankingView(d: { rows: { name: string; level: number; xp: nu
     ${d.rows.length === 0
       ? html`<tr><td colspan="5" class="none center">No heroes yet.</td></tr>`
       : d.rows.map(
-          (r, i) => html`<tr class="${r.ownerId === d.myId ? 'hl' : ''}">${rankCell(d.offset + i + 1)}<td class="pla"><img src="/static/img/units/hero.svg" width="16" height="16" alt="" class="tmark"> ${r.name}</td>
+          (r, i) => html`<tr class="${r.ownerId === d.myId ? 'hl' : ''}">${rankCell(d.offset + i + 1)}<td class="pla"><img src="/static/img/${heroIconPath(r.tribe)}.svg" width="16" height="16" alt="" class="tmark"> ${r.name}</td>
             <td class="pla">${tribeMark(r.tribe)} <a href="/player/${r.ownerId}">${r.owner}</a></td><td class="num">${r.level}</td><td class="val">${fmtNum(r.xp)}${vbar(r.xp, top)}</td></tr>`,
         )}</tbody></table>
     ${rankFoot(html``, numPager('/stats/heroes', d.page, d.pages))}</div>`;
