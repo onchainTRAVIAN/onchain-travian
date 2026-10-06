@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.16.5 — 2026-10-06
+- Training queue: the extra "All" finish button is gone (it cost the same and did the same as the last batch's button); the last batch's button is now labelled "All".
+
 ## 0.16.4 — 2026-10-05
 - **Building pictures are clickable:** on a building's page and on the "construct new building" cards, the picture opens that building's guide page with every level (cost, build time, what it gives). Guide articles about a building link there too.
 - **Switching villages keeps you on the same page** (Train troops, Rally Point, Production, a building, the map…), now showing the chosen village's resources and troops.
