@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.18.1 — 2026-10-06 — old-school buildings
+- **Buildings redrawn in a simple old-school style** (like classic Travian 3): clean, slightly cartoony, few details, sized to their plots, 5 stages each. Much lighter: about 8 KB per picture instead of 10–17 KB; troop and hero pictures are about a third lighter too.
+
 ## 0.18.0 — 2026-10-06 — painted art (AI-generated)
 - **All buildings (5 stages each), troops and tribe heroes repainted** with AI image generation (kie.ai, Nano Banana) in one consistent hand-painted style; the small unit and hero icons are made from the same art.
 - **Phones:** the menu and Info box fold behind a "☰ Menu" button so pages start with their content; urgent notices (incoming attacks) stay visible; tab rows swipe; the simulator's troop tables scroll.
