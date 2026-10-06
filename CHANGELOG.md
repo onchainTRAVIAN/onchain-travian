@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.0 — 2026-10-06 — new painted art
+- **All buildings repainted** in a soft painted style (like Travian Legends), each growing visibly over 5 stages (levels 1, 5, 10, 15, 20) — from wood and thatch to stone, towers and gold trim; new village walls for all three tribes, a new building site and Wonder construction stages.
+- **All troops repainted** with real anatomy, faces, shining metal, fur, cloth and horses.
+- **Tribe heroes:** your hero now has its own figure per tribe whose armour, cape and weapon get grander every 5 levels; new hero icons in troop tables and rankings.
+- New art shows immediately after updates (image links are versioned).
+
 ## 0.16.5 — 2026-10-06
 - **Live map shows your troop movements again:** a red marker on tiles your attacks/raids are heading to, green for reinforcements, blue for settlers, brown for troops coming back; they refresh every 15 seconds.
 - Training queue: the extra "All" finish button is gone (it cost the same and did the same as the last batch's button); the last batch's button is now labelled "All".
