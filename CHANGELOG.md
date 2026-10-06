@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.19.1 — 2026-10-06 — natural buildings
+- **Buildings and walls:** no more white gaps (clipped highlights and cut-out haze fixed), thin soft outline instead of heavy inking, more natural colours.
+
 ## 0.19.0 — 2026-10-06 — auto training
 - **Auto training** on the Train troops page: units per hour per building for 1–8 hours; every minute it queues what is due and trains as many as it can when resources are short; stops by itself (Info box tells you, settings kept). Quick setups (strongest attack / defence / most loot), a "max" per row, and live numbers: income vs cost per hour, coverage, building load, totals, how long the stock lasts, extra crop upkeep.
 

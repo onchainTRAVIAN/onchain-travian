@@ -34,7 +34,7 @@ ROOF = {
     'military': (212, 0.22, 0.80, 212),  # slate grey-blue
     'craft': (24, 0.58, 0.80, 18),       # brown wooden shingles
     'trade': (23, 1.00, 1.00, 16),      # orange clay tiles
-    'farm': (40, 0.85, 0.95, 26),        # golden thatch / straw
+    'farm': (36, 1.00, 1.00, 24),        # golden thatch / straw
     'stone': (32, 0.07, 0.90, 30),       # grey stone roofs
 }
 FAMILY = {
@@ -148,8 +148,11 @@ def recolour(rgb: np.ndarray, a: np.ndarray, fam: str) -> np.ndarray:
     red |= body & ((h < 0.075) | (h > 0.95)) & (s > 0.3) & (near > 0.5)
     lab, n = ndimage.label(red, structure=np.ones((3, 3)))
     sizes = ndimage.sum(red, lab, range(1, n + 1))
-    roof = np.isin(lab, np.where(sizes >= 40)[0] + 1)  # flags, fruit, small red bits keep their colour
-    dark = np.clip((0.55 - v) / 0.3, 0, 1)  # grout lines: darker -> warm brown hue, less saturation
+    big = np.isin(lab, np.where(sizes >= 40)[0] + 1)
+    # roof pieces cut off by a sail/chimney sit right next to a big roof; flags and fruit keep their colour
+    touched = np.unique(lab[ndimage.binary_dilation(big, iterations=3) & red])
+    roof = np.isin(lab, touched[touched > 0])
+    dark = np.clip((0.65 - v) / 0.35, 0, 1)  # grout lines: darker -> warm brown hue, less saturation
     nh = (hue + (grout - hue) * dark) / 360
     ns = np.clip(s * sf * (1 - 0.25 * dark), 0, 1)
     nv = np.clip(v * vf, 0, 1)
