@@ -1,5 +1,5 @@
-"""Old-school repaint of the building pictures (no AI): natural light, roof colour by building type
-(classic T3 variety) and a thin soft outline so each building reads on the pale village ground.
+"""Old-school repaint of the building pictures (no AI), styled after classic Travian 3 (style only): sunny
+honey/ochre timber, golden thatch and family roof colours, light beige stone, a crisp thin dark outline.
 
 Usage:
   ~/art-env/bin/python scripts/art/repaint.py scripts/art/src/buildings src/web/public/img/buildings
@@ -17,9 +17,12 @@ Steps per picture:
      tint and a value cap so nothing reads as a white hole on the ground.
   3. recolour: red roof tiles take the family colour (muted, dark grout lines stay brown, not olive);
      flags and other small red bits keep their colour.
-  4. tone: gentle midtone lift + contrast with a highlight roll-off (no clipping), slightly calmer colour.
-  5. outline: 1px warm dark-brown ring at partial opacity on the silhouette only (diagonals fainter).
-  6. quantize to 64 colours (keeps alpha levels), optimized PNG.
+  4. sunny: timber/brick hue pulled from reddish brown to honey ochre (sunlit faces a bit more golden),
+     warm colours lifted; light brick/stone desaturated towards beige. Walls too (their red tower roofs stay).
+  5. tone: midtone lift + contrast with a highlight roll-off (no clipping); white_guard then compresses
+     near-grey values above WHITE_GUARD so light stone/slate never reads as a white hole.
+  6. outline: 1px dark-brown ring at partial opacity on the silhouette only (diagonals fainter).
+  7. quantize to 64 colours (keeps alpha levels), optimized PNG.
 """
 import pathlib
 import sys
@@ -30,12 +33,12 @@ from scipy import ndimage
 
 # Roof colour family per building: (target hue deg, saturation factor, value factor, dark-grout hue deg).
 ROOF = {
-    'civic': (9, 0.95, 1.08, 14),        # warm light red tiles: main, townhall, residence, palace, embassy, treasury...
-    'military': (210, 0.26, 0.98, 210),  # light slate grey-blue
-    'craft': (27, 0.88, 1.06, 22),       # orange-brown wooden shingles
+    'civic': (11, 1.08, 1.00, 14),       # warm light red tiles: main, townhall, residence, palace, embassy, treasury...
+    'military': (210, 0.28, 0.90, 210),  # light slate grey-blue
+    'craft': (29, 1.00, 0.92, 22),       # orange-brown wooden shingles
     'trade': (30, 1.00, 1.12, 24),       # light orange clay tiles
     'farm': (47, 1.18, 1.14, 36),        # golden-yellow thatch / straw (the classic T3 roof)
-    'stone': (36, 0.09, 1.04, 32),       # light grey stone roofs
+    'stone': (36, 0.10, 0.88, 32),       # light grey stone roofs
 }
 FAMILY = {
     **dict.fromkeys(['main', 'townhall', 'residence', 'palace', 'embassy', 'treasury', 'heromansion', 'academy'], 'civic'),
@@ -52,9 +55,10 @@ SHADOW_MAX_ALPHA = 56
 CREAM = np.array([0.92, 0.86, 0.70])  # warm light stone hue for pale surfaces
 PALE_FROM, PALE_KEEP, CREAM_MIX = 0.66, 0.68, 0.45  # pale (low-sat) values above PALE_FROM compress: 1.0 -> 0.89, beige
 SPECK_MAX = 12               # pale components up to this many px inside the building are filled
-CONTRAST, GAMMA, SATURATION = 1.04, 0.86, 1.06
-OCHRE_HUE, OCHRE_PULL, WARM_SAT, WARM_LIFT = 41, 0.55, 1.1, 1.3  # sunny(): timber/brick -> honey ochre
-SUN_HUE, STONE_DESAT = 5, 0.35  # extra hue (deg) on sunlit faces; desaturation of light brick/stone
+CONTRAST, GAMMA, SATURATION = 1.12, 0.86, 1.06
+OCHRE_HUE, OCHRE_PULL, WARM_SAT, WARM_LIFT = 39, 0.55, 1.1, 1.15  # sunny(): timber/brick -> honey ochre
+SUN_HUE, STONE_DESAT = 4, 0.55  # extra hue (deg) on sunlit faces; desaturation of light brick/stone
+WHITE_GUARD = 0.87  # after tone: greyish pixels brighter than this are compressed (no white gaps)
 WALL_TONE = (1.05, 0.88, 1.06)  # walls are smooth SVG renders: a little more light, less contrast
 ROLL_START, ROLL_TOP = 0.84, 0.97  # highlights above ROLL_START compress smoothly towards ROLL_TOP
 
@@ -196,6 +200,17 @@ def tone(rgb: np.ndarray, params: tuple[float, float, float] = (CONTRAST, GAMMA,
     return np.clip(x, 0, 1)
 
 
+def white_guard(rgb: np.ndarray) -> np.ndarray:
+    """Last safety net after the lift: near-grey pixels above WHITE_GUARD are compressed so light stone,
+    plaster and slate stay beige/grey instead of reading as white holes on the pale village ground."""
+    hsv = rgb_to_hsv(rgb)
+    s, v = hsv[..., 1], hsv[..., 2]
+    w = np.clip(1 - s / 0.2, 0, 1)
+    vt = np.where(v > WHITE_GUARD, WHITE_GUARD + (v - WHITE_GUARD) * 0.3, v)
+    vt = v + (vt - v) * w
+    return rgb * (vt / np.maximum(v, 1e-6))[..., None]
+
+
 def outline(rgb: np.ndarray, a: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     body = a >= 0.5
     cross = ndimage.binary_dilation(body, structure=ndimage.generate_binary_structure(2, 1)) & ~body
@@ -219,8 +234,11 @@ def process(img: Image.Image, fam: str | None) -> Image.Image:
     rgb = fix_whites(rgb, a)
     if fam:
         rgb, roof = recolour(rgb, a, fam)
-        rgb = sunny(rgb, a, roof)
-    rgb = tone(rgb) if fam else tone(rgb, WALL_TONE)
+    else:  # walls: the gate towers' red cone roofs stay red
+        hsv = rgb_to_hsv(rgb)
+        roof = ((hsv[..., 0] < 21 / 360) | (hsv[..., 0] > 0.97)) & (hsv[..., 1] > 0.45)
+    rgb = sunny(rgb, a, roof)  # walls too: palisade timber goes honey, city-wall stone light beige
+    rgb = white_guard(tone(rgb) if fam else tone(rgb, WALL_TONE))
     rgb, a = outline(rgb, a)
     rgb[a == 0] = 0
     out = np.dstack([rgb, a[..., None]])

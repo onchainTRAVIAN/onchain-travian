@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.20.1 — 2026-10-06 — classic T3 building colours
+- Buildings and walls moved toward the classic Travian 3 look: lighter and sunnier, golden thatch roofs, honey/ochre timber, lighter slate and red tiles, crisp thin dark outline (style inspired by the T3 wiki pictures; original art).
+
 ## 0.20.0 — 2026-10-06 — auto training by resource shares
 - **Auto training now spends what you have:** give troops a % share of your resources; right away and every minute each troop gets its share of the current stock and as many as that buys are queued (left-overs re-split up to 3 times); unassigned % stays in stock; never queues past the run's end; same-troop orders merge into one queue line. Forecast per troop (now / per hour / limiting resource), income-use cards, building busy bars, quick setups split 100% so buildings stay equally busy, "rest" button.
 
