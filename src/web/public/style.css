@@ -473,9 +473,13 @@ ul.list li img.avatar.sm { margin-right: 8px; }
 /* Troop info */
 a.uico { display: inline-block; line-height: 0; vertical-align: middle; }
 a.uico:hover img { filter: drop-shadow(0 0 1.5px #71d000); }
-.unitinfo { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 10px; }
-.unitbig { flex: none; background: radial-gradient(ellipse at 50% 70%, #f1ecd8, #fbfaf5 70%); border: 1px solid #e3dcc6; border-radius: 6px; }
-.unitstats { flex: 1; min-width: 240px; }
+.unitinfo { display: grid; grid-template-columns: 122px minmax(0, 1fr); grid-template-areas: "name name" "pic stats"; gap: 8px 16px; align-items: start; margin-bottom: 10px; }
+.unitinfo .unitname { grid-area: name; padding-bottom: 6px; border-bottom: 1px solid #e3dcc6; }
+.unitbig { grid-area: pic; display: block; background: radial-gradient(ellipse at 50% 70%, #f1ecd8, #fbfaf5 70%); border: 1px solid #e3dcc6; border-radius: 6px; }
+.unitstats { grid-area: stats; min-width: 0; }
+.unitstats > p:first-child { margin-top: 0; }
+.unitstats table { width: 100%; }
+@media (max-width: 600px) { .unitinfo { grid-template-columns: 1fr; grid-template-areas: "name" "pic" "stats"; } .unitbig { justify-self: center; } }
 .unitstats table th, .unitinfo + h2 + table th { text-align: left; font-weight: normal; color: #555; width: 45%; }
 .unittabs a { padding: 2px 4px; }
 /* An unbuilt wall: a faint outline around the village that can be clicked to build it. */
@@ -711,6 +715,9 @@ form.spanel, details.spanel { display: block; }
 .bhead { display: flex; gap: 14px; padding: 12px; align-items: flex-start; }
 .bhead .bpic { position: relative; flex: none; width: 96px; height: 116px; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(ellipse at 50% 88%, #e4edcf 0, #f4f1e4 62%, #fbfaf5 100%); border: 1px solid #dcd6c3; border-radius: 6px; }
 .bhead .bpic img { width: 75px; height: 100px; object-fit: contain; }
+.bhead .bimg { flex: none; width: 96px; height: 116px; display: flex; align-items: flex-end; justify-content: center; background: radial-gradient(ellipse at 50% 88%, #e4edcf 0, #f4f1e4 62%, #fbfaf5 100%); border: 1px solid #dcd6c3; border-radius: 6px; }
+.bhead .bimg img { width: 75px; height: 100px; object-fit: contain; }
+.bhead .bdesc:last-child { flex: 1; margin: 0; align-self: center; }
 .bhead .lvlbadge, .herocard .lvlbadge { position: absolute; top: -8px; left: -8px; width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 50%; background: #c9a227; color: #fff; font-weight: bold; font-size: 12px; border: 2px solid #fff; box-shadow: 0 0 0 1px #b08a1c; }
 .bhead .binfo { flex: 1; min-width: 0; }
 .bhead .btitle { margin: 0 0 4px; font: bold 22px/1.15 Georgia, 'Times New Roman', serif; color: #2f2a17; }
@@ -1129,8 +1136,7 @@ body.lm-noscroll { overflow: hidden; }
 .gbtn.big { font-size: 15px; padding: 8px 22px; }
 a.gbtn { display: inline-flex; text-decoration: none; }
 .howto li img { margin-right: 8px; }
-.unitname { margin: 0 0 6px; font: bold 18px Georgia, serif; }
-.unitinfo { display: flex; gap: 14px; flex-wrap: wrap; }
+.unitname { margin: 0; font: bold 18px Georgia, serif; }
 .unittabs a { padding: 3px 6px; }
 .queue table.tb { width: 100%; border: 0; }
 .protnote { margin: 4px 0 8px; }
@@ -1268,3 +1274,8 @@ svg.meter.atbad .fg { fill: #e06030; }
 .at-uin .at-in { width: 52px; }
 .at-pct { font-weight: bold; color: #6b5b33; }
 .at-assigned { margin: 8px 0; font-size: 13px; }
+
+/* Headless panels: keep the first line clear of the gold corner ornament (its curl reaches ~10px in). */
+.spanel.pad, .simvil > .pad, .spanel > .pad:first-child { padding-top: 12px; padding-left: 16px; }
+.tk-intro, .rephead { padding: 12px 12px 10px 16px; }
+.bhead .lvlbadge { top: 4px; left: 4px; }
