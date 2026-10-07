@@ -45,7 +45,7 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
     ${woodTabs((['romans', 'teutons', 'gauls', 'nature', 'natars'] as TribeId[]).map((x) => ({ href: `/units?t=${x}`, label: TRIBES[x].name, on: x === d.tribe })), 'Tribe')}
     <div class="woodbody">
     <nav class="pilltabs unittabs" aria-label="Unit">${t.units.map(
-      (x, i) => html`<a href="/unit/${d.tribe}/${i + 1}" class="${i === d.slot ? 'on' : ''}" title="${x.name}"${i === d.slot ? html` aria-current="page"` : ''}>${unitIcon(d.tribe, i, 16, false)}</a>`,
+      (x, i) => html`<a href="/unit/${d.tribe}/${i + 1}" class="${i === d.slot ? 'on' : ''}" title="${x.name}"${i === d.slot ? html` aria-current="page"` : ''}>${unitIcon(d.tribe, i, 24, false)}</a>`,
     )}</nav>
     <div class="unitinfo spanel pad"><h2 class="unitname">${u.name}</h2>
       <img class="unitbig" src="${pic(`img/units/big/${d.tribe}-${n}`)}" width="120" height="140" alt="${u.name}">

@@ -3,6 +3,7 @@
 ## 0.20.3 — 2026-10-07 — pictures placed properly
 - Troop pages: name on top, picture on the left with the stats beside it (no more title squeezed next to the picture).
 - Building pictures on info pages (build cards, building page, guide) are cropped to the drawn building and centred in their frame instead of sitting small in a corner of an empty canvas.
+- Troop pages: unit tabs spread evenly over the full width with bigger icons; the upgrade-levels table fits the page (cost in two rows, no cut-off Time column).
 - Panels without a title bar keep their first line clear of the gold corner ornament; the level badge sits inside the picture frame.
 
 ## 0.20.2 — 2026-10-06 — original buildings back

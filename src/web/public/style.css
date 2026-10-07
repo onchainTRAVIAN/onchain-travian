@@ -619,7 +619,11 @@ table.simres tr.trap td.trapc { color: #8a5a00; font-weight: bold; }
 table.upgtb td, table.upgtb th { padding: 2px 6px; }
 table.upgtb tr.base td { background: #f3f3f3; }
 table.upgtb tr:hover td { background: #f2f9e4; }
-table.upgtb td.cost { white-space: nowrap; font-size: 11px; }
+table.upgtb { width: 100%; }
+table.upgtb td.cost { font-size: 11px; }
+table.upgtb td.cost .cost { display: grid; grid-template-columns: repeat(2, max-content); gap: 0 8px; }
+table.upgtb td.cost .cost span { margin: 0; }
+table.upgtb td .good { font-size: 10px; }
 table.upgtb td.cost img { width: 14px; height: 10px; }
 /* Wallet holder tiers */
 .tiercard { padding: 6px 10px 8px; }
@@ -1281,3 +1285,6 @@ svg.meter.atbad .fg { fill: #e06030; }
 .bhead .lvlbadge { top: 4px; left: 4px; }
 svg.bart { display: block; overflow: hidden; }
 .bhead .bpic, .bhead .bimg, .bcard .bcimg { align-items: center; background: radial-gradient(ellipse at 50% 72%, #e4edcf 0, #f4f1e4 60%, #fbfaf5 100%); }
+.unittabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 3px; }
+.unittabs a { display: flex; align-items: center; justify-content: center; padding: 4px 0; }
+.unittabs a img { width: 24px; height: 24px; }
