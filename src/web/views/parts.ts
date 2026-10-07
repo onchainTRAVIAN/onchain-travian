@@ -14,7 +14,7 @@ import type { MovementView } from '../../game/queries.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon, timer } from './layout.js';
-import { hasAsset, stagedImage, assetUrl } from '../assets.js';
+import { artBox, assetUrl, hasAsset, stagedImage, stagedRel } from '../assets.js';
 
 export function unitName(tribe: TribeId, slot: number): string {
   return TRIBES[tribe].units[slot]?.name ?? '?';
@@ -231,8 +231,25 @@ export function buildingImg(id: string | null, alt?: string, floated = false, le
   const label = alt ?? buildingLabel(id).name;
   const cls = floated ? 'building' : '';
   if (id && FIELD_ART[id]) return html`<img class="${cls} fld" src="${assetUrl(`img/fields/${FIELD_ART[id]}.svg`)}" width="75" height="100" alt="${label}">`;
-  if (id && WALL_ART[id]) return html`<img class="${cls}" src="${assetUrl(`img/buildings/wall-${WALL_ART[id]}.svg`)}" width="75" height="100" alt="${label}">`;
-  return html`<img class="${cls}" src="${id ? stagedImage('buildings', id, level) : assetUrl('img/buildings/empty.svg')}" width="75" height="100" alt="${label}">`;
+  const rel = !id ? 'img/buildings/empty.svg' : WALL_ART[id] ? `img/buildings/wall-${WALL_ART[id]}.svg` : stagedRel('buildings', id, level);
+  return framedArt(rel, label, cls);
+}
+
+/**
+ * 75×100 building picture cropped to its drawn area (padded, scaled up at most ~1.6×) and centred,
+ * so small buildings don't sit in a corner of an empty canvas. Inline SVG: works under the CSP.
+ */
+function framedArt(rel: string, label: string, cls: string): SafeHtml {
+  const b = artBox(rel);
+  if (!b) return html`<img class="${cls}" src="${assetUrl(rel)}" width="75" height="100" alt="${label}">`;
+  const pad = 3;
+  let w = b.w + pad * 2, h = b.h + pad * 2;
+  // Keep the 3:4 frame shape and never zoom in past ~1.6× (tiny stage-1 pictures would look bloated).
+  const scale = Math.min(75 / w, 100 / h, 1.6);
+  w = 75 / scale; h = 100 / scale;
+  const x = b.x + b.w / 2 - w / 2, y = b.y + b.h / 2 - h / 2;
+  const r = (n: number) => Math.round(n * 10) / 10;
+  return html`<svg class="bart ${cls}" width="75" height="100" viewBox="${r(x)} ${r(y)} ${r(w)} ${r(h)}" role="img" aria-label="${label}"><title>${label}</title><image href="${assetUrl(rel)}" width="75" height="100"></image></svg>`;
 }
 
 export function hasTroops(c: UnitCounts): boolean {
