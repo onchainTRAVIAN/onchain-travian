@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.20.4 — 2026-10-08 — onchainTRAVIAN logo
+- Project/token name **onchainTRAVIAN**. Logo set in `branding/`: gold coin (steel Roman helmet, red crest, laurel, chain links; with and without rim legend), wordmark, side-by-side and stacked lockups; SVG + transparent PNGs (1024 → 32 px). Generator `scripts/art/brand/` (Cinzel font, OFL). Not yet used in the game UI.
+
 ## 0.20.3 — 2026-10-07 — pictures placed properly
 - Troop pages: name on top, picture on the left with the stats beside it (no more title squeezed next to the picture).
 - Building pictures on info pages (build cards, building page, guide) are cropped to the drawn building and centred in their frame instead of sitting small in a corner of an empty canvas.

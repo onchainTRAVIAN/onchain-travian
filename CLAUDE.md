@@ -1,4 +1,4 @@
-# Project: crypto wapgame (Ancient Realms)
+# Project: crypto wapgame (Ancient Realms) — brand name onchainTRAVIAN
 
 Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Express 5 server-rendered HTML (no client framework), SQLite via Drizzle.
 
@@ -54,3 +54,4 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - `app.js` is one IIFE: never reuse a `var` name across feature blocks (hoisting made blocks clobber each other twice).
 - Map movement markers: `movementMarks()` in `src/web/routes/map.ts` → `marks` in `mapView` (classic) and `GET /map/marks` (live map polls it every 15 s; `.mvk` CSS).
 - Gold Club: `src/game/actions/goldclub.ts` (farm lists + auto-raids, oasis auto-add radius ≤ `FARM_RADIUS_MAX`=35, max 100 targets/list, evasion hooked in `handleCombat`, trade routes, cropper finder); automation runs in the `src/server.ts` tick.
+- Brand/token logo: `branding/` (coin, coin-icon, wordmark, lockup, stacked; `_preview.png` overview). Regenerate with the scraping venv: `python scripts/art/brand/logo.py && python scripts/art/brand/render.py` (Cinzel text → paths via fontTools; PNGs via Playwright).
