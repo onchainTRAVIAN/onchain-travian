@@ -209,12 +209,14 @@ export function layout(o: PageOpts): SafeHtml {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${o.title} · ${config.WORLD_NAME}</title>
 <link rel="stylesheet" href="${assetUrl('style.css')}">
-<link rel="icon" href="/static/img/nav/dorf2.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="${assetUrl('img/brand/coin-32.png')}">
+<link rel="icon" type="image/png" sizes="192x192" href="${assetUrl('img/brand/coin-192.png')}">
+<link rel="apple-touch-icon" href="${assetUrl('img/brand/coin-180.png')}">
 </head>
 <body data-masks="${assetUrl('masks.json')}" data-now="${o.now}">
 <div id="wrap">
   <div id="header">
-    <a id="logo" href="${c ? '/fields' : '/'}">${config.WORLD_NAME}<small>${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic world'}</small></a>
+    <a id="logo" href="${c ? '/fields' : '/'}"><img class="coin" src="${assetUrl('img/brand/coin-128.png')}" width="60" height="60" alt=""><span><img src="${assetUrl('img/brand/wordmark-2line.svg')}" width="148" height="47" alt="${config.WORLD_NAME}"><small>${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic world'}</small></span></a>
     ${topNav(o.nav, c)}
     <div id="ltime">Server time: <b>${fmtClock(o.now)}</b> UTC</div>
   </div>

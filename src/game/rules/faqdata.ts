@@ -15,7 +15,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
   {
     id: 'what-is-game',
     category: 'start',
-    title: 'What is Ancient Realms?',
+    title: 'What is onchainTRAVIAN?',
     keywords: ['game', 'about', 'travian', 'classic', 'browser game', 'how to play', 'rules', 'goal', 'win', 'new player', 'beginner', 'introduction'],
     summary: 'A browser strategy game that follows the classic Travian 3.6 rules: grow villages, train troops, trade, fight and join an alliance. The world ends when an alliance finishes a World Wonder at level 100.',
     body: [

@@ -6,7 +6,7 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   SESSION_SECRET: z.string().min(16).default('dev-only-insecure-secret-change-me'),
   DATABASE_PATH: z.string().min(1).default('./data/game.db'),
-  WORLD_NAME: z.string().min(1).default('Ancient Realms'),
+  WORLD_NAME: z.string().min(1).default('onchainTRAVIAN'),
   WORLD_SPEED: z.coerce.number().positive().max(1000).default(1),
   TROOP_SPEED: z.coerce.number().positive().max(1000).default(1),
   /** Merchants per Marketplace level (1 in classic Travian; fast worlds can raise it). */

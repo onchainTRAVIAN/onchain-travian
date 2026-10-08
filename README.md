@@ -1,4 +1,4 @@
-# Ancient Realms — classic Travian-style strategy game with a token economy
+# onchainTRAVIAN — classic Travian-style strategy game with a token economy
 
 A browser strategy game built on the classic Travian 3.6 rules (2010–2015 era): Romans, Teutons and Gauls, exact unit and building numbers, and a classic layout (resource-field oval, village centre, round top menu). Original artwork; works on PC and phones. On top of it there is a credits shop, a paid news ticker, and a crypto layer: wallet sign-in, perks for token holders, and ETH/token top-ups.
 

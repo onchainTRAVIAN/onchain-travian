@@ -150,9 +150,25 @@ def wordmark():
             f'{DEFS}<g transform="translate({pad} {pad + cap + 4:.1f})">{g}</g></svg>')
 
 
+def wordmark_2line():
+    """Header version: small 'onchain' over big 'TRAVIAN' (left aligned)."""
+    def line(text, size, weight, fill, track):
+        p, w = text_paths(text, size, weight, track=size * track)
+        sw = size * .07
+        return (f'<g fill="none" stroke="{INK}" stroke-width="{sw * 1.5:.1f}" stroke-linejoin="round">{p}</g>'
+                f'<g fill="{fill}" stroke="{INK}" stroke-width="{sw * .35:.1f}">{p}</g>'), w
+    a, wa = line('onchain', 84, 700, 'url(#green)', .06)
+    b, wb = line('TRAVIAN', 120, 900, 'url(#gold)', .04)
+    pad = 14
+    W, H = max(wa, wb) + pad * 2, 84 * .72 + 120 * .72 + 24 + pad * 2 + 8
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W:.0f} {H:.0f}" width="{W:.0f}" height="{H:.0f}">'
+            f'{DEFS}<g filter="url(#drop)"><g transform="translate({pad + 4} {pad + 84 * .72:.1f})">{a}</g>'
+            f'<g transform="translate({pad} {pad + 84 * .72 + 24 + 120 * .72:.1f})">{b}</g></g></svg>')
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
-    files = {'wordmark.svg': wordmark()}
+    files = {'wordmark.svg': wordmark(), 'wordmark-2line.svg': wordmark_2line()}
     for name, svg in files.items():
         with open(os.path.join(OUT, name), 'w') as fh:
             fh.write(svg)
