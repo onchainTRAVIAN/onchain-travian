@@ -1,0 +1,62 @@
+"""onchainTRAVIAN coin logo concepts via kie.ai (Nano Banana). Resumable.
+
+python3 scripts/art/brand/gen_logo.py <out_dir> [--only id1,id2]
+"""
+import pathlib
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'kie'))
+from kie import generate_many  # noqa: E402
+
+OUT = pathlib.Path(sys.argv[1])
+ONLY = set(sys.argv[sys.argv.index('--only') + 1].split(',')) if '--only' in sys.argv else None
+
+STYLE = (
+    'Premium crypto token logo for a cosy medieval / ancient Roman browser strategy game (village building, armies, tribes). '
+    'Hand-painted 2D game icon, rich painterly rendering like a polished mobile strategy game app icon: bold readable silhouette, '
+    'thick clean dark outline, warm sunlight from the top-left, glossy highlights, vibrant warm colours. '
+    'A single round coin seen straight from the front, perfectly centred, filling about 90% of the frame, '
+    'on a plain pure white background (#ffffff). No text, no letters, no numbers, no runes, no watermark, no other objects. '
+    'It must stay recognisable when shrunk to 32 pixels. Original artwork. '
+)
+
+CONCEPTS = {
+    'helmet': 'Thick shiny gold coin with a raised beaded rim. In the centre a polished steel Roman legionary helmet in side view with a big red horsehair crest, framed by a green laurel wreath; the wreath is tied at the bottom by three small silver chain links.',
+    'castle': 'Thick shiny gold coin with a raised rim. In the centre an embossed fortified hilltop village: a stone keep with red roofs, palisade walls and a waving red banner, small fields in front.',
+    'shield': 'Thick shiny gold coin with a raised rim made of interlocking chain links. In the centre a red Roman scutum shield with a gold boss, crossed with a sword and a spear behind it.',
+    'tribes': 'Thick shiny gold coin with a raised beaded rim. In the centre three small heraldic shields side by side (red Roman, blue Teuton, green Gaul) under a golden crown, with a laurel wreath around them.',
+    'tower': 'Thick shiny gold coin. In the centre a sturdy medieval watchtower with a red cone roof and a flag, built from stone blocks that subtly look like stacked cubes (a blockchain hint), green hills behind it.',
+    'hero': 'Thick shiny gold coin with a raised beaded rim. In the centre a heroic rider on a rearing horse holding a raised sword, red cape flowing, embossed in gold with coloured enamel accents.',
+    'front': 'Thick shiny gold coin with a raised rim. In the centre a front-facing bronze-and-steel Roman centurion helmet with a tall transverse red crest and cheek guards, two crossed swords behind it, glowing.',
+    'wonder': 'Thick shiny gold coin with a raised rim. In the centre a stepped golden temple monument (a world wonder) with a glowing beacon on top, surrounded by a ring of small chain links.',
+}
+
+if __name__ == '__main__':
+    jobs = [{'prompt': STYLE + d, 'out': OUT / f'{k}.png'} for k, d in CONCEPTS.items()
+            if (ONLY is None or k in ONLY) and not (OUT / f'{k}.png').exists()]
+    print(len(jobs), 'to generate', flush=True)
+    credits = 0
+    for r in generate_many(jobs, workers=8):
+        credits += r.get('credits', 0)
+        print(r, flush=True)
+    print('credits', credits)
+
+
+# Round 2 (2026-10-08): variations of the chosen 'helmet' concept, using it as reference.
+KEEP = ('The reference image is the chosen logo: keep its subject, composition, style and colours '
+        '(gold coin, steel Roman helmet in side view with a big red crest, green laurel wreath, chain at the bottom). ')
+VARIANTS = {
+    'helmet-a': 'Polish it: crisper outlines, richer gold with stronger rim highlights, helmet slightly larger, the three silver chain links at the bottom clearly visible and bolder.',
+    'helmet-b': 'Same design but the raised outer rim of the coin is made of interlocking gold chain links all the way around (blockchain hint); the wreath ends tied with a small silver chain.',
+    'helmet-c': 'Same design, bolder icon version: thicker dark outlines, simpler shapes, helmet and crest bigger and filling more of the coin, fewer but larger laurel leaves, so it reads well at 32 px.',
+    'helmet-d': 'Same design with a raised beaded rim like an ancient Roman aureus, deeper embossed relief, warm glints, and a small gold hexagon gem set where the wreath is tied at the bottom.',
+}
+
+
+def variants(out: pathlib.Path, ref_png: pathlib.Path) -> None:
+    from kie import upload
+    ref = upload(ref_png)
+    jobs = [{'prompt': STYLE + KEEP + d, 'out': out / f'{k}.png', 'refs': [ref]}
+            for k, d in VARIANTS.items() if not (out / f'{k}.png').exists()]
+    for r in generate_many(jobs, workers=4):
+        print(r, flush=True)

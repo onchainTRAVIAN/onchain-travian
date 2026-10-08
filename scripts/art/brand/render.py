@@ -1,4 +1,4 @@
-"""Render branding/*.svg to PNGs (transparent) + a preview sheet.
+"""Render branding/wordmark.svg to a transparent PNG (2x).
 
 python scripts/art/brand/render.py   (scraping venv: playwright)
 """
@@ -10,11 +10,7 @@ from playwright.async_api import async_playwright
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'branding')
 
 PNGS = [
-    ('coin.svg', [1024, 512, 256]),
-    ('coin-icon.svg', [1024, 512, 256, 128, 64, 32]),
-    ('wordmark.svg', [1]),  # scale factors for non-square art
-    ('lockup.svg', [1]),
-    ('stacked.svg', [1]),
+    ('wordmark.svg', [1]),
 ]
 
 
@@ -46,21 +42,6 @@ async def main():
                     out = f'{name[:-4]}.png'
                 await shot(page, svg, w, h, os.path.join(OUT, out))
                 print('png', out)
-        # preview sheet on dark + light
-        tiles = ''.join(
-            f'<img src="coin-icon-{s}.png" width="{s}" height="{s}">' for s in (256, 128, 64, 32))
-        sheet = f'''<html><body style="margin:0;font:13px Verdana">
-<div style="background:#1b1d22;padding:24px;display:flex;gap:24px;align-items:center">
-<img src="coin-512.png" width="360" height="360">{tiles}</div>
-<div style="background:#f3ead2;padding:24px"><img src="lockup.png" style="width:900px"></div>
-<div style="background:#0e1116;padding:24px;display:flex;gap:40px;align-items:center">
-<img src="stacked.png" style="width:420px"><img src="wordmark.png" style="width:600px"></div>
-</body></html>'''
-        sp = os.path.join(OUT, '_preview.html')
-        open(sp, 'w').write(sheet)
-        await page.set_viewport_size({'width': 1400, 'height': 800})
-        await page.goto('file://' + os.path.abspath(sp))
-        await page.screenshot(path=os.path.join(OUT, '_preview.png'), full_page=True)
         await b.close()
 
 
