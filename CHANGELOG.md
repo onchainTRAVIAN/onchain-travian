@@ -2,6 +2,7 @@
 
 ## 0.20.6 - 2026-10-09 - source on GitHub
 - Source code published at https://github.com/onchainTRAVIAN/onchain-travian with screenshots, automatic checks on every change, issue templates and a security policy.
+- No more white gap under the footer on short pages: the footer always reaches the bottom of the screen (also on big zoomed screens).
 
 ## 0.20.5 — 2026-10-09 — painted header, lowercase "onchain"
 - Small "?" help bubbles next to stats and functions all over the game (resource bar, village, buildings, training, auto training, rally point, hero, simulator, production, shop, statistics, reports, map, alliance): hover, Tab or tap to read a short explanation.
