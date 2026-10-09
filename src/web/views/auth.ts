@@ -8,7 +8,7 @@ import { csrfField, icon } from './layout.js';
 
 export function landingView(stats: { players: number; online: number; villages: number }, csrf: string): SafeHtml {
   return html`<div class="hero">
-    <h1 class="brand"><img src="${assetUrl('img/brand/coin-256.png')}" width="128" height="128" alt=""><img src="${assetUrl('img/brand/wordmark.svg')}" width="390" height="45" alt="${config.WORLD_NAME}"></h1>
+    <h1 class="brand"><img src="${assetUrl('img/brand/coin-256.png')}" width="128" height="128" alt=""><img src="${assetUrl('img/brand/wordmark.svg')}" width="365" height="45" alt="${config.WORLD_NAME}"></h1>
     <p>Build your village, raise an army and conquer your neighbours in a classic strategy game for any phone or browser.</p>
   </div>
   <div class="stats">

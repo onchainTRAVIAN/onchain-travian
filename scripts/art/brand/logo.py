@@ -2,7 +2,7 @@
 
 Run with the scraping venv (fontTools):  python scripts/art/brand/logo.py
 Writes SVGs to branding/; text is converted to paths (no font needed to view).
-Font: Cinzel (OFL, scripts/art/brand/OFL.txt).
+Fonts (OFL): Cinzel for TRAVIAN (scripts/art/brand/OFL.txt), Cormorant Garamond Bold for the lowercase 'onchain'.
 """
 import math
 import os
@@ -16,16 +16,17 @@ OUT = os.path.join(HERE, '..', '..', '..', 'branding')
 _fonts = {}
 
 
-def font(weight):
-    if weight not in _fonts:
-        f = TTFont(os.path.join(HERE, 'Cinzel.ttf'))
-        _fonts[weight] = instantiateVariableFont(f, {'wght': weight})
-    return _fonts[weight]
+def font(weight, file='Cinzel.ttf'):
+    key = (file, weight)
+    if key not in _fonts:
+        f = TTFont(os.path.join(HERE, file))
+        _fonts[key] = instantiateVariableFont(f, {'wght': weight}) if 'fvar' in f else f
+    return _fonts[key]
 
 
-def glyphs(text, weight):
+def glyphs(text, weight, file='Cinzel.ttf'):
     """[(path_d in font units, advance)] for each char."""
-    f = font(weight)
+    f = font(weight, file)
     cmap = f.getBestCmap()
     gs = f.getGlyphSet()
     out = []
@@ -37,16 +38,16 @@ def glyphs(text, weight):
     return out
 
 
-def upem(weight):
-    return font(weight)['head'].unitsPerEm
+def upem(weight, file='Cinzel.ttf'):
+    return font(weight, file)['head'].unitsPerEm
 
 
-def text_paths(text, size, weight, track=0.0):
+def text_paths(text, size, weight, track=0.0, file='Cinzel.ttf'):
     """Straight text from (0, baseline 0). Returns (svg, width)."""
-    s = size / upem(weight)
+    s = size / upem(weight, file)
     x = 0.0
     parts = []
-    for d, adv in glyphs(text, weight):
+    for d, adv in glyphs(text, weight, file):
         if d:
             parts.append(f'<path transform="translate({x:.2f} 0) scale({s:.5f} {-s:.5f})" d="{d}"/>')
         x += adv * s + track
@@ -128,9 +129,14 @@ DEFS = '''
 </defs>'''
 
 
-def wordmark_group(size=120):
-    """'onchain' (small caps, green) + 'TRAVIAN' (gold). Returns (svg, width, cap)."""
-    a, wa = text_paths('onchain', size, 700, track=size * .02)
+# 'onchain' is set in true lowercase (Cinzel has none): (file, weight, size factor, tracking)
+LOWER = ('CormorantGaramond.ttf', 700, 1.3, .02)
+
+
+def wordmark_group(size=120, lower=None):
+    """'onchain' (lowercase, green) + 'TRAVIAN' (gold). Returns (svg, width, cap)."""
+    lf, lw, lk, lt = lower or LOWER
+    a, wa = text_paths('onchain', size * lk, lw, track=size * lt, file=lf)
     b, wb = text_paths('TRAVIAN', size, 900, track=size * .04)
     gap = size * .12
     sw = size * .07
@@ -142,8 +148,8 @@ def wordmark_group(size=120):
     return g, wa + gap + wb, size * .72
 
 
-def wordmark():
-    g, w, cap = wordmark_group(120)
+def wordmark(lower=None):
+    g, w, cap = wordmark_group(120, lower)
     pad = 20
     W, H = w + pad * 2, cap + pad * 2 + 20
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W:.0f} {H:.0f}" width="{W:.0f}" height="{H:.0f}">'
@@ -152,12 +158,13 @@ def wordmark():
 
 def wordmark_2line():
     """Header version: small 'onchain' over big 'TRAVIAN' (left aligned)."""
-    def line(text, size, weight, fill, track):
-        p, w = text_paths(text, size, weight, track=size * track)
+    def line(text, size, weight, fill, track, file='Cinzel.ttf'):
+        p, w = text_paths(text, size, weight, track=size * track, file=file)
         sw = size * .07
         return (f'<g fill="none" stroke="{INK}" stroke-width="{sw * 1.5:.1f}" stroke-linejoin="round">{p}</g>'
                 f'<g fill="{fill}" stroke="{INK}" stroke-width="{sw * .35:.1f}">{p}</g>'), w
-    a, wa = line('onchain', 84, 700, 'url(#green)', .06)
+    lf, lw, lk, lt = LOWER
+    a, wa = line('onchain', 84 * lk, lw, 'url(#green)', lt, lf)
     b, wb = line('TRAVIAN', 120, 900, 'url(#gold)', .04)
     pad = 14
     W, H = max(wa, wb) + pad * 2, 84 * .72 + 120 * .72 + 24 + pad * 2 + 8
