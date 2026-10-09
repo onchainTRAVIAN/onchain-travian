@@ -83,3 +83,23 @@ def banners(out: pathlib.Path) -> None:
             for k, d in BANNERS.items() if not (out / f'{k}.png').exists()]
     for r in generate_many(jobs, workers=4):
         print(r, flush=True)
+
+
+# Emerald clasp redesign (2026-10-09): the chains around the gem looked odd; edit only the bottom ornament.
+CLASP_KEEP = ('Edit the reference image. Keep EVERYTHING identical (same coin, rim, helmet, crest, laurel branches, colours, '
+              'composition, white background) except the small ornament at the bottom where the two laurel branches meet. ')
+CLASPS = {
+    'clasp-bezel': 'Replace the chains there with an ornate gold bezel setting holding the green emerald: a small hexagonal gold mount with tiny prongs and filigree curls on both sides that wrap around the ends of the laurel stems, like jewellery.',
+    'clasp-ribbon': 'Replace the chains there with a red silk ribbon tied in a neat bow that binds the two laurel stems together, with the green emerald set in a small round gold mount at the centre of the bow.',
+    'clasp-crest': 'Replace the chains there with a small gold Roman shield-shaped medallion that binds the two laurel stems together, with the green hexagonal emerald set in its centre.',
+    'clasp-leaves': 'Remove the chains there; the two laurel stems cross and are bound by a thin gold band, and the green hexagonal emerald sits in a gold setting on top of the crossing, flanked by two small gold leaves.',
+}
+
+
+def clasps(out: pathlib.Path, ref_png: pathlib.Path) -> None:
+    from kie import upload
+    ref = upload(ref_png)
+    jobs = [{'prompt': CLASP_KEEP + d, 'out': out / f'{k}.png', 'refs': [ref]}
+            for k, d in CLASPS.items() if not (out / f'{k}.png').exists()]
+    for r in generate_many(jobs, workers=4):
+        print(r, flush=True)

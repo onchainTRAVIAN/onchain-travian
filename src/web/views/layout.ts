@@ -231,7 +231,11 @@ export function layout(o: PageOpts): SafeHtml {
     </div>
     ${sideInfo(c, o.csrf)}
   </div>
-  <div id="footer"><a href="/help">Game guide</a> | <a href="/stats">Statistics</a> | ${config.WORLD_NAME}</div>
+  <footer id="footer">
+    <a class="fbrand" href="${c ? '/fields' : '/'}"><img src="${assetUrl('img/brand/coin-128.png')}" width="40" height="40" alt=""><img src="${assetUrl('img/brand/wordmark.svg')}" width="203" height="25" alt="${config.WORLD_NAME}"></a>
+    <nav class="flinks" aria-label="Footer"><a href="/help">Game guide</a><a href="/units">Troop guide</a><a href="/stats">Statistics</a>${c ? html`<a href="/simulator">Simulator</a>` : html`<a href="/register">Play now</a>`}</nav>
+    <p class="fline">Classic browser strategy with its own coin · ${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic speed'} · © ${new Date(o.now).getUTCFullYear()} ${config.WORLD_NAME}</p>
+  </footer>
 </div>
 <script src="${assetUrl('app.js')}" defer></script>
 </body>
