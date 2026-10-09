@@ -6,7 +6,7 @@
 - Page fills the screen: on tablets / phones held sideways the content uses all the width next to the menu; on big screens the page sits on a parchment backdrop instead of empty white sides.
 - The highlighted village in the village list has the same straight green bar as the menu; your capital has a small gold crown.
 - New footer: dark wood bar with the coin and wordmark, link buttons (Game guide, Troop guide, Statistics, Simulator / Play now) and a short info line.
-- Auto training panel folds open/closed (click its title); it remembers your choice.
+- Auto training panel folds open/closed with a clear green "Open" button and a one-line description; it remembers your choice.
 - Game texts use a plain dash "-" instead of the long dash.
 - Coin logo: the version with a gem where the laurel is tied, the gem now emerald green (header, favicon, front page, Twitter picture).
 

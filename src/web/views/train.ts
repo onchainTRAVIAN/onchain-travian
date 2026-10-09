@@ -102,7 +102,9 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
   const goalLink = (goal: AutoGoal) => `/troops/train?auto=${goal}&hours=${a.hours}#auto`;
   // Foldable: closed by default; open after a quick-setup pick, on #auto links and when the player left it open (app.js).
   return html`<details class="spanel autotrain" id="auto"${a.goal ? html` open` : ''}>
-    <summary class="sp-head"><span class="at-title">Auto training</span><span>${running && p ? html`running · ends in ${timer(p.endsAt, now)}` : p ? 'finished' : 'off'}</span></summary>
+    <summary class="sp-head"><span class="at-title">Auto training<small>Let the village train troops for you for 1-8 hours</small></span>
+      <span class="at-state">${running && p ? html`<b class="ok">running</b> · ends in ${timer(p.endsAt, now)}` : p ? 'finished' : 'off'}</span>
+      <span class="at-toggle" aria-hidden="true"><span class="o">Open</span><span class="c">Close</span></span></summary>
     <div class="pad">
       ${status}
       <p class="small">Give the troops you want a <b>share of your resources</b> (in %). Every minute auto training spends what the village has: each troop gets its share of your current stock and as many as that buys go into the queue (see <a href="#queue">In training</a>); what's left over is split again. Shares below 100% keep the rest in stock. It runs for the hours you choose, then stops - you start it again yourself.</p>

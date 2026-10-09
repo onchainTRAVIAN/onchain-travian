@@ -710,10 +710,21 @@ svg.meter.pts .fg { fill: #9ccc5a; }
 form.spanel, details.spanel { display: block; }
 .herohelp summary.sp-head { display: list-item; list-style: none; }
 .herohelp summary.sp-head::-webkit-details-marker { display: none; }
-details.autotrain > summary.sp-head { cursor: pointer; list-style: none; padding-right: 34px; align-items: center; }
+details.autotrain > summary.sp-head { cursor: pointer; list-style: none; padding: 9px 34px 9px 26px; align-items: center; gap: 10px; justify-content: flex-start; }
 details.autotrain > summary.sp-head::-webkit-details-marker { display: none; }
-details.autotrain > summary .at-title::before { content: ''; display: inline-block; margin-right: 7px; vertical-align: 1px; border: 5px solid transparent; border-left: 6px solid #6b5a2e; border-right: 0; transition: transform 0.15s; }
-details.autotrain[open] > summary .at-title::before { transform: rotate(90deg); }
+details.autotrain > summary .at-title { flex: 1; color: #2f2a17; }
+details.autotrain > summary .at-title small { display: block; margin-top: 2px; font: normal 11px Verdana, Arial, sans-serif; color: #8a8266; }
+details.autotrain[open] > summary .at-title small { display: none; }
+details.autotrain > summary .at-state { flex: none; font-size: 11px; color: #8a8266; }
+details.autotrain > summary .at-toggle { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid #6fa62a; border-radius: 4px; background: linear-gradient(#a6dd5c, #6fb52a); color: #fff; font: bold 11px Verdana, Arial, sans-serif; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
+details.autotrain > summary .at-toggle::after { content: ''; border: 5px solid transparent; border-top: 6px solid #fff; border-bottom: 0; transition: transform 0.15s; }
+details.autotrain[open] > summary .at-toggle { background: linear-gradient(#f4f1e4, #ddd6bd); border-color: #c9bf9c; color: #6b5a2e; text-shadow: none; }
+details.autotrain[open] > summary .at-toggle::after { border-top-color: #6b5a2e; transform: rotate(180deg); }
+details.autotrain > summary .at-toggle span { color: inherit; font-weight: bold; }
+details.autotrain > summary .at-toggle .c, details.autotrain[open] > summary .at-toggle .o { display: none; }
+details.autotrain[open] > summary .at-toggle .c { display: inline; }
+details.autotrain > summary:hover .at-toggle { filter: brightness(1.06); }
+details.autotrain:not([open]) { border-color: #9ccc65; box-shadow: 0 0 0 1px rgba(113, 208, 0, 0.25), 0 1px 3px rgba(60, 50, 20, 0.15); }
 details.autotrain:not([open]) > summary.sp-head { border-bottom: 0; }
 details.autotrain:not([open]) { padding-bottom: 0; }
 /* Village name plaque (village overview and centre) */
