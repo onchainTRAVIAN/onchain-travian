@@ -478,6 +478,7 @@ ul.list li img.avatar.sm { margin-right: 8px; }
 .qh::before { content: ''; position: absolute; z-index: 61; bottom: calc(100% + 3px); left: 50%; margin-left: -6px; border: 6px solid transparent; border-top-color: rgba(35, 25, 12, 0.9); border-bottom: 0; opacity: 0; visibility: hidden; transition: opacity 0.12s; }
 .qh:hover::after, .qh:hover::before, .qh:focus-visible::after, .qh:focus-visible::before, .qh.open::after, .qh.open::before { opacity: 1; visibility: visible; }
 html.js .qh::after, html.js .qh::before { display: none; }
+.sp-head .qh, .vtitle .qh, th .qh { color: #6b5520; font-weight: bold; }
 /* with JS one floating bubble is used instead (never clipped by panels) */
 .qhpop { position: fixed; z-index: 1000; max-width: 240px; padding: 7px 10px; border-radius: 6px; background: rgba(35, 25, 12, 0.9); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); color: #f6e7c0; font: normal 11px/1.45 Verdana, Arial, sans-serif; pointer-events: none; opacity: 0; transition: opacity 0.12s; }
 .qhpop.on { opacity: 1; }

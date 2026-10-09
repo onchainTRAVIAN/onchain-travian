@@ -8,6 +8,7 @@ import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, timer } from './layout.js';
 import { panel, svgBar, unitIcon } from './parts.js';
+import { help } from './tips.js';
 
 /** The hero's portrait gets a grander backdrop and frame every 5 levels (stages 1–5). */
 export function heroStage(level: number): number {
@@ -97,16 +98,16 @@ export function heroView(d: {
         <div class="hname"><b>${h.name}</b> <span class="muted">level ${h.level}</span></div>
         <div class="hsub">${unitIcon(d.tribe, h.unitSlot, 16, false)} trained from ${unit.name} · ${TRIBES[d.tribe].name}</div>
         <div class="hstatus st-${h.status}"><span class="dot"></span>${STATUS[h.status]} ${where}</div>
-        <div class="hrow"><span class="k">Health</span>${meter(h.health, 'hp ' + healthCls)}<span class="v">${Math.round(h.health)}%</span></div>
-        <div class="hrow"><span class="k">Experience</span>${meter(xpPct, 'xp')}<span class="v">${fmtNum(h.xp)} / ${fmtNum(nextXp)}</span></div>
-        <div class="hfoot small muted">Home: ${d.homeName} · speed ${unit.speed} fields/hour · regenerates ${heroRegenPerDay(h.regen)}% a day${config.WORLD_SPEED !== 1 ? ` (×${config.WORLD_SPEED})` : ''}</div>
+        <div class="hrow"><span class="k">Health</span>${meter(h.health, 'hp ' + healthCls)}<span class="v">${Math.round(h.health)}%</span>${help('heroHealth')}</div>
+        <div class="hrow"><span class="k">Experience</span>${meter(xpPct, 'xp')}<span class="v">${fmtNum(h.xp)} / ${fmtNum(nextXp)}</span>${help('heroXp')}</div>
+        <div class="hfoot small muted">Home: ${d.homeName} · speed ${unit.speed} fields/hour${help('heroSpeed')} · regenerates ${heroRegenPerDay(h.regen)}% a day${config.WORLD_SPEED !== 1 ? ` (×${config.WORLD_SPEED})` : ''}${help('heroRegen')}</div>
       </div>
     </div>
     <div class="hstats">
-      <div class="spanel tile"><span class="lbl">Attack</span><b>${fmtNum(stats.off)}</b></div>
-      <div class="spanel tile"><span class="lbl">Def. infantry</span><b>${fmtNum(stats.defInf)}</b></div>
+      <div class="spanel tile"><span class="lbl">Attack${help('heroAttack')}</span><b>${fmtNum(stats.off)}</b></div>
+      <div class="spanel tile"><span class="lbl">Def. infantry${help('heroDefence')}</span><b>${fmtNum(stats.defInf)}</b></div>
       <div class="spanel tile"><span class="lbl">Def. cavalry</span><b>${fmtNum(stats.defCav)}</b></div>
-      <div class="spanel tile"><span class="lbl">Army bonus</span><b>+${(h.offBonus * HERO_BONUS_PER_POINT * 100).toFixed(1)}% / +${(h.defBonus * HERO_BONUS_PER_POINT * 100).toFixed(1)}%</b></div>
+      <div class="spanel tile"><span class="lbl">Army bonus${help('heroBonus')}</span><b>+${(h.offBonus * HERO_BONUS_PER_POINT * 100).toFixed(1)}% / +${(h.defBonus * HERO_BONUS_PER_POINT * 100).toFixed(1)}%</b></div>
     </div>
     ${h.status === 'dead'
       ? html`<div class="spanel heroact"><h3 class="sp-head">Revive ${h.name} in ${d.homeName}</h3><div class="pad">${costLine(heroReviveCost(unit, h.level), d.homeHave)}
@@ -118,7 +119,7 @@ export function heroView(d: {
       ? html`<p class="heroactions"><a class="btn" href="/troops/send">Send with troops</a> <a class="btn secondary" href="/simulator">Simulate a battle</a> <a class="btn secondary" href="/map">Find oases to capture</a></p>`
       : ''}
     <form method="post" action="/hero/skills" class="spanel skills">${csrfField(d.csrf)}
-      <h3 class="sp-head">Skills<span>${used} of ${total} points used${free > 0 ? html` · <b class="freept">${free} free</b>` : ''}</span></h3>
+      <h3 class="sp-head">Skills<span>${used} of ${total} points used${help('heroPoints')}${free > 0 ? html` · <b class="freept">${free} free</b>` : ''}</span></h3>
       ${skills.map(
         (sk) => html`<div class="skill"><label for="sk-${sk.key}"><b>${sk.label}</b><span class="small muted">${sk.effect}</span></label>
           ${meter((sk.value / HERO_SKILL_MAX) * 100, 'pts')}

@@ -4,6 +4,7 @@ import { ALLIANCE_FOUND_PRICE, type AllianceRow, type Role } from '../../game/ac
 import { fmtAgo, fmtClock, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, icon } from './layout.js';
+import { help } from './tips.js';
 import { avatarUrl } from '../../game/actions/avatar.js';
 
 /* ---------- Alliance ---------- */
@@ -83,7 +84,7 @@ export function allianceView(d: {
   const isMine = d.myRole !== null;
   const canManage = d.myRole === 'leader' || d.myRole === 'officer';
   const totalPop = d.members.reduce((s, m) => s + m.pop, 0);
-  return html`<div class="vtitle"><h1>[${a.tag}] ${a.name}</h1><span class="vmeta">${d.members.length}/${d.capacity} members · ${fmtNum(totalPop)} population</span></div>
+  return html`<div class="vtitle"><h1>[${a.tag}] ${a.name}</h1><span class="vmeta">${d.members.length}/${d.capacity} members ${help('allianceCapacity')} · ${fmtNum(totalPop)} population</span></div>
     ${a.description ? html`<div class="spanel pad msgbody">${a.description}</div>` : ''}
     ${isMine ? html`<div class="actions"><a class="btn" href="/chat?c=alliance">${icon('menu/chat', '', 16)} Alliance chat</a></div>` : ''}
     ${panel('Members', html`<ul class="list">${d.members.map(

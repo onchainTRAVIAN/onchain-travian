@@ -8,6 +8,7 @@ import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon } from './layout.js';
 import { rallyTabs } from './troops.js';
 import { unitIcon } from './parts.js';
+import { help } from './tips.js';
 
 const TRIBE_CHOICES: { id: TribeId; label: string }[] = [
   { id: 'romans', label: 'Romans' },
@@ -122,7 +123,7 @@ export function simResultPanel(input: SimInput, r: SimResult): SafeHtml {
       ${r.buildingAfter !== null ? html`<tr><th>Catapults</th><td>target level ${input.targetLevel} → <b>${r.buildingAfter}</b></td></tr>` : ''}
       ${r.attackerWon ? html`<tr><th>${icon('res/wood', 'Resources', 18, 12)} Can carry home</th><td>${fmtNum(r.carry)} resources</td></tr>` : ''}
       ${r.winAt !== null
-        ? html`<tr><th>Margin</th><td>${r.attackerWon
+        ? html`<tr><th>Margin${help('simMargin')}</th><td>${r.attackerWon
             ? html`still wins with <b>${pct(r.winAt)}</b> of this attack`
             : html`needs <b>×${(Math.ceil(r.winAt * 100) / 100).toFixed(2)}</b> this attack to win (about ${fmtNum(Math.ceil((r.winAt - 1) * 100))}% more)`}</td></tr>`
         : ''}
@@ -155,19 +156,19 @@ export function simulatorView(d: { input: SimPageInput; result: SimResult; world
         <label><input type="radio" name="oasis" value="1"${i.village ? '' : html` checked`}> Oasis</label>
       </p>
       ${armyInputs('a', i.attacker, 'attacker', 'Attacker', true)}
-      <p class="simrow"><label>Population <input type="number" name="apop" value="${i.attackerPop}" min="1" class="w60" inputmode="numeric"></label>
-        <label>Attack bonus <input type="number" name="abon" value="${v(Math.round(i.attackBonus * 100))}" min="0" max="100" class="w30" inputmode="numeric" placeholder="0">%</label>
+      <p class="simrow"><label>Population${help('simMorale')} <input type="number" name="apop" value="${i.attackerPop}" min="1" class="w60" inputmode="numeric"></label>
+        <label>Attack bonus${help('simBonus')} <input type="number" name="abon" value="${v(Math.round(i.attackBonus * 100))}" min="0" max="100" class="w30" inputmode="numeric" placeholder="0">%</label>
         <span class="small muted">(Gold +10%, artifacts…)</span></p>
       ${armyInputs('d1', i.defenders[0] ?? blank(i.village ? 'romans' : 'nature'), 'defender', i.village ? 'Defender' : 'Oasis animals', false)}
       ${i.village
-        ? html`<p class="simrow"><label>Wall <input type="number" name="wall" value="${v(i.wall)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
-            <label>Residence/Palace <input type="number" name="res" value="${v(i.residence)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
-            <label>Stonemason <input type="number" name="stone" value="${v(i.stonemason)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
+        ? html`<p class="simrow"><label>Wall${help('simWall')} <input type="number" name="wall" value="${v(i.wall)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
+            <label>Residence/Palace${help('simResidence')} <input type="number" name="res" value="${v(i.residence)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
+            <label>Stonemason${help('simStonemason')} <input type="number" name="stone" value="${v(i.stonemason)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
             <label>Population <input type="number" name="dpop" value="${i.defenderPop}" min="1" class="w60" inputmode="numeric"></label>
             <label>Defence bonus <input type="number" name="dbon" value="${v(Math.round(i.defenseBonus * 100))}" min="0" max="100" class="w30" inputmode="numeric" placeholder="0">%</label>
             <label>Catapult target level <input type="number" name="tl" value="${v(i.targetLevel)}" min="0" max="20" class="w30" inputmode="numeric" placeholder="0"></label>
             ${(i.defenders[0]?.tribe ?? 'romans') === 'gauls'
-              ? html`<label title="Free traps (Trapper capacity minus prisoners already held)">Free traps <input type="number" name="traps" value="${v(i.traps)}" min="0" class="w60" inputmode="numeric" placeholder="0"></label>`
+              ? html`<label title="Free traps (Trapper capacity minus prisoners already held)">Free traps${help('simTraps')} <input type="number" name="traps" value="${v(i.traps)}" min="0" class="w60" inputmode="numeric" placeholder="0"></label>`
               : html`<span class="small muted">Traps: Gaul defenders only.</span>`}</p>
           ${extra.map((a, k) => html`<details class="simreinf"${a ? html` open` : ''}><summary>Reinforcement ${k + 1}</summary>${armyInputs(`d${k + 2}`, a ?? blank('romans'), 'defender', `Reinforcement ${k + 1}`, false)}</details>`)}`
         : html`<input type="hidden" name="wall" value="0">`}

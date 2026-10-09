@@ -10,6 +10,7 @@ import { reportIcon } from './reports.js';
 import { html, type SafeHtml } from '../html.js';
 import { timer } from './layout.js';
 import { movementList, panel, unitIcon, unitsTable } from './parts.js';
+import { help } from './tips.js';
 
 /** Village population steps where the map picture changes (a capital tops out near 1,800, other villages near 1,300). */
 export const VILLAGE_TIERS = [250, 500, 1000, 1500] as const;
@@ -334,9 +335,9 @@ export function tileView(d: TileViewData): SafeHtml {
     ${panel('Details', html`<ul class="list">
       ${v
         ? html`<li><span class="grow">Owner <span class="sub">${v.ownerId ? html`<a href="/player/${v.ownerId}">${v.owner}</a>` : v.owner} · ${v.tribe}</span></span></li>
-          <li><span class="grow">Population <span class="sub">${fmtNum(v.pop)}</span></span></li>`
+          <li><span class="grow">Population ${help('population')}<span class="sub">${fmtNum(v.pop)}</span></span></li>`
         : d.kind === 'oasis'
-          ? html`<li><span class="grow">${OASIS_LABEL[(d.oasis ?? 'wood') as OasisType]}
+          ? html`<li><span class="grow">${OASIS_LABEL[(d.oasis ?? 'wood') as OasisType]} ${help('oasis')}
               <span class="sub">${d.oasisOwner ? html`Held by ${d.oasisOwner.name} (${d.oasisOwner.villageName})` : 'Unoccupied - wild animals live here'}</span></span></li>`
           : html`<li><span class="grow">Fields <span class="sub">${d.layout ?? '4-4-4-6'} (wood-clay-iron-crop) · free to settle</span></span></li>`}
       <li><span class="grow">Distance <span class="sub">${d.distance.toFixed(1)} fields</span></span></li>
@@ -356,9 +357,9 @@ export function tileView(d: TileViewData): SafeHtml {
       ? panel('Resources in this oasis', html`<p class="cost">${RESOURCE_KEYS.filter((k) => (d.oasisStock?.[k] ?? 0) > 0).map((k) => html`<span>${resIcon(k)}${fmtNum(Math.floor(d.oasisStock?.[k] ?? 0))}</span>`)}</p>
         <p class="small muted">Unoccupied oases gather these over time. Win an attack or raid here and your troops carry home as much as they can.</p>`)
       : ''}
-    ${d.animals && d.animals.some((n) => n > 0) ? panel('Animals', unitsTable('nature', d.animals, undefined, { hideEmpty: true }), { pad: false }) : ''}
+    ${d.animals && d.animals.some((n) => n > 0) ? panel(html`<b>Animals ${help('animals')}</b>`, unitsTable('nature', d.animals, undefined, { hideEmpty: true }), { pad: false }) : ''}
     ${d.garrison.map((g) => panel(`Garrison of ${g.owner}`, unitsTable(g.tribe, g.units, undefined, { hideEmpty: true }), { meta: `from ${g.village}`, pad: false }))}
-    ${prot ? html`<p class="small good">${icon('ui/reinforce', '', 14)} This player is under beginner protection for ${timer(v?.protectedUntil ?? d.now, d.now, false)}.</p>` : ''}
+    ${prot ? html`<p class="small good">${icon('ui/reinforce', '', 14)} This player is under beginner protection for ${timer(v?.protectedUntil ?? d.now, d.now, false)}. ${help('beginnerProtection')}</p>` : ''}
     ${d.kind === 'oasis'
       ? panel('Actions', html`<div class="actions">
           ${send('attack', 'Attack')} ${send('raid', 'Raid')} ${send('scout', 'Scout', 'btn secondary')}

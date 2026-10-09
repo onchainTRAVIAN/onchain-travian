@@ -9,6 +9,7 @@ import { csrfField, icon, resIcon, timer } from './layout.js';
 import { KIND_LABEL, movementList, panel, unitIcon, unitsInline, unitsTable, woodTabs } from './parts.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
 import { fmtClock } from '../format.js';
+import { help } from './tips.js';
 
 export interface TroopsViewData {
   tribe: TribeId;
@@ -42,18 +43,18 @@ export function troopsView(d: TroopsViewData): SafeHtml {
     ${rallyTabs('overview')}
     <div class="woodbody">
     ${d.hasRally ? '' : html`<p class="small bad">You need a <a href="/slot/39">Rally Point</a> before you can send troops anywhere.</p>`}
-    ${panel('Your troops at home', html`${unitsTable(d.tribe, d.home, undefined, { hero: !!d.hero })}
+    ${panel(html`Your troops at home${help('rallyHome')}`, html`${unitsTable(d.tribe, d.home, undefined, { hero: !!d.hero })}
       ${d.hero ? html`<p class="small herorow">${unitIcon(d.tribe, 10, 16, false)} <a href="/hero"><b>${d.hero.name}</b></a> is at home · health ${d.hero.health}%</p>` : ''}
       ${d.hasRally ? html`<div class="actions"><a class="btn" href="/troops/send">${icon('menu/send', '', 16)} Send troops</a> <a class="btn secondary" href="/troops/farmlist">Farm list</a> <a class="btn secondary" href="/simulator">Combat simulator</a></div>` : ''}`, { pad: false, cls: 'troopshome' })}
     ${panel('Troop movements', movementList(d.movements, d.now, d.movementTab), { meta: String(d.movements.length), pad: false })}
-    ${panel('Reinforcements in this village', d.reinforcements.length === 0
+    ${panel(html`Reinforcements in this village${help('reinforcements')}`, d.reinforcements.length === 0
       ? html`<p class="muted small">No other armies are stationed here.</p>`
       : html`<ul class="list">${d.reinforcements.map(
           (r) => html`<li><span class="grow">${r.villageName} <span class="sub">${r.ownerName} · ${unitsInline(r.tribe, r.units)}</span></span>
             <form method="post" action="/troops/sendback">${csrfField(d.csrf)}<input type="hidden" name="ownerVillageId" value="${r.ownerVillageId}">
             <button type="submit" class="small secondary">Send home</button></form></li>`,
         )}</ul>`)}
-    ${panel('Your troops elsewhere', d.away.length === 0
+    ${panel(html`Your troops elsewhere${help('elsewhere')}`, d.away.length === 0
       ? html`<p class="muted small">None of your troops are stationed elsewhere.</p>`
       : html`<ul class="list">${d.away.map(
           (r) => html`<li><span class="grow"><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.villageName}</a> <span class="sub">${r.ownerName} · ${unitsInline(d.tribe, r.units)}</span></span>
@@ -77,12 +78,12 @@ const CATA_ORDER = [...FIELD_IDS, ...TOWN_BUILDING_IDS] as const;
 /** Catapult target menus: what the Rally Point level allows (random below level 3); a second one at level 20. */
 function catapultSelects(rally: number, chosen: string[]): SafeHtml {
   const options = CATA_ORDER.filter((b) => catapultTargetAllowed(b, rally));
-  const sel = (name: string, current: string | undefined, label: string) =>
-    html`<label>${label} <select name="${name}"><option value="">random</option>${options.map(
+  const sel = (name: string, current: string | undefined, label: string, tip = false) =>
+    html`<label>${label}${tip ? help('catapults') : ''} <select name="${name}"><option value="">random</option>${options.map(
       (b) => html`<option value="${b}"${current === b ? html` selected` : ''}>${BUILDINGS[b].name}</option>`,
     )}</select></label>`;
-  if (options.length === 0) return html`<p class="small muted">Catapults hit random buildings until your Rally Point reaches level 3.</p>`;
-  return html`<p>${sel('catapultTarget', chosen[0], 'Catapult target:')}
+  if (options.length === 0) return html`<p class="small muted">Catapults hit random buildings until your Rally Point reaches level 3.${help('catapults')}</p>`;
+  return html`<p>${sel('catapultTarget', chosen[0], 'Catapult target:', true)}
     ${rally >= 20 ? html` ${sel('catapultTarget2', chosen[1], 'Second target:')} <span class="small muted">(needs at least 20 catapults; they split in half)</span>` : ''}</p>`;
 }
 
@@ -107,7 +108,7 @@ export function sendView(d: { tribe: TribeId; home: UnitCounts; values: Partial<
       <section class="spanel"><h3 class="sp-head">Troops</h3>
       <table id="troops" class="a2b"><tbody>
         ${[0, 1, 2, 3].map((r) => html`<tr>${cols.map((c) => (c[r] !== undefined ? cell(c[r] as number) : html`<td></td>`))}</tr>`)}
-        ${d.heroHome ? html`<tr><td colspan="3"><label>${unitIcon(d.tribe, 10, 16, false)} <input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> Hero</label></td></tr>` : ''}
+        ${d.heroHome ? html`<tr><td colspan="3"><label>${unitIcon(d.tribe, 10, 16, false)} <input type="checkbox" name="hero" value="1"${d.values.hero ? html` checked` : ''}> Hero${help('heroJoin')}</label></td></tr>` : ''}
       </tbody></table>
       <p class="carryline pad"><a href="#troops" data-allunits="all">» Select all troops</a> · <a href="#troops" data-allunits="none">clear</a>
         · ${icon('res/wood', 'Resources', 18, 12)} Can carry: <b id="carry-total" data-carrytotal>0</b> resources</p></section>
@@ -200,7 +201,7 @@ export function movementDetailView(d: MovementDetail, now: number): SafeHtml {
           .join(', ')}${d.hero ? ', hero' : ''}</p>`, { meta: `${fmtNum(d.units.reduce((a, b) => a + b, 0))}${d.hero ? ' + hero' : ''}`, pad: false })
       : ''}
     ${d.returning || haul || d.capacity !== null
-      ? panel(d.merchants > 0 && !hasUnits ? 'Goods' : 'Haul', html`${haul
+      ? panel(d.merchants > 0 && !hasUnits ? 'Goods' : html`Haul${help('haul')}`, html`${haul
           ? html`<table class="tb"><tbody>${RESOURCE_KEYS.map(
               (k) => html`<tr><td>${resIcon(k)} ${RESOURCE_LABEL[k]}</td><td class="num">${fmtNum(Math.floor(haul[k]))}</td></tr>`,
             )}<tr><th>Total</th><th class="num">${fmtNum(total)}${d.capacity ? html` <span class="small muted">of ${fmtNum(d.capacity)} (${Math.round((total / d.capacity) * 100)}%)</span>` : ''}</th></tr></tbody></table>`
