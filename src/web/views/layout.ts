@@ -232,9 +232,18 @@ export function layout(o: PageOpts): SafeHtml {
     ${sideInfo(c, o.csrf)}
   </div>
   <footer id="footer">
-    <a class="fbrand" href="${c ? '/fields' : '/'}"><img src="${assetUrl('img/brand/coin-128.png')}" width="40" height="40" alt=""><img src="${assetUrl('img/brand/wordmark.svg')}" width="203" height="25" alt="${config.WORLD_NAME}"></a>
-    <nav class="flinks" aria-label="Footer"><a href="/help">Game guide</a><a href="/units">Troop guide</a><a href="/stats">Statistics</a>${c ? html`<a href="/simulator">Simulator</a>` : html`<a href="/register">Play now</a>`}</nav>
-    <p class="fline">Classic browser strategy with its own coin · ${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic speed'} · © ${new Date(o.now).getUTCFullYear()} ${config.WORLD_NAME}</p>
+    <div class="fgrid">
+      <div class="fbrand">
+        <a href="${c ? '/fields' : '/'}"><img src="${assetUrl('img/brand/coin-128.png')}" width="58" height="58" alt=""><img src="${assetUrl('img/brand/wordmark-2line.svg')}" width="126" height="40" alt="${config.WORLD_NAME}"></a>
+        <p>The classic browser strategy game with its own coin. Build villages, raise armies, trade and conquer.</p>
+      </div>
+      <nav class="fcol" aria-label="Game"><h4>Game</h4><a href="/help">Game guide</a><a href="/units">Troop guide</a><a href="/stats">Statistics</a>${c ? html`<a href="/simulator">Combat simulator</a>` : ''}</nav>
+      ${c
+        ? html`<nav class="fcol" aria-label="Your empire"><h4>Your empire</h4><a href="/fields">Village overview</a><a href="/map">World map</a><a href="/troops">Rally point</a><a href="/hero">Hero</a></nav>
+      <nav class="fcol" aria-label="Gold and coin"><h4>Gold &amp; coin</h4><a href="/shop">Plus &amp; Gold</a><a href="/goldmarket">Gold market</a><a href="/wallet">Wallet</a><a href="/shop/ticker">News ticker</a></nav>`
+        : html`<nav class="fcol" aria-label="Join"><h4>Join the world</h4><a href="/register">Create account</a><a href="/">Log in</a><a href="/help">How to play</a></nav>`}
+    </div>
+    <div class="fbar"><span>© ${new Date(o.now).getUTCFullYear()} ${config.WORLD_NAME}</span><span>${config.WORLD_SPEED !== 1 ? `Speed x${config.WORLD_SPEED} world` : 'Classic speed world'} · server time ${fmtClock(o.now)} UTC</span></div>
   </footer>
 </div>
 <script src="${assetUrl('app.js')}" defer></script>
