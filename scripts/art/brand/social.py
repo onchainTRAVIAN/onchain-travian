@@ -25,16 +25,19 @@ html, body {{ margin: 0; }}
 AVATAR = BASE + f'''<div class="bg" style="--gx:50%;width:1000px;height:1000px">
 <img class="coin" src="{(OUT / "coin-1024.png").as_uri()}" style="left:60px;top:60px;width:880px;height:880px"></div>'''
 
-def banner(bg: pathlib.Path | None = None) -> str:
-    """Coin + wordmark + tagline; over a painted scene (kie.ai, gen_logo.banners) when bg is given."""
+def banner(bg: pathlib.Path | None = None, coin: bool = True, text: bool = True) -> str:
+    """Coin + wordmark + tagline; over a painted scene (kie.ai, gen_logo.banners) when bg is given.
+    coin=False: text only (right side); text=False: the bare painting."""
     scene = (f'<img src="{bg.as_uri()}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
              '<div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(12,7,3,0) 25%,'
              'rgba(12,7,3,.55) 50%,rgba(12,7,3,.72) 100%),linear-gradient(0deg,rgba(12,7,3,.35),rgba(12,7,3,0) 40%)"></div>'
              ) if bg else ''
-    left = 520 if bg else 330
+    if bg and not text:
+        return BASE + f'<div style="width:1500px;height:500px;overflow:hidden"><img src="{bg.as_uri()}" style="width:100%;height:100%;object-fit:cover"></div>'
+    left = (520 if coin else 480) if bg else 330
     return BASE + f'''<div class="{'' if bg else 'bg'}" style="--gx:30%;position:relative;overflow:hidden;width:1500px;height:500px">{scene}
-<img class="coin" src="{(OUT / "coin-1024.png").as_uri()}" style="left:{left}px;top:100px;width:300px;height:300px">
-<div style="position:absolute;z-index:1;left:{left + 330}px;top:160px">
+{f'<img class="coin" src="{(OUT / "coin-1024.png").as_uri()}" style="left:{left}px;top:100px;width:300px;height:300px">' if coin else ''}
+<div style="position:absolute;z-index:1;left:{left + 330}px;top:{160 if coin else 170}px">
   <img src="{(OUT / "wordmark.svg").as_uri()}" style="display:block;width:{560 if bg else 660}px;height:auto;filter:drop-shadow(0 3px 6px #000)">
   <div style="font:700 {24 if bg else 27}px Cinzel;color:#f6e2a8;letter-spacing:3px;margin:20px 0 0 6px;text-shadow:0 2px 5px #000,0 0 12px #000">
     Build &middot; Raid &middot; Conquer &middot; On-chain</div>
@@ -51,6 +54,8 @@ async def main():
         b = await p.chromium.launch()
         pages = [('twitter-avatar', AVATAR, 1000, 1000), ('twitter-banner', banner(), 1500, 500)]
         pages += [(f'twitter-{bg.stem}', banner(bg), 1500, 500) for bg in sorted(RAW.glob('banner-*.png'))]
+        pages += [(f'twitter-{bg.stem}-text', banner(bg, coin=False), 1500, 500) for bg in sorted(RAW.glob('banner-*.png'))]
+        pages += [(f'twitter-{bg.stem}-clean', banner(bg, text=False), 1500, 500) for bg in sorted(RAW.glob('banner-*.png'))]
         for name, body, w, h in pages:
             pg = await b.new_page(viewport={'width': w, 'height': h})
             tmp = OUT / '_social.html'
