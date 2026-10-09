@@ -6,7 +6,7 @@
 - Wordmark: "onchain" in lowercase (Cormorant Garamond Bold) next to "TRAVIAN" (Cinzel).
 - Page fills the screen: on tablets / phones held sideways the content uses all the width next to the menu; on big screens the page sits on a parchment backdrop instead of empty white sides.
 - The highlighted village in the village list has the same straight green bar as the menu; your capital has a small gold crown.
-- New footer: a slim painted Roman legion band (marching legion, hilltop town, sunset valley) with the coin and wordmark in the middle, one row of links below and a bottom line with the year, world speed and server time.
+- New footer: the painted Roman legion scene (marching legion, hilltop town, sunset valley) fades softly out of the page, with the coin and wordmark in the middle, one row of links below and a bottom line with the year, world speed and server time.
 - Auto training panel folds open/closed with a clear green "Open" button and a one-line description; it remembers your choice.
 - Game texts use a plain dash "-" instead of the long dash.
 - Coin logo: the emerald now sits in a gold filigree setting where the laurel is tied (header, favicon, front page, Twitter picture).
