@@ -8,7 +8,7 @@
 - New footer: dark wood bar with the coin and wordmark, link buttons (Game guide, Troop guide, Statistics, Simulator / Play now) and a short info line.
 - Auto training panel folds open/closed with a clear green "Open" button and a one-line description; it remembers your choice.
 - Game texts use a plain dash "-" instead of the long dash.
-- Coin logo: the version with a gem where the laurel is tied, the gem now emerald green (header, favicon, front page, Twitter picture).
+- Coin logo: the emerald now sits in a gold filigree setting where the laurel is tied (header, favicon, front page, Twitter picture).
 
 ## 0.20.4 — 2026-10-08 — onchainTRAVIAN logo
 - Project/token name **onchainTRAVIAN**. Coin logo painted with kie.ai (gold coin, steel Roman helmet with red crest, laurel wreath tied with a silver chain), cut out to transparent PNGs 1024 → 32 px (`branding/coin-*.png`, alternative with a hexagon gem `alt-d-*.png`); wordmark (green "onchain" + gold "TRAVIAN", Cinzel) as SVG/PNG; side-by-side and stacked lockups. Concepts in `branding/concepts/`.
