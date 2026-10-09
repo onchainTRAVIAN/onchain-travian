@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.5 — 2026-10-09 — painted header, lowercase "onchain"
+- The page header shows the painted world map from the Twitter banner (villages, river, lake) behind the logo and the menu buttons; server time and the speed note are light text with a shadow.
+- Wordmark: "onchain" in lowercase (Cormorant Garamond Bold) next to "TRAVIAN" (Cinzel).
+
 ## 0.20.4 — 2026-10-08 — onchainTRAVIAN logo
 - Project/token name **onchainTRAVIAN**. Coin logo painted with kie.ai (gold coin, steel Roman helmet with red crest, laurel wreath tied with a silver chain), cut out to transparent PNGs 1024 → 32 px (`branding/coin-*.png`, alternative with a hexagon gem `alt-d-*.png`); wordmark (green "onchain" + gold "TRAVIAN", Cinzel) as SVG/PNG; side-by-side and stacked lockups. Concepts in `branding/concepts/`.
 - The game is now called **onchainTRAVIAN**: coin + two-line wordmark in the header (smaller on phones), coin favicon and home-screen icon, big logo on the front page; `WORLD_NAME` default changed.
