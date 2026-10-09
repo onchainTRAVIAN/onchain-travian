@@ -234,7 +234,7 @@ export function layout(o: PageOpts): SafeHtml {
   </div>
   <footer id="footer">
     <div class="fhero">
-      <a class="fbrand" href="${c ? '/fields' : '/'}"><img class="fcoin" src="${assetUrl('img/brand/coin-256.png')}" width="112" height="112" alt=""><img class="fword" src="${assetUrl('img/brand/wordmark.svg')}" width="360" height="44" alt="${config.WORLD_NAME}"></a>
+      <a class="fbrand" href="${c ? '/fields' : '/'}"><img class="fcoin" src="${assetUrl('img/brand/coin-256.png')}" width="72" height="72" alt=""><img class="fword" src="${assetUrl('img/brand/wordmark.svg')}" width="262" height="32" alt="${config.WORLD_NAME}"></a>
       <p class="ftag">Build · Raid · Conquer</p>
     </div>
     <nav class="flinks" aria-label="Footer"><a href="/help">Game guide</a><a href="/units">Troop guide</a><a href="/stats">Statistics</a>${c
