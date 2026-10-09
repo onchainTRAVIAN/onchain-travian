@@ -1,0 +1,16 @@
+name: Feature idea
+description: Suggest a feature or a change to the game
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What should the game do, and why would it make it better?
+    validations:
+      required: true
+  - type: textarea
+    id: classic
+    attributes:
+      label: How did classic Travian handle it?
+      description: Optional - links or details from T3.6 help us keep the classic rules.

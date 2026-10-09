@@ -5,10 +5,11 @@ every surface a lit->shade gradient plus light texture strokes, soft dark-brown 
 Only plain SVG shapes, gradients, blur filters, clipPaths and masks are emitted.
 """
 import math
+import pathlib
 import random
 
 OUT = '#3b2a17'
-ROOT = '/home/suruja/work/crypto wapgame/src/web/public/img'
+ROOT = str(pathlib.Path(__file__).resolve().parents[3] / 'src/web/public/img')
 
 # oblique projection used by the buildings: depth recedes up and to the right
 DX, DY = .5, -.36

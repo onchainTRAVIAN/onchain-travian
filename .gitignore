@@ -6,3 +6,5 @@ data/
 *.db-shm
 *.db-wal
 .claude-env-max/
+__pycache__/
+*.pyc

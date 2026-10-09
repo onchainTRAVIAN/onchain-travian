@@ -1,7 +1,18 @@
 {
-  "name": "crypto-wapgame",
-  "version": "0.1.0",
-  "description": "WAP-style browser strategy game",
+  "name": "onchain-travian",
+  "version": "0.20.6",
+  "private": true,
+  "description": "Classic Travian 3.6-style browser strategy game with an onchain economy - build, raid, conquer",
+  "license": "UNLICENSED",
+  "author": "onchainTRAVIAN",
+  "homepage": "https://github.com/onchainTRAVIAN/onchain-travian#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onchainTRAVIAN/onchain-travian.git"
+  },
+  "bugs": {
+    "url": "https://github.com/onchainTRAVIAN/onchain-travian/issues"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
@@ -41,7 +52,6 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   },
-  "private": true,
   "type": "module",
   "engines": {
     "node": ">=22"

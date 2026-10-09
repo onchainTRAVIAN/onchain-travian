@@ -1,0 +1,60 @@
+onchainTRAVIAN - Proprietary License
+Copyright (c) 2026 onchainTRAVIAN. All rights reserved.
+
+This repository and everything in it - source code, smart contracts, game rules
+implementation, artwork, images, logos, the names "onchainTRAVIAN" and the
+associated token identity, text, data and documentation (together, the
+"Software") - is the exclusive property of onchainTRAVIAN and is protected by
+copyright, trademark and other intellectual-property laws and international
+treaties.
+
+1. NO LICENCE GRANTED
+   The Software is made publicly visible for transparency and review only.
+   Except for viewing it on github.com through GitHub's own interface (as
+   GitHub's Terms of Service require), no right or licence of any kind is
+   granted, whether express, implied, by estoppel or otherwise.
+
+2. PROHIBITED WITHOUT PRIOR WRITTEN PERMISSION
+   Without a separate written agreement signed by onchainTRAVIAN you may not,
+   in whole or in part:
+   a) copy, download for reuse, reproduce, mirror or archive the Software;
+   b) modify, translate, adapt or create derivative works of it;
+   c) run, host, deploy or operate the game, a copy, a clone or a derivative
+      of it, publicly or privately, commercially or for free;
+   d) distribute, publish, sell, sublicense, rent, lend or otherwise make the
+      Software available to anyone;
+   e) use the artwork, logos, names, brand or token identity, or anything
+      confusingly similar, in any product, service, token or marketing;
+   f) deploy the smart contracts, or contracts derived from them, to any
+      blockchain network;
+   g) use the Software, in whole or in part, to train, fine-tune, evaluate or
+      prompt any machine-learning or artificial-intelligence system, or to
+      build datasets;
+   h) remove or alter any copyright, trademark or proprietary notice.
+   Forking on GitHub does not grant any of these rights.
+
+3. CONTRIBUTIONS
+   Anything you submit to this repository (issues, pull requests, comments,
+   code, art) is given to onchainTRAVIAN with a perpetual, worldwide,
+   irrevocable, royalty-free right to use, modify and relicense it, and you
+   confirm you have the right to give it.
+
+4. ENFORCEMENT
+   Any use in breach of this licence is unauthorised and infringes the rights
+   of onchainTRAVIAN. Any permission, if ever given, ends automatically and
+   immediately on breach. onchainTRAVIAN reserves all rights and remedies
+   available under applicable law, including injunctive relief, damages,
+   account of profits, takedown notices and recovery of legal costs.
+
+5. NO WARRANTY, NO LIABILITY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. TO THE
+   MAXIMUM EXTENT PERMITTED BY LAW, ONCHAINTRAVIAN SHALL NOT BE LIABLE FOR ANY
+   CLAIM, DAMAGES, LOSS OF FUNDS OR TOKENS, OR OTHER LIABILITY ARISING FROM OR
+   IN CONNECTION WITH THE SOFTWARE.
+
+6. GENERAL
+   If any part of this licence is held unenforceable, the rest stays in force.
+   No failure or delay in enforcing a right is a waiver of it.
+
+Permission requests: open an issue titled "Licence request" at
+https://github.com/onchainTRAVIAN/onchain-travian

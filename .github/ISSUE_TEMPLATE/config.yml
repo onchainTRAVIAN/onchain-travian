@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Play the live world
+    url: https://ancient-realms.up.railway.app
+    about: Questions about playing? The in-game Game guide answers most of them.
+  - name: Report a security vulnerability
+    url: https://github.com/onchainTRAVIAN/onchain-travian/security/advisories/new
+    about: Please report security issues privately, not as public issues.
