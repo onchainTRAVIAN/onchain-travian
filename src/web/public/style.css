@@ -544,6 +544,7 @@ input.w60 { width: 60px; }
 .mvscroll.short { max-height: 220px; }
 .raider-loglist { margin: 4px 0; padding-left: 18px; }
 .sp-villages .vn { flex: 1; min-width: 0; }
+.sp .sp-villages button.lnk img.vcapm { display: inline-block; width: 13px; height: 13px; vertical-align: -2px; margin-right: 4px; }
 .sp-villages .vp { flex: none; font-size: 11px; color: #555; margin: 0 6px 0 4px; padding-left: 15px; background: url(/static/img/res/pop.svg) no-repeat left center / 12px 12px; }
 .sp-total { margin: 0; padding: 4px 12px 8px; color: #555; }
 .raider td.oname { white-space: nowrap; }

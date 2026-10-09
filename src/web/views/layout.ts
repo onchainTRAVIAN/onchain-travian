@@ -14,7 +14,7 @@ import { TRIBES, type TribeId } from '../../game/rules/units.js';
 export interface Chrome {
   user: UserRow;
   village: VillageRow;
-  villages: { id: number; name: string; x: number; y: number; pop: number }[];
+  villages: { id: number; name: string; x: number; y: number; pop: number; isCapital?: boolean }[];
   eco: Economy;
   unread: { reports: number; messages: number };
   credits: number;
@@ -187,7 +187,7 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
       <ul class="sp-villages">${c.villages.map(
         (v) => html`<li class="${v.id === c.village.id ? 'on' : ''}">
           <form method="post" action="/village/switch"><input type="hidden" name="_csrf" value="${csrf}"><input type="hidden" name="villageId" value="${v.id}">
-          <button type="submit" class="lnk"${v.id === c.village.id ? html` aria-current="true"` : ''}><span class="vn">${v.name}</span><span class="vp" title="Population">${fmtNum(v.pop)}</span><span class="vc">(${v.x}|${v.y})</span></button></form></li>`,
+          <button type="submit" class="lnk"${v.id === c.village.id ? html` aria-current="true"` : ''}><span class="vn">${v.isCapital ? html`<img class="vcapm" src="${assetUrl('img/ui/capital.svg')}" width="13" height="13" alt="Capital" title="Capital">` : ''}${v.name}</span><span class="vp" title="Population">${fmtNum(v.pop)}</span><span class="vc">(${v.x}|${v.y})</span></button></form></li>`,
       )}</ul>
       ${c.villages.length > 1 ? html`<p class="sp-total small">Total population: <b>${fmtNum(c.villages.reduce((a, v) => a + v.pop, 0))}</b></p>` : ''}</section>
     ${c.tasks ? taskPanel({ tribe: c.user.tribe as TribeId, current: c.tasks.current, claimable: c.tasks.claimable, total: c.tasks.total, done: c.tasks.done, csrf }) : ''}

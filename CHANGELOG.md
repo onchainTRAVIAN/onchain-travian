@@ -4,7 +4,7 @@
 - The page header shows the painted world map from the Twitter banner (villages, river, lake) behind the logo and the menu buttons; server time and the speed note are light text with a shadow.
 - Wordmark: "onchain" in lowercase (Cormorant Garamond Bold) next to "TRAVIAN" (Cinzel).
 - Page fills the screen: on tablets / phones held sideways the content uses all the width next to the menu; on big screens the page sits on a parchment backdrop instead of empty white sides.
-- The highlighted village in the village list has the same straight green bar as the menu.
+- The highlighted village in the village list has the same straight green bar as the menu; your capital has a small gold crown.
 - Auto training panel folds open/closed (click its title); it remembers your choice.
 - Game texts use a plain dash "-" instead of the long dash.
 - Coin logo: the version with a gem where the laurel is tied, the gem now emerald green (header, favicon, front page, Twitter picture).
