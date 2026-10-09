@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.20.5 — 2026-10-09 — painted header, lowercase "onchain"
+- Small "?" help bubbles next to stats and functions all over the game (resource bar, village, buildings, training, auto training, rally point, hero, simulator, production, shop, statistics, reports, map, alliance): hover, Tab or tap to read a short explanation.
 - The page header shows the painted world map from the Twitter banner (villages, river, lake) behind the logo and the menu buttons; server time and the speed note are light text with a shadow.
 - Wordmark: "onchain" in lowercase (Cormorant Garamond Bold) next to "TRAVIAN" (Cinzel).
 - Page fills the screen: on tablets / phones held sideways the content uses all the width next to the menu; on big screens the page sits on a parchment backdrop instead of empty white sides.

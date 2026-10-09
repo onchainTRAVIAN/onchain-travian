@@ -472,13 +472,13 @@ ul.list li img.avatar.sm { margin-right: 8px; }
 .sp-head { margin: 0; padding: 8px 12px; font-size: 12px; font-weight: bold; color: #2f2a17; background: linear-gradient(#f4f1e4, #ebe6d2); border-bottom: 1px solid #dcd6c3; display: flex; justify-content: space-between; }
 .sp-head span { color: #8a8266; font-weight: normal; }
 /* "?" help bubbles (help() in views/tips.ts; edge placement + tap in app.js) */
-.qh { position: relative; display: inline-block; width: 14px; height: 14px; margin: 0 3px; vertical-align: -2px; border: 1px solid #a8955c; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fffaf0, #efe2bd); color: #6b5520; font: bold 10px/14px Verdana, Arial, sans-serif; text-align: center; text-shadow: none; cursor: help; user-select: none; box-sizing: border-box; line-height: 12px; }
-.qh:hover, .qh:focus-visible, .qh.open { border-color: #71d000; box-shadow: 0 0 0 2px rgba(113, 208, 0, 0.3); outline: none; }
+span.qh.qh.qh { position: relative; display: inline-block; padding: 0; min-width: 0; letter-spacing: 0; width: 14px; height: 14px; margin: 0 3px; vertical-align: -2px; border: 1px solid #a8955c; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fffaf0, #efe2bd); color: #6b5520; font: bold 10px/14px Verdana, Arial, sans-serif; text-align: center; text-shadow: none; cursor: help; user-select: none; box-sizing: border-box; line-height: 12px; }
+span.qh.qh.qh:hover, span.qh.qh.qh:focus-visible, span.qh.qh.qh.open { border-color: #71d000; box-shadow: 0 0 0 2px rgba(113, 208, 0, 0.3); outline: none; }
 .qh::after { content: attr(data-help); position: absolute; z-index: 60; bottom: calc(100% + 9px); left: 50%; width: max-content; max-width: 240px; padding: 7px 10px; border-radius: 6px; background: rgba(35, 25, 12, 0.9); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); color: #f6e7c0; font: normal 11px/1.45 Verdana, Arial, sans-serif; text-align: left; white-space: normal; transform: translateX(-50%); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.12s; }
 .qh::before { content: ''; position: absolute; z-index: 61; bottom: calc(100% + 3px); left: 50%; margin-left: -6px; border: 6px solid transparent; border-top-color: rgba(35, 25, 12, 0.9); border-bottom: 0; opacity: 0; visibility: hidden; transition: opacity 0.12s; }
 .qh:hover::after, .qh:hover::before, .qh:focus-visible::after, .qh:focus-visible::before, .qh.open::after, .qh.open::before { opacity: 1; visibility: visible; }
 html.js .qh::after, html.js .qh::before { display: none; }
-.sp-head .qh, .vtitle .qh, th .qh { color: #6b5520; font-weight: bold; }
+
 /* with JS one floating bubble is used instead (never clipped by panels) */
 .qhpop { position: fixed; z-index: 1000; max-width: 240px; padding: 7px 10px; border-radius: 6px; background: rgba(35, 25, 12, 0.9); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); color: #f6e7c0; font: normal 11px/1.45 Verdana, Arial, sans-serif; pointer-events: none; opacity: 0; transition: opacity 0.12s; }
 .qhpop.on { opacity: 1; }
@@ -1303,7 +1303,7 @@ a.binfo:hover img, a.binfo:hover svg { filter: drop-shadow(0 0 3px #9cc66a); }
 .at-hours legend { float: left; font-weight: bold; margin-right: 8px; padding: 0; }
 .at-hours label { position: relative; }
 .at-hours input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.at-hours span { display: inline-block; min-width: 34px; padding: 4px 8px; text-align: center; border: 1px solid #b9a77a; border-radius: 4px; background: #f6efd9; font-weight: bold; color: #5a4a22; }
+.at-hours label span { display: inline-block; min-width: 34px; padding: 4px 8px; text-align: center; border: 1px solid #b9a77a; border-radius: 4px; background: #f6efd9; font-weight: bold; color: #5a4a22; }
 .at-hours input:checked + span { background: linear-gradient(#ffe27a, #f0b92b); border-color: #b58712; color: #3a2a06; }
 .at-hours input:focus-visible + span { outline: 2px solid #71d000; outline-offset: 1px; }
 .at-load { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; font-weight: normal; font-size: 11px; color: #6b5b33; }

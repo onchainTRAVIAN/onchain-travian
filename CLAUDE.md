@@ -6,6 +6,7 @@ Classic Travian 3.6 clone (exact rules/numbers, original art). TS strict, Expres
 - Every bonus goes through `perks` table → `getModifiers()` (`src/game/modifiers.ts`). Token-holder perks and premium plug in there.
 - State changes: inside `db.transaction`, call `catchUp(tx, villageId, now)` first. Training completes lazily in `catchUp`.
 - Player-facing rule violations: throw `GameError`; `formAction` turns them into flash messages.
+- Help bubbles: `help(key)` + texts in `src/web/views/tips.ts` (`TIPS`, numbers from rule constants - keep in sync); renders `.qh` "?"; app.js shows one floating `.qhpop` (panels clip overflow) on hover/focus/tap. New stats/features get a tip.
 - Player-facing text: plain hyphen "-", never the long dash "—" (user's rule 2026-10-09).
 - Views use the escape-by-default `html``` tag (`src/web/html.ts`). No inline styles/scripts (CSP is `'self'`). Every `<img>` gets `width`/`height` attributes (else it flashes full-size before CSS applies).
 - Schema change → edit `src/db/schema.ts` then `npm run db:generate`.
