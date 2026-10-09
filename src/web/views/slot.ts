@@ -10,6 +10,7 @@ import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
 import { buildingInfoImg, effectAt, unitIcon } from './parts.js';
 import { trainingQueue } from './village.js';
 import { UNIT_GUIDE } from '../../game/rules/unitguide.js';
+import { help } from './tips.js';
 
 function costWithTime(o: BuildOption, have: Resources): SafeHtml {
   return costLine(
@@ -37,7 +38,7 @@ function buildAction(o: BuildOption, csrf: string, now: number, label: string, b
 
 function upgradeBox(o: BuildOption, have: Resources, csrf: string, now: number): SafeHtml {
   if (o.maxed) return html`<p class="bmax">${o.def.name} is fully upgraded.</p>`;
-  return html`<section class="spanel bup"><h3 class="sp-head">${o.currentLevel === 0 ? 'Construction' : `Upgrade to level ${o.nextLevel}`}<span>costs</span></h3>
+  return html`<section class="spanel bup"><h3 class="sp-head">${o.currentLevel === 0 ? 'Construction' : `Upgrade to level ${o.nextLevel}`} ${help('upgradeCost')}<span>costs</span></h3>
     <div class="pad">${costWithTime(o, have)}
       <div class="bact">${buildAction(o, csrf, now, `Upgrade to level ${o.nextLevel}`)}</div></div></section>`;
 }
@@ -47,10 +48,12 @@ function effectTiles(o: BuildOption | null, def: BuildingDef, level: number, tri
   const nowEffect = level > 0 ? effectAt(def, level, tribe) : null;
   const nextEffect = o && !o.maxed ? effectAt(def, o.nextLevel, tribe) : null;
   if (!nowEffect && !nextEffect) return html``;
+  // The cranny's tile explains how hiding works (on the first tile shown).
+  const tip = def.id === 'cranny' ? help('cranny') : '';
   return html`<div class="beff">
-    ${nowEffect ? html`<div class="tile"><span class="lbl">Now (level ${level})</span><b>${nowEffect}</b></div>` : ''}
+    ${nowEffect ? html`<div class="tile"><span class="lbl">Now (level ${level})${tip}</span><b>${nowEffect}</b></div>` : ''}
     ${nowEffect && nextEffect ? html`<span class="arrow" aria-hidden="true">→</span>` : ''}
-    ${nextEffect ? html`<div class="tile next"><span class="lbl">Level ${o?.nextLevel}</span><b>${nextEffect}</b></div>` : ''}</div>`;
+    ${nextEffect ? html`<div class="tile next"><span class="lbl">Level ${o?.nextLevel}${nowEffect ? '' : tip}</span><b>${nextEffect}</b></div>` : ''}</div>`;
 }
 
 export interface SlotViewData {
@@ -75,15 +78,16 @@ export interface SlotViewData {
 function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId, have: Resources, csrf: string, now: number): SafeHtml {
   if (t.options.length === 0) return html``;
   const anyAvailable = t.options.some((o) => o.available);
+  const carryTip = t.options.find((o) => o.unit.carry > 0)?.slot;
   return html`<form method="post" action="/train" class="block">${csrfField(csrf)}<input type="hidden" name="building" value="${t.building}">
     <section class="spanel tgroup"><h3 class="sp-head">Train troops<span><a href="/troops/train">all buildings »</a></span></h3>
-    <table class="build_details"><thead><tr><th>Name</th><th>Quantity</th><th>Max</th></tr></thead><tbody>
+    <table class="build_details"><thead><tr><th>Name ${help('unitCost')}</th><th>Quantity</th><th>Max ${help('trainMax')}</th></tr></thead><tbody>
     ${t.options.map(
       (o) => html`<tr id="u${o.slot}">
         <td class="desc">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b> <span class="avail" title="${fmtNum(t.home[o.slot] ?? 0)} at home now · ${fmtNum(t.owned[o.slot] ?? 0)} in total (incl. away and on the move)">(You have: ${fmtNum(t.owned[o.slot] ?? 0)})</span>
 
           <span class="small muted" title="${UNIT_GUIDE[o.unit.id]?.use ?? ''}">${UNIT_GUIDE[o.unit.id]?.kind ?? ''}</span>
-          <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>${o.unit.carry > 0 ? html`<span class="carry" title="Resources each one can carry home from a raid">carries ${fmtNum(o.unit.carry)}</span>` : ''}`)}
+          <div class="details">${costLine(o.cost, have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>${o.unit.carry > 0 ? (o.slot === carryTip ? html`<span class="carry">carries ${fmtNum(o.unit.carry)}${help('carry')}</span>` : html`<span class="carry" title="Resources each one can carry home from a raid">carries ${fmtNum(o.unit.carry)}</span>`) : ''}`)}
           ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>
         <td class="val">${o.available
           ? html`<label class="sr" for="t${o.slot}">How many ${o.unit.name}</label><input class="w30 tr-in" id="t${o.slot}" type="number" name="t${o.slot}" min="0" max="${o.maxAffordable}" inputmode="numeric" value="0"
@@ -95,7 +99,7 @@ function trainingPanel(t: NonNullable<SlotViewData['training']>, tribe: TribeId,
     </tbody></table>
     ${anyAvailable
       ? html`<div class="train-total" id="train-total" data-have="${Math.floor(have.wood)},${Math.floor(have.clay)},${Math.floor(have.iron)},${Math.floor(have.crop)}">
-          <b>Total:</b>
+          <b>Total:</b>${help('trainTotal')}
           <span id="tt-wood">${resIcon('wood')}0</span><span id="tt-clay">${resIcon('clay')}0</span><span id="tt-iron">${resIcon('iron')}0</span><span id="tt-crop">${resIcon('crop')}0</span>
           <span id="tt-upkeep">${icon('res/cropuse', 'Crop consumption', 18, 12)}0</span><span id="tt-time">${icon('res/clock', 'Duration', 18, 12)}0:00:00</span><span id="tt-carry" class="carry" title="Resources these troops can carry"><b>can carry</b> 0</span>
         </div>
@@ -134,7 +138,7 @@ export function slotView(d: SlotViewData): SafeHtml {
     ${d.level > 0 && def.id === 'rally' ? html`<p class="actions"><a class="btn" href="/troops">Rally Point overview</a> <a class="btn secondary" href="/troops/send">Send troops</a> <a class="btn secondary" href="/simulator">Simulator</a></p>` : ''}
     ${d.level > 0 ? d.panels : ''}
     ${d.training && d.level > 0 ? trainingPanel(d.training, d.tribe, d.have, d.csrf, d.now) : ''}
-    <details class="spanel lvdetails"${d.level === 0 ? html` open` : ''}><summary class="sp-head">All levels<span>cost, time and what each level gives</span></summary>
+    <details class="spanel lvdetails"${d.level === 0 ? html` open` : ''}><summary class="sp-head">All levels ${help('levelTable')}<span>cost, time and what each level gives</span></summary>
       ${levelTable(def, { tribe: d.tribe, mainLevel: d.mainLevel, current: d.level, speed: d.buildSpeed })}
       <p class="small pad"><a href="/help/buildings/${def.id}">» ${def.name} in the game guide</a></p></details>
   </div>`;

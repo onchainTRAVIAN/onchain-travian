@@ -8,6 +8,7 @@ import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { goldBtn, heroIconPath, pager as numPager, panel, svgBar, tribeMark, woodTabs } from './parts.js';
 import { csrfField, timer } from './layout.js';
+import { help, type TipKey } from './tips.js';
 import { avatarUrl } from '../../game/actions/avatar.js';
 import { WEEK_MS, WEEKLY_CATEGORIES, WEEKLY_LABEL, WEEKLY_PRIZES, type MedalView, type WeeklyCategory, type WeeklyRow } from '../../game/actions/weekly.js';
 
@@ -89,11 +90,11 @@ export function messageView(d: {
 
 /* ---------- Rankings ---------- */
 
-const RANK_TABS: { key: RankKind; label: string; title: string; col: string }[] = [
-  { key: 'population', label: 'Overview', title: 'The largest players', col: 'Population' },
-  { key: 'attack', label: 'Attackers', title: 'The most successful attackers', col: 'Points' },
-  { key: 'defense', label: 'Defenders', title: 'The most successful defenders', col: 'Points' },
-  { key: 'raid', label: 'Robbers', title: 'The greatest robbers', col: 'Resources' },
+const RANK_TABS: { key: RankKind; label: string; title: string; col: string; tip: TipKey }[] = [
+  { key: 'population', label: 'Overview', title: 'The largest players', col: 'Population', tip: 'statPop' },
+  { key: 'attack', label: 'Attackers', title: 'The most successful attackers', col: 'Points', tip: 'statAttack' },
+  { key: 'defense', label: 'Defenders', title: 'The most successful defenders', col: 'Points', tip: 'statDefence' },
+  { key: 'raid', label: 'Robbers', title: 'The greatest robbers', col: 'Resources', tip: 'statRobber' },
 ];
 
 /** Statistics navigation: folder tabs, plus the player sub-tabs underneath. */
@@ -246,7 +247,7 @@ export function weeklyView(d: {
 export function villageRankingView(d: { rows: { id: number; name: string; x: number; y: number; pop: number; owner: string | null; ownerId: number | null }[]; offset: number; page: number; pages: number; myId?: number | null; top?: number }): SafeHtml {
   const top = d.top ?? (d.page === 1 ? d.rows[0]?.pop ?? 0 : 0);
   return html`<h1>Statistics</h1>${statsTabs('villages')}
-    <table class="ranks"><thead><tr><th colspan="4">The largest villages</th></tr><tr><td></td><td>Village</td><td>Player</td><td>Population</td></tr></thead><tbody>
+    <table class="ranks"><thead><tr><th colspan="4">The largest villages</th></tr><tr><td></td><td>Village</td><td>Player</td><td>Population ${help('population')}</td></tr></thead><tbody>
     ${d.rows.map(
       (r, i) => html`<tr class="${r.ownerId !== null && r.ownerId === d.myId ? 'hl' : ''}">${rankCell(d.offset + i + 1)}
         <td class="vil"><a href="/map/tile?x=${r.x}&amp;y=${r.y}">${r.name}</a> <span class="co">(${r.x}|${r.y})</span></td>
@@ -300,7 +301,7 @@ export function rankingView(d: {
           ${d.page !== d.me.page || d.findId ? html`<a href="/stats?k=${d.kind}&amp;page=${d.me.page}#me">show my place</a>` : ''}</div>`
       : ''}
     <table class="ranks"><thead><tr><th colspan="5">${tab?.title ?? ''}</th></tr>
-      <tr><td></td><td>Player</td><td>Alliance</td>${isPop ? html`<td>Population</td><td>Villages</td>` : html`<td>Population</td><td>${tab?.col ?? ''}</td>`}</tr></thead><tbody>
+      <tr><td></td><td>Player</td><td>Alliance</td>${isPop ? html`<td>Population ${help('statPop')}</td><td>Villages</td>` : html`<td>Population ${help('statPop')}</td><td>${tab?.col ?? ''}${tab ? html` ${help(tab.tip)}` : ''}</td>`}</tr></thead><tbody>
       ${d.rows.length === 0
         ? html`<tr><td colspan="5" class="none center">No players yet.</td></tr>`
         : d.rows.map(
@@ -346,7 +347,7 @@ export function playerView(d: {
   const t = TRIBES[d.user.tribe];
   const pop = d.villages.reduce((s, v) => s + v.pop, 0);
   const topPop = Math.max(1, ...d.villages.map((v) => v.pop));
-  const tile = (label: string, value: string, sub?: string) => html`<div class="spanel tile"><span class="lbl">${label}</span><b>${value}</b>${sub ? html`<span class="sub">${sub}</span>` : ''}</div>`;
+  const tile = (label: string, value: string, tip?: TipKey) => html`<div class="spanel tile"><span class="lbl">${label}${tip ? html` ${help(tip)}` : ''}</span><b>${value}</b></div>`;
   const villages = [...d.villages].sort((a, b) => Number(b.isCapital) - Number(a.isCapital) || b.pop - a.pop);
   return html`<div class="spanel pcardx">
       <img class="pav" src="${avatarUrl(d.user)}" width="96" height="96" alt="">
@@ -364,11 +365,11 @@ export function playerView(d: {
           <a class="btn small secondary" href="/shop?to=${encodeURIComponent(d.user.username)}#gold">Send Gold</a>`}</div>
     </div>
     <div class="pstats">
-      ${tile('Population', fmtNum(pop))}
+      ${tile('Population', fmtNum(pop), 'statPop')}
       ${tile('Villages', String(d.villages.length))}
-      ${tile('Attack', fmtNum(d.user.offPoints))}
-      ${tile('Defence', fmtNum(d.user.defPoints))}
-      ${tile('Raided', fmtNum(d.user.lootTotal))}
+      ${tile('Attack', fmtNum(d.user.offPoints), 'statAttack')}
+      ${tile('Defence', fmtNum(d.user.defPoints), 'statDefence')}
+      ${tile('Raided', fmtNum(d.user.lootTotal), 'statRobber')}
       ${tile('Hero', d.heroLevel !== null ? `level ${d.heroLevel}` : '-')}
     </div>
     ${d.user.bio ? html`<section class="spanel pabout"><h3 class="sp-head">About ${d.user.username}</h3><div class="msgbody">${d.user.bio}</div></section>` : ''}

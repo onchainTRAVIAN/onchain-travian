@@ -21,6 +21,7 @@ import { fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { icon, resIcon } from './layout.js';
 import { buildingImg, effectAt, woodTabs } from './parts.js';
+import { help } from './tips.js';
 
 /**
  * The building's main benefit at a level as a number (with a short unit), so the table can show
@@ -97,7 +98,7 @@ export function levelTable(def: BuildingDef, o: { tribe: TribeId; mainLevel: num
   const hasEffect = rows.some((l) => effectValue(def, l, o.tribe) !== null || effectAt(def, l, o.tribe) !== null);
   let popTotal = 0;
   return html`<div class="tblwrap"><table class="tb lvtable"><thead><tr><th>Lvl</th>${RESOURCE_KEYS.map((k) => html`<th>${resIcon(k)}</th>`)}
-      <th>${icon('res/clock', 'Build time', 18, 12)}</th><th title="Population added">${icon('res/pop', 'Population', 18, 12)}</th><th title="Culture points per day">CP</th>${hasEffect ? html`<th>${cap(effectValue(def, 1, o.tribe)?.unit ?? 'gives')}</th>` : ''}</tr></thead><tbody>
+      <th>${icon('res/clock', 'Build time', 18, 12)}</th><th>${icon('res/pop', 'Population', 18, 12)}${help('levelPop')}</th><th>CP${help('levelCp')}</th>${hasEffect ? html`<th>${cap(effectValue(def, 1, o.tribe)?.unit ?? 'gives')}${help('levelEffect')}</th>` : ''}</tr></thead><tbody>
     ${rows.map((l) => {
       const cost = buildCost(def, l);
       popTotal += popAtLevel(def, l);
@@ -140,6 +141,6 @@ export function buildingsGuideView(d: { tribe: TribeId; id: BuildingId | null; m
     <form method="get" action="/help/buildings/${def.id}" class="small mbpick"><label for="mb">Build times with Main Building level</label>
       <select id="mb" name="mb">${Array.from({ length: 20 }, (_, i) => i + 1).map((l) => html`<option value="${l}"${l === d.mainLevel ? html` selected` : ''}>${l}</option>`)}</select>
       <button type="submit" class="small">Show</button> <a href="/help/buildings">« all buildings</a></form>
-    <section class="spanel"><h3 class="sp-head">All levels<span>${TRIBES[d.tribe].name}</span></h3>${levelTable(def, { tribe: d.tribe, mainLevel: d.mainLevel })}</section>
+    <section class="spanel"><h3 class="sp-head">All levels ${help('levelTable')}<span>${TRIBES[d.tribe].name}</span></h3>${levelTable(def, { tribe: d.tribe, mainLevel: d.mainLevel })}</section>
     </div>`;
 }

@@ -7,6 +7,7 @@ import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, icon, resIcon } from './layout.js';
 import { pager, unitIcon, unitsTable } from './parts.js';
+import { help } from './tips.js';
 
 const KIND_ICON: Record<string, [string, string]> = {
   attack_won: ['ui/win', 'Won as attacker'],
@@ -185,13 +186,13 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
   const looted = sumRes(r.loot);
   const bounty =
     r.mode !== 'scout' && (looted > 0 || r.capacity > 0)
-      ? html`<div class="rbounty"><b>Bounty</b><span class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.loot[k])}</span>`)}</span>
+      ? html`<div class="rbounty"><b>Bounty ${help('bounty')}</b><span class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.loot[k])}</span>`)}</span>
           <span class="rcarry">${splitBar(looted, Math.max(0, r.capacity - looted), 'fg', 'bg')}<span class="small muted">${fmtNum(looted)} of ${fmtNum(r.capacity)} carried${r.capacity > 0 ? ` (${Math.round((looted / r.capacity) * 100)}%)` : ''}</span></span></div>`
       : undefined;
   const events: SafeHtml[] = [];
   if (r.wall) events.push(html`<li><b>Wall</b> level ${r.wall.from} → <b>${r.wall.to}</b></li>`);
   if (r.building) events.push(html`<li><b>${r.building.name}</b> level ${r.building.from} → <b>${r.building.to}</b></li>`);
-  if (r.loyalty) events.push(html`<li><b>Loyalty</b> ${r.loyalty.from}% → <b>${r.loyalty.to}%</b></li>`);
+  if (r.loyalty) events.push(html`<li><b>Loyalty</b> ${help('loyalty')} ${r.loyalty.from}% → <b>${r.loyalty.to}%</b></li>`);
   if (r.conquered) events.push(html`<li class="good"><b>The village was conquered!</b></li>`);
   if (r.oasis?.captured) events.push(html`<li class="good"><b>Oasis captured!</b></li>`);
   for (const n of r.notes ?? []) events.push(html`<li class="small">${n}</li>`);
@@ -211,7 +212,7 @@ function battleView(r: BattleReportData, viewerId: number): SafeHtml {
     ${r.scout?.success && isAttacker
       ? html`<section class="spanel"><h3 class="sp-head">Intelligence<span><a href="${scoutSimLink(r)}">simulate an attack »</a></span></h3><div class="pad">
         ${r.scout.resources ? html`<p><b>Resources</b> <span class="cost">${RESOURCE_KEYS.map((k) => html`<span>${resIcon(k)}${fmtNum(r.scout?.resources?.[k] ?? 0)}</span>`)}</span></p>` : ''}
-        <p class="small"><b>Wall</b> level ${r.scout.wallLevel ?? 0} · <b>Cranny hides</b> ${typeof r.scout.crannyHides === 'object'
+        <p class="small"><b>Wall</b> level ${r.scout.wallLevel ?? 0} · <b>Cranny hides</b> ${help('cranny')} ${typeof r.scout.crannyHides === 'object'
           ? RESOURCE_KEYS.map((k) => html`${resIcon(k)}${fmtNum((r.scout?.crannyHides as Resources)[k])} `)
           : html`${fmtNum((r.scout.crannyHides as number | undefined) ?? 0)} of each`}</p>
         ${(r.scout.troops ?? []).every((t) => !t.hero && t.units.every((n) => n === 0)) ? html`<p class="muted small">No troops in the village.</p>` : (r.scout.troops ?? []).map((t) => unitsTable(t.tribe, t.units, undefined, { hero: !!t.hero, label: t.owner ?? 'Troops' }))}

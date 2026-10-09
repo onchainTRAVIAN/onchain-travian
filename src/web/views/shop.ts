@@ -6,6 +6,7 @@ import { NAME_CHANGE_PRICE } from '../../game/actions/account.js';
 import { ETH_ASSET, GOLD_PACKAGES, formatUnitsShort, weiForUsd } from '../../crypto/pricing.js';
 import { assetUrl, hasAsset } from '../assets.js';
 import { goldBtn } from './parts.js';
+import { help, type TipKey } from './tips.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
 import { fmtAgo, fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
@@ -58,7 +59,7 @@ export function shopView(d: {
   now: number;
 }): SafeHtml {
   const body = d.tab === 'buy' ? buyTab(d) : d.tab === 'adv' ? advTab(d) : d.tab === 'specials' ? specialsTab(d) : historyTab(d);
-  return html`<div class="shophead"><h1>Plus &amp; Gold</h1><span class="shopbal" title="Your Gold">${icon('res/gold', 'Gold', 24, 16)} <b>${fmtNum(d.balance)}</b></span></div>
+  return html`<div class="shophead"><h1>Plus &amp; Gold</h1><span class="shopbal">${icon('res/gold', 'Gold', 24, 16)} <b>${fmtNum(d.balance)}</b>${help('gold')}</span></div>
     ${shopTabs(d.tab)}
     <div class="woodbody">${body}</div>`;
 }
@@ -115,14 +116,14 @@ function advTab(d: { balance: number; boosts: { source: string; expiresAt: numbe
   const by = (id: string) => PRODUCTS.find((p) => p.id === id)!;
   return html`<div class="advgrid two">
       <div class="spanel advcard wide${d.goldClub ? ' active' : ''}" id="goldclub">${art('goldclub', 'Gold Club')}
-        <div class="advtxt"><b>Gold Club</b><span class="small">Farm lists with automatic raids, the Oasis Raider, evasion, trade routes and the cropper finder.</span></div>
+        <div class="advtxt"><b>Gold Club ${help('goldClub')}</b><span class="small">Farm lists with automatic raids, the Oasis Raider, evasion, trade routes and the cropper finder.</span></div>
         <div class="advfoot"><span class="advdur small">Bonus duration: <b>whole world</b></span>
           ${d.goldClub ? html`<span class="good small">You are a member ✓</span>` : html`<form method="post" action="/shop/goldclub">${csrfField(d.csrf)}${goldPrice(GOLD_CLUB_PRICE, d.balance >= GOLD_CLUB_PRICE, 'Activate')}</form>`}</div></div>
       ${card(by('build_queue'), true)}
     </div>
-    <h2 class="advh">Production</h2>
+    <h2 class="advh">Production ${help('shopProduction')}</h2>
     <div class="advgrid four">${(['prod_wood', 'prod_clay', 'prod_iron', 'prod_crop'] as const).map((id) => card(by(id)))}</div>
-    <h2 class="advh">Army &amp; speed</h2>
+    <h2 class="advh">Army &amp; speed ${help('shopArmy')}</h2>
     <div class="advgrid four">${(['smithy_queue', 'train_speed', 'attack', 'defense'] as const).map((id) => card(by(id)))}</div>
     <p class="small muted">Buying again while active adds the time on top. <a href="/help/gold-boosts">How boosts work</a></p>`;
 }
@@ -137,9 +138,9 @@ function specialsTab(d: {
   csrf: string;
   now: number;
 }): SafeHtml {
-  const head = (id: string, pic: string, title: string, price: SafeHtml | string) =>
-    html`<h3 class="sp-head" id="${id}"><span class="sph">${art(pic)}${title}</span><span>${price}</span></h3>`;
-  return html`<section class="spanel special">${head('storage', 'storage', 'Storage expansion', `${STORAGE_BOOST_PRICE} Gold per village`)}
+  const head = (id: string, pic: string, title: string, price: SafeHtml | string, tip: TipKey) =>
+    html`<h3 class="sp-head" id="${id}"><span class="sph">${art(pic)}${title} ${help(tip)}</span><span>${price}</span></h3>`;
+  return html`<section class="spanel special">${head('storage', 'storage', 'Storage expansion', `${STORAGE_BOOST_PRICE} Gold per village`, 'storageBoost')}
       <div class="pad"><p class="small">The chosen village stores <b>50% more</b> of every resource, forever (Great Warehouse and Great Granary included). Once per village.</p>
       ${d.storage.every((v) => v.boosted)
         ? html`<p class="small good">All your villages already have it.</p>`
@@ -149,15 +150,15 @@ function specialsTab(d: {
             )}</select></div>
             <div>${goldPrice(STORAGE_BOOST_PRICE, d.balance >= STORAGE_BOOST_PRICE, 'Expand')}</div></form>`}
       ${d.storage.some((v) => v.boosted) ? html`<p class="small muted">Already expanded: ${d.storage.filter((v) => v.boosted).map((v) => v.name).join(', ')}</p>` : ''}</div></section>
-    <section class="spanel special">${head('protection', 'protection', '24 hours of protection', `${PROTECTION_PRICE} Gold`)}
+    <section class="spanel special">${head('protection', 'protection', '24 hours of protection', `${PROTECTION_PRICE} Gold`, 'protection')}
       <div class="pad"><p class="small">Nobody can attack, raid or scout your villages for 24 hours. Attacking another player ends it early. After bought protection ends you can buy it again only after 8 hours.</p>
       ${d.protection.protectedUntil > d.now
         ? html`<p class="small good">You are protected for ${timer(d.protection.protectedUntil, d.now, false)}.</p>`
         : d.protection.canBuyAt > d.now
           ? html`<p class="small bad">You can buy protection again in ${timer(d.protection.canBuyAt, d.now, false)}.</p>`
           : html`<form method="post" action="/shop/protection">${csrfField(d.csrf)}${goldPrice(PROTECTION_PRICE, d.balance >= PROTECTION_PRICE, 'Buy protection')}</form>`}</div></section>
-    <section class="spanel special">${head('npc-trade', 'npc', 'NPC merchant', `${NPC_TRADE_PRICE} Gold`)}<div class="pad">${npcPanel(d.stock, d.capacity, d.balance, d.csrf)}</div></section>
-    <section class="spanel special">${head('gold', 'transfer', 'Send Gold to a player', 'free')}
+    <section class="spanel special">${head('npc-trade', 'npc', 'NPC merchant', `${NPC_TRADE_PRICE} Gold`, 'npcTrade')}<div class="pad">${npcPanel(d.stock, d.capacity, d.balance, d.csrf)}</div></section>
+    <section class="spanel special">${head('gold', 'transfer', 'Send Gold to a player', 'free', 'sendGold')}
       <form method="post" action="/shop/transfer" class="pad block">${csrfField(d.csrf)}
         <table class="tb"><tbody>
           <tr><th><label for="gto">Player</label></th><td><input id="gto" type="text" name="to" value="${d.sendTo}" required maxlength="20" autocomplete="off" placeholder="Player name"></td></tr>
@@ -166,9 +167,9 @@ function specialsTab(d: {
         </tbody></table>
         <p><button type="submit">Send Gold</button> <span class="small muted">The player gets a message from you. Transfers can't be undone.</span></p>
       </form></section>
-    <section class="spanel special">${head('ticker', 'ticker', 'News ticker', `${config.TICKER_PRICE_PER_HOUR} Gold per hour`)}
+    <section class="spanel special">${head('ticker', 'ticker', 'News ticker', `${config.TICKER_PRICE_PER_HOUR} Gold per hour`, 'ticker')}
       <div class="pad"><p class="small">Put your message on the scrolling news line at the top of every player's screen.</p><a class="btn" href="/shop/ticker">Book a time slot</a></div></section>
-    <section class="spanel special"><h3 class="sp-head">Finish immediately</h3>
+    <section class="spanel special"><h3 class="sp-head"><b>Finish immediately ${help('finishNow')}</b></h3>
       <div class="pad"><p class="small">Tap the <b>finish now</b> button (with the Gold coin) next to any construction, training or research to finish it now. The price follows the time left: ${config.WORLD_SPEED !== 1 ? `on this x${config.WORLD_SPEED} world about 1 Gold per ${Math.max(1, Math.round(100 / config.WORLD_SPEED))} minute${Math.round(100 / config.WORLD_SPEED) === 1 ? '' : 's'} left` : '1 Gold per 100 minutes left'}, at least 2. In a training queue one <b>Finish all</b> button finishes the whole queue.</p>
       <p class="small">» <a href="/goldmarket">Gold market</a>: buy and sell resources and troops with other players for Gold. » <a href="/account">Change your player name</a> (${fmtNum(NAME_CHANGE_PRICE)} Gold).</p></div></section>`;
 }
@@ -221,10 +222,10 @@ export function tickerView(d: {
     const iso = new Date(t).toISOString();
     return `${iso.slice(5, 10)} ${iso.slice(11, 16)} UTC`;
   };
-  return html`<div class="shophead"><h1>Plus &amp; Gold</h1><span class="shopbal" title="Your Gold">${icon('res/gold', 'Gold', 24, 16)} <b>${fmtNum(d.balance)}</b></span></div>
+  return html`<div class="shophead"><h1>Plus &amp; Gold</h1><span class="shopbal">${icon('res/gold', 'Gold', 24, 16)} <b>${fmtNum(d.balance)}</b>${help('gold')}</span></div>
     ${shopTabs('specials')}
     <div class="woodbody">
-    <section class="spanel"><h3 class="sp-head">News ticker: post a message<span>${config.TICKER_PRICE_PER_HOUR} Gold per hour · ${d.live} running now</span></h3>
+    <section class="spanel"><h3 class="sp-head"><b>News ticker: post a message ${help('ticker')}</b><span>${config.TICKER_PRICE_PER_HOUR} Gold per hour · ${d.live} running now</span></h3>
       <form method="post" action="/shop/ticker" class="pad block">${csrfField(d.csrf)}
         <p class="small">Your message scrolls across the top of the game for <b>every player</b>, starting now. Post as many as you like - they take turns. No links. Balance: <b>${fmtNum(d.balance)} Gold</b> · <a href="/wallet">get Gold</a></p>
         <label for="tb" class="sr">Message</label>

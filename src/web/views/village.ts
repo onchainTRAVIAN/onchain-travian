@@ -21,6 +21,7 @@ import { TOWN_SPOTS } from './spots.js';
 import { levelStage, stagedImage, wallImage, assetUrl } from '../assets.js';
 import { csrfField, icon, resIcon, timer } from './layout.js';
 import { buildingImg, buildingLabel, movementSummary, unitIcon } from './parts.js';
+import { help } from './tips.js';
 
 export interface VillageViewData {
   state: VillageState;
@@ -97,12 +98,12 @@ function villageTitle(d: VillageViewData): SafeHtml {
       <label for="vrn" class="sr">Village name</label><input id="vrn" type="text" name="name" value="${v.name}" minlength="2" maxlength="30" required>
       <button type="submit" class="small">Save</button> <button type="button" class="small secondary" data-rename-cancel>Cancel</button></form>
     <span class="vmeta"><a href="/map?x=${v.x}&amp;y=${v.y}" title="Show on the map">(${v.x}|${v.y})</a>
-      <span class="vpop" title="Population">${fmtNum(v.pop)}</span>${v.isCapital ? html`<span class="vcap">capital</span>` : ''}</span></div>`;
+      <span class="vpop">${fmtNum(v.pop)}</span>${help('population')}${v.isCapital ? html`<span class="vcap">capital</span>${help('capital')}` : ''}</span></div>`;
 }
 
 function productionTable(eco: Economy): SafeHtml {
   // Each row opens the breakdown: base from fields and every bonus on top.
-  return html`<table id="production"><thead><tr><th colspan="4"><a href="/production" title="Where your production comes from">Production:</a></th></tr></thead><tbody>
+  return html`<table id="production"><thead><tr><th colspan="4"><a href="/production" title="Where your production comes from">Production:</a> ${help('production')}</th></tr></thead><tbody>
     ${RESOURCE_KEYS.map(
       (k) => html`<tr class="prodrow"><td class="ico"><a href="/production#${k}" title="${RESOURCE_LABEL[k]}: base and bonuses">${resIcon(k)}</a></td><td><a href="/production#${k}" class="plain">${RESOURCE_LABEL[k]}:</a></td><td class="val ${eco.net[k] < 0 ? 'bad' : ''}"><a href="/production#${k}" class="plain">${fmtNum(eco.net[k])}</a></td><td><a href="/production#${k}" class="plain">per hour</a></td></tr>`,
     )}
@@ -111,7 +112,7 @@ function productionTable(eco: Economy): SafeHtml {
 
 function troopsTable(tribe: TribeId, units: UnitCounts, hero: string | null): SafeHtml {
   const rows = units.map((n, i) => ({ n, i })).filter((r) => r.n > 0);
-  return html`<table id="troops"><thead><tr><th colspan="3">Troops:</th></tr></thead><tbody>
+  return html`<table id="troops"><thead><tr><th colspan="3">Troops: ${help('troopsHome')}</th></tr></thead><tbody>
     ${rows.length === 0 && !hero
       ? html`<tr><td colspan="3" class="none center">none</td></tr>`
       : rows.map((r) => html`<tr><td class="ico">${unitIcon(tribe, r.i)}</td><td class="val">${fmtNum(r.n)}</td><td>${TRIBES[tribe].units[r.i]?.name}</td></tr>`)}

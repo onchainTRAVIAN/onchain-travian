@@ -658,4 +658,62 @@
       if (!afDet.contains(a)) a.addEventListener('click', afOpen);
     });
   }
+
+  // "?" help bubbles: one floating bubble (panels clip overflow), hover/focus on desktop, tap on phones.
+  var qhPop = document.createElement('div');
+  qhPop.className = 'qhpop';
+  qhPop.setAttribute('role', 'tooltip');
+  document.body.appendChild(qhPop);
+  var qhCur = null;
+  var qhPinned = false;
+  var qhShow = function (el) {
+    qhCur = el;
+    qhPop.textContent = el.getAttribute('data-help') || '';
+    qhPop.className = 'qhpop';
+    var r = el.getBoundingClientRect();
+    var pw = qhPop.offsetWidth;
+    var ph = qhPop.offsetHeight;
+    var mid = r.left + r.width / 2;
+    var left = Math.max(8, Math.min(window.innerWidth - pw - 8, mid - pw / 2));
+    var up = r.top - ph - 10 >= 8;
+    qhPop.style.left = Math.round(left) + 'px';
+    qhPop.style.top = Math.round(up ? r.top - ph - 9 : r.bottom + 9) + 'px';
+    qhPop.style.setProperty('--qa', Math.round(Math.max(10, Math.min(pw - 10, mid - left))) + 'px');
+    qhPop.classList.add(up ? 'up' : 'down', 'on');
+  };
+  var qhHide = function () {
+    qhPop.classList.remove('on');
+    if (qhCur) qhCur.classList.remove('open');
+    qhCur = null;
+    qhPinned = false;
+  };
+  document.addEventListener('mouseover', function (e) {
+    var q = e.target.closest && e.target.closest('.qh');
+    if (q && !qhPinned) qhShow(q);
+  });
+  document.addEventListener('mouseout', function (e) {
+    var q = e.target.closest && e.target.closest('.qh');
+    if (q && !qhPinned && q === qhCur) qhHide();
+  });
+  document.addEventListener('focusin', function (e) {
+    var q = e.target.closest && e.target.closest('.qh');
+    if (q) qhShow(q);
+    else if (!qhPinned) qhHide();
+  });
+  document.addEventListener('click', function (e) {
+    var q = e.target.closest && e.target.closest('.qh');
+    if (!q) { if (qhPinned) qhHide(); return; }
+    e.preventDefault();
+    e.stopPropagation(); // a "?" inside a link, label or summary must not trigger it
+    if (qhPinned && qhCur === q) { qhHide(); return; }
+    qhShow(q);
+    qhPinned = true;
+    q.classList.add('open');
+  }, true);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { qhHide(); return; }
+    var q = e.target.closest && e.target.closest('.qh');
+    if (q && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); q.click(); }
+  });
+  window.addEventListener('scroll', function () { if (qhCur) qhHide(); }, { passive: true });
 })();

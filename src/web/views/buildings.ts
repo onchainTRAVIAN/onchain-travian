@@ -12,6 +12,7 @@ import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
 import { panel, unitIcon, unitsInline } from './parts.js';
 import { TRAP_COST } from '../../game/actions/traps.js';
+import { help } from './tips.js';
 
 const KIND_TITLE = { academy: 'Research', blacksmith: 'Blacksmith upgrades', armoury: 'Armoury upgrades' } as const;
 
@@ -27,7 +28,7 @@ function researchTable(
   const runningAll = orders.filter((o) => o.kind === kind);
   const list = kind === 'academy' ? opts.filter((o) => !o.done) : opts;
   const done = kind === 'academy' ? opts.filter((o) => o.done) : [];
-  return html`<section class="spanel"><h3 class="sp-head">${kind === 'academy' ? 'Research' : kind === 'blacksmith' ? 'Weapon upgrades' : 'Armour upgrades'}</h3><table class="tb train"><thead><tr><th>${KIND_TITLE[kind]}</th><th>Action</th></tr></thead><tbody>
+  return html`<section class="spanel"><h3 class="sp-head">${kind === 'academy' ? 'Research' : kind === 'blacksmith' ? 'Weapon upgrades' : 'Armour upgrades'} ${help(kind === 'academy' ? 'research' : 'smithy')}</h3><table class="tb train"><thead><tr><th>${KIND_TITLE[kind]}</th><th>Action</th></tr></thead><tbody>
     ${list.length === 0 ? html`<tr><td colspan="2" class="muted">There are no units left to research.</td></tr>` : ''}
     ${list.map(
       (o) => html`<tr><td><div class="tname">${unitIcon(tribe, o.slot)} <b>${o.unit.name}</b>${kind !== 'academy' ? html` <span class="small muted">(level ${o.level})</span>` : ''}</div>
@@ -74,7 +75,7 @@ export function marketPanel(d: {
   const resOptions = (sel: string) => RESOURCE_KEYS.map((k) => html`<option value="${k}"${k === sel ? html` selected` : ''}>${RESOURCE_LABEL[k]}</option>`);
   const ri = (k: string) => resIcon(k as ResourceKey);
   return html`<nav class="pilltabs" aria-label="Marketplace"><a href="#send">Send resources</a><a href="#offer">Offer</a><a href="#buy">Buy</a><a href="#npc-trade">NPC trade</a><a href="#routes">Trade routes</a><a href="/goldmarket">Gold market</a></nav>
-    <section class="spanel" id="send"><h3 class="sp-head">Send resources<span>merchants ${d.merchants.free}/${d.merchants.total} · each carries ${fmtNum(d.merchants.capacity)}</span></h3>
+    <section class="spanel" id="send"><h3 class="sp-head">Send resources ${help('merchants')}<span>merchants ${d.merchants.free}/${d.merchants.total} · each carries ${fmtNum(d.merchants.capacity)}</span></h3>
     <form method="post" action="/market/send" id="sendform" data-cap="${d.merchants.capacity}" data-free="${d.merchants.free}">
       ${csrfField(d.csrf)}
       <table class="tb"><tbody>
@@ -99,7 +100,7 @@ export function marketPanel(d: {
       <p class="pad"><button type="submit">OK</button></p>
     </form></section>
     ${d.places.map((p) => html`<form id="delplace${p.id}" method="post" action="/places/delete" hidden>${csrfField(d.csrf)}<input type="hidden" name="id" value="${p.id}"></form>`)}
-    <section class="spanel" id="offer"><h3 class="sp-head">Offer resources</h3>
+    <section class="spanel" id="offer"><h3 class="sp-head">Offer resources ${help('marketOffer')}</h3>
     <form method="post" action="/market/offer">
       ${csrfField(d.csrf)}
       <table class="tb"><tbody>
@@ -126,12 +127,12 @@ export function marketPanel(d: {
             <td><form method="post" action="/market/accept">${csrfField(d.csrf)}<input type="hidden" name="offerId" value="${o.id}"><button type="submit" class="small">Accept</button></form></td></tr>`,
         )}
     </tbody></table></section>
-    ${d.npc ? html`<section class="spanel" id="npc-trade"><h3 class="sp-head">NPC trade<span>3 Gold</span></h3><div class="pad">${d.npc}</div></section>` : ''}
+    ${d.npc ? html`<section class="spanel" id="npc-trade"><h3 class="sp-head">NPC trade ${help('npcTrade')}<span>3 Gold</span></h3><div class="pad">${d.npc}</div></section>` : ''}
     ${d.routes ?? ''}`;
 }
 
 export function celebrationPanel(opts: CelebrationOption[], running: CelebrationRow | undefined, have: Resources, csrf: string, now: number): SafeHtml {
-  return html`<section class="spanel"><h3 class="sp-head">Celebrations</h3><table class="tb train"><thead><tr><th>Celebration</th><th>Action</th></tr></thead><tbody>
+  return html`<section class="spanel"><h3 class="sp-head">Celebrations ${help('celebration')}</h3><table class="tb train"><thead><tr><th>Celebration</th><th>Action</th></tr></thead><tbody>
     ${opts.map(
       (o) => html`<tr><td><b>${o.name}</b> <span class="small muted">(${fmtNum(o.culturePoints)} culture points)</span>
         ${costLine(o.cost, have, html`<span>${icon('res/clock', 'Duration', 18, 12)}${fmtDuration(o.timeMs)}</span>`)}</td>
@@ -145,8 +146,8 @@ export function celebrationPanel(opts: CelebrationOption[], running: Celebration
 
 export function expansionPanel(check: ExpansionCheck, villages: number): SafeHtml {
   return panel('Expansion', html`<table class="tb"><tbody>
-      <tr><th>Culture points</th><td>${fmtNum(check.culturePoints)} of ${fmtNum(check.required)} needed for village ${villages + 1}</td></tr>
-      <tr><th>Expansion slots</th><td>${check.used} used of ${check.slots}</td></tr>
+      <tr><th>Culture points ${help('culturePoints')}</th><td>${fmtNum(check.culturePoints)} of ${fmtNum(check.required)} needed for village ${villages + 1}</td></tr>
+      <tr><th>Expansion slots ${help('expansionSlots')}</th><td>${check.used} used of ${check.slots}</td></tr>
     </tbody></table>
     <p class="small muted pad">Train 3 settlers to found a new village, or a chief to conquer one. Slots come at Residence level 10 and 20, Palace level 10, 15 and 20.</p>`, { pad: false });
 }
@@ -158,7 +159,7 @@ export function embassyPanel(alliance: { id: number; name: string; tag: string }
 }
 
 export function mansionPanel(oases: { x: number; y: number; oasis: string | null }[], slots: number, csrf: string): SafeHtml {
-  return html`<section class="spanel"><h3 class="sp-head">Oases<span>${oases.length}/${slots}</span></h3><table class="tb"><tbody>
+  return html`<section class="spanel"><h3 class="sp-head">Oases ${help('oasisSlots')}<span>${oases.length}/${slots}</span></h3><table class="tb"><tbody>
     ${oases.length === 0
       ? html`<tr><td colspan="3" class="muted">No oases annexed. Clear an oasis within 3 fields with an attack that includes your hero. An oasis held by another player takes 1–4 such attacks (its loyalty must fall to 0; it regrows 2 per hour per Hero's Mansion level of the owner).</td></tr>`
       : oases.map((o) => html`<tr><td><a href="/map/tile?x=${o.x}&amp;y=${o.y}">(${o.x}|${o.y})</a></td><td>${OASIS_LABEL[(o.oasis ?? 'wood') as OasisType]}</td>
@@ -177,7 +178,7 @@ export function trapperPanel(d: {
 }): SafeHtml {
   const free = Math.max(0, d.built - d.held);
   const canBuild = Math.max(0, d.capacity - d.built);
-  return html`<section class="spanel"><h3 class="sp-head">Traps<span>${fmtNum(d.built)} of ${fmtNum(d.capacity)}</span></h3><table class="tb"><tbody>
+  return html`<section class="spanel"><h3 class="sp-head">Traps ${help('traps')}<span>${fmtNum(d.built)} of ${fmtNum(d.capacity)}</span></h3><table class="tb"><tbody>
       <tr><th>Traps built</th><td>${fmtNum(d.built)} of ${fmtNum(d.capacity)}</td></tr>
       <tr><th>Ready</th><td>${fmtNum(free)}</td></tr>
       <tr><th>Holding prisoners</th><td>${fmtNum(d.held)}</td></tr>

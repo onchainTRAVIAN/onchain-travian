@@ -10,6 +10,7 @@ import { html, type SafeHtml } from '../html.js';
 import { costLine, csrfField, icon, resIcon, timer } from './layout.js';
 import { panel, svgBar, unitIcon } from './parts.js';
 import { trainingQueue } from './village.js';
+import { help } from './tips.js';
 
 export interface TrainGroup {
   building: BuildingId;
@@ -33,6 +34,11 @@ export interface AutoTrainData {
 
 export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Resources; home: UnitCounts; owned: UnitCounts; academySlot: number | null; csrf: string; now: number; auto?: AutoTrainData }): SafeHtml {
   const any = d.groups.some((g) => g.options.some((o) => o.available));
+  // One "?" per concept: on the first unit that shows it.
+  const opts = d.groups.flatMap((g) => g.options);
+  const firstOpt = opts[0];
+  const firstCarry = opts.find((o) => o.unit.carry > 0);
+  const firstAvail = opts.find((o) => o.available);
   const head = html`<div class="vtitle"><h1>Train troops</h1><span class="vmeta">all training buildings of this village in one place${d.auto && d.auto.rows.length ? html` · <a href="#auto">» Auto training${d.auto.plan?.active ? ' (running)' : ''}</a>` : ''}</span></div>`;
   if (d.groups.length === 0) {
     return html`${head}${panel('No training buildings yet', html`<p class="small">Build a <a href="/village"><b>Barracks</b></a> (Main Building 3, Rally Point 1) to start training soldiers. Stable, Workshop and the Great Barracks/Stable add more units.</p>`)}`;
@@ -47,20 +53,20 @@ export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Re
               (o) => html`<tr>
                 <td class="desc">${unitIcon(d.tribe, o.slot)} <b>${o.unit.name}</b> <span class="avail" title="${fmtNum(d.home[o.slot] ?? 0)} at home now · ${fmtNum(d.owned[o.slot] ?? 0)} in total (incl. away and on the move)">(You have: ${fmtNum(d.owned[o.slot] ?? 0)})</span>
                   <span class="small muted" title="${UNIT_GUIDE[o.unit.id]?.use ?? ''}">${UNIT_GUIDE[o.unit.id]?.kind ?? ''}</span>
-                  <div class="details">${costLine(o.cost, d.have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>${o.unit.carry > 0 ? html`<span class="carry">carries ${fmtNum(o.unit.carry)}</span>` : ''}`)}
+                  <div class="details">${costLine(o.cost, d.have, html`<span>${icon('res/cropuse', 'Crop consumption', 18, 12)}${o.unit.upkeep}</span><span title="per unit">${icon('res/clock', 'Duration', 18, 12)}${fmtUnitTime(o.timeMs)}</span>${o === firstOpt ? help('unitCost') : ''}${o.unit.carry > 0 ? html`<span class="carry">carries ${fmtNum(o.unit.carry)}</span>${o === firstCarry ? help('carry') : ''}` : ''}`)}
                   ${o.available ? '' : html`<span class="none">${o.reason}</span>`}</div></td>
                 <td class="val">${o.available
                   ? html`<label class="sr" for="t_${g.building}_${o.slot}">How many ${o.unit.name}</label><input class="w30 tr-in" id="t_${g.building}_${o.slot}" type="number" name="t_${g.building}_${o.slot}" min="0" max="${o.maxAffordable}" inputmode="numeric" placeholder="0"
                       data-cost="${o.cost.wood},${o.cost.clay},${o.cost.iron},${o.cost.crop},${o.unit.upkeep},${o.timeMs},${o.unit.carry}">`
                   : html`<span class="none">-</span>`}</td>
-                <td class="max">${o.available ? html`<a href="#t_${g.building}_${o.slot}" class="fill" data-fill="t_${g.building}_${o.slot}" data-value="${o.maxAffordable}">(${fmtNum(o.maxAffordable)})</a>` : html`<span class="none">(0)</span>`}</td>
+                <td class="max">${o.available ? html`<a href="#t_${g.building}_${o.slot}" class="fill" data-fill="t_${g.building}_${o.slot}" data-value="${o.maxAffordable}">(${fmtNum(o.maxAffordable)})</a>${o === firstAvail ? help('trainMax') : ''}` : html`<span class="none">(0)</span>`}</td>
               </tr>`,
             )}</tbody></table>`}
       </section>`,
     )}
     ${any
       ? html`<div class="train-total sticky" id="train-total" data-have="${Math.floor(d.have.wood)},${Math.floor(d.have.clay)},${Math.floor(d.have.iron)},${Math.floor(d.have.crop)}">
-          <b>Total:</b>
+          <b>Total:</b>${help('trainTotal')}
           <span id="tt-wood">${resIcon('wood')}0</span><span id="tt-clay">${resIcon('clay')}0</span><span id="tt-iron">${resIcon('iron')}0</span><span id="tt-crop">${resIcon('crop')}0</span>
           <span id="tt-upkeep">${icon('res/cropuse', 'Crop consumption', 18, 12)}0</span><span id="tt-time">${icon('res/clock', 'Duration', 18, 12)}0:00:00</span><span id="tt-carry" class="carry"><b>can carry</b> 0</span>
           <button type="submit" class="gbtn green">Train all</button>
@@ -99,6 +105,8 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
         ${running ? html`<form method="post" action="/train/auto/stop" class="inl">${csrfField(csrf)}<button type="submit" class="gbtn secondary">Stop auto training</button></form>` : ''}
       </div>`
     : '';
+  const firstB = a.rows[0]?.building;
+  const firstShare = a.rows.find((r) => r.available)?.key;
   const goalLink = (goal: AutoGoal) => `/troops/train?auto=${goal}&hours=${a.hours}#auto`;
   // Foldable: closed by default; open after a quick-setup pick, on #auto links and when the player left it open (app.js).
   return html`<details class="spanel autotrain" id="auto"${a.goal ? html` open` : ''}>
@@ -111,13 +119,13 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
       <div class="at-quick"><b>Quick setup</b> <span class="small">best unit for each building, shares sized so all buildings stay about equally busy:</span>
         <span class="at-goals">${(Object.keys(AUTO_GOALS) as AutoGoal[]).map((g) => html`<a class="gbtn${a.goal === g ? '' : ' secondary'}" data-at-goal="${g}" href="${goalLink(g)}">${AUTO_GOALS[g]}</a>`)}<a class="small" href="/troops/train#auto" data-at-clear>clear</a></span></div>
       <form method="post" action="/train/auto" id="at-form" data-income="${RESOURCE_KEYS.map((k) => Math.round(a.income[k])).join(',')}" data-stock="${RESOURCE_KEYS.map((k) => Math.floor(a.stock[k])).join(',')}">${csrfField(csrf)}
-        <fieldset class="at-hours"><legend>Run for</legend>${Array.from({ length: AUTO_TRAIN_MAX_HOURS - AUTO_TRAIN_MIN_HOURS + 1 }, (_, i) => i + AUTO_TRAIN_MIN_HOURS).map(
+        <fieldset class="at-hours"><legend>Run for${help('autoHours')}</legend>${Array.from({ length: AUTO_TRAIN_MAX_HOURS - AUTO_TRAIN_MIN_HOURS + 1 }, (_, i) => i + AUTO_TRAIN_MIN_HOURS).map(
           (h) => html`<label><input type="radio" name="hours" value="${h}"${h === a.hours ? html` checked` : ''}><span>${h} h</span></label>`,
         )}</fieldset>
         <div class="at-list">
         ${[...byBuilding].map(([b, rows]) => {
           const load = sm.load[b as keyof typeof sm.load] ?? 0;
-          return html`<div class="at-bhead"><b>${BUILDINGS[b as keyof typeof BUILDINGS].name}</b><span class="at-load" data-load-b="${b}" title="How busy your income keeps this building">${svgBar(load * 100, load > 1 ? 'atbad' : 'atok')}<span>${Math.round(load * 100)}% busy</span></span></div>
+          return html`<div class="at-bhead"><b>${BUILDINGS[b as keyof typeof BUILDINGS].name}</b><span class="at-load" data-load-b="${b}"${b === firstB ? '' : html` title="How busy your income keeps this building"`}>${svgBar(load * 100, load > 1 ? 'atbad' : 'atok')}<span>${Math.round(load * 100)}% busy</span>${b === firstB ? help('autoBusy') : ''}</span></div>
           ${rows.map((r) => {
             const f = fc.get(r.key);
             return html`<div class="at-unit${r.available ? '' : ' na'}">
@@ -127,7 +135,7 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
               ${r.available ? '' : html`<div class="none small">${r.reason}</div>`}</div>
             ${r.available
               ? html`<div class="at-uin"><label class="sr" for="a_${r.key}">${r.unit.name}: % of resources</label><input class="at-in" id="a_${r.key}" name="a_${r.key}" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="0" value="${a.values[r.key] ? String(a.values[r.key]) : ''}"
-                  data-key="${r.key}" data-b="${r.building}" data-cost="${RESOURCE_KEYS.map((k) => r.cost[k]).join(',')}" data-up="${r.unit.upkeep}" data-time="${r.timeMs}"><span class="at-pct">%</span>
+                  data-key="${r.key}" data-b="${r.building}" data-cost="${RESOURCE_KEYS.map((k) => r.cost[k]).join(',')}" data-up="${r.unit.upkeep}" data-time="${r.timeMs}"><span class="at-pct">%</span>${r.key === firstShare ? help('autoShare') : ''}
                 <button type="button" class="at-max" data-at-rest="${r.key}" title="Give this troop all the % not assigned yet">rest</button></div>`
               : ''}
           </div>`;
@@ -135,10 +143,10 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
         })}
         </div>
         <div class="at-sum" id="at-sum">
-          <p class="at-assigned" id="at-assigned">Assigned: <b>${sm.assigned}%</b>${sm.assigned < 100 ? html` · <span class="muted">${100 - sm.assigned}% stays in your stock</span>` : ''}${sm.assigned > 100 ? html` · <b class="bad">more than 100%</b>` : ''}</p>
+          <p class="at-assigned"><span id="at-assigned">Assigned: <b>${sm.assigned}%</b>${sm.assigned < 100 ? html` · <span class="muted">${100 - sm.assigned}% stays in your stock</span>` : ''}${sm.assigned > 100 ? html` · <b class="bad">more than 100%</b>` : ''}</span>${help('autoAssigned')}</p>
           <div class="at-cards">${RESOURCE_KEYS.map((k) => html`<div class="at-card">
             <div class="at-chead">${resIcon(k)} ${RES_LABEL[k]}</div>
-            <div class="at-line"><span>Stock</span><b>${n0(a.stock[k])}</b></div>
+            <div class="at-line"><span>Stock${k === 'wood' ? help('autoStock') : ''}</span><b>${n0(a.stock[k])}</b></div>
             <div class="at-line"><span>Income</span><b>${n0(a.income[k])}/h</b></div>
             <div class="at-line"><span>Used</span><b data-at-used="${k}">${n0(sm.usedPerHour[k])}/h</b></div>
             <div class="at-cover" data-at-cover="${k}" title="Share of this resource's income the plan uses">${svgBar(a.income[k] > 0 ? (sm.usedPerHour[k] / a.income[k]) * 100 : 0, 'atok')}<span>${a.income[k] > 0 ? Math.round((sm.usedPerHour[k] / a.income[k]) * 100) : 0}%</span></div>

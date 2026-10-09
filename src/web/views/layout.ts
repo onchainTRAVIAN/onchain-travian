@@ -10,6 +10,7 @@ import { fmtClock, fmtDuration, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { avatarUrl } from '../../game/actions/avatar.js';
 import { TRIBES, type TribeId } from '../../game/rules/units.js';
+import { help } from './tips.js';
 
 export interface Chrome {
   user: UserRow;
@@ -107,12 +108,12 @@ function topNav(active: NavKey | undefined, c: Chrome | null | undefined): SafeH
 function resourceBar(v: VillageRow, eco: Economy, now: number, credits: number): SafeHtml {
   const stock: Resources = { wood: v.wood, clay: v.clay, iron: v.iron, crop: v.crop };
   return html`<div id="res"><table><tr>
-    ${RESOURCE_KEYS.map((k) => {
+    ${RESOURCE_KEYS.map((k, i) => {
       const full = eco.net[k] >= 0 && stock[k] >= eco.capacity[k];
-      return html`<td><a href="/production#${k}" class="resl" title="${RESOURCE_LABEL[k]}: where production comes from">${resIcon(k)}</a></td><td class="${full ? 'full' : ''}" title="${RESOURCE_LABEL[k]}: ${fmtNum(eco.net[k])} per hour"><a href="/production#${k}" class="plain"><span data-amount="${stock[k]}" data-rate="${eco.net[k]}" data-cap="${eco.capacity[k]}" data-at="${now}">${fmtNum(stock[k])}</span>/${fmtNum(eco.capacity[k])}</a></td>`;
+      return html`<td><a href="/production#${k}" class="resl" title="${RESOURCE_LABEL[k]}: where production comes from">${resIcon(k)}</a></td><td class="${full ? 'full' : ''}" title="${RESOURCE_LABEL[k]}: ${fmtNum(eco.net[k])} per hour"><a href="/production#${k}" class="plain"><span data-amount="${stock[k]}" data-rate="${eco.net[k]}" data-cap="${eco.capacity[k]}" data-at="${now}">${fmtNum(stock[k])}</span>/${fmtNum(eco.capacity[k])}</a>${i === 0 ? help('res') : ''}</td>`;
     })}
-    <td><a href="/production#crop" class="resl" title="Crop consumption: details">${icon('res/cropuse', 'Crop consumption', 18, 12)}</a></td><td class="${eco.net.crop < 0 ? 'neg' : ''}" title="Crop consumption / production"><a href="/production#crop" class="plain">${fmtNum(eco.upkeep)}/${fmtNum(eco.gross.crop)}</a></td>
-    <td>${icon('res/gold', 'Gold', 18, 12)}</td><td><a href="/shop?tab=buy">${fmtNum(credits)}</a></td>
+    <td><a href="/production#crop" class="resl" title="Crop consumption: details">${icon('res/cropuse', 'Crop consumption', 18, 12)}</a></td><td class="${eco.net.crop < 0 ? 'neg' : ''}" title="Crop consumption / production"><a href="/production#crop" class="plain">${fmtNum(eco.upkeep)}/${fmtNum(eco.gross.crop)}</a>${help('cropBalance')}</td>
+    <td>${icon('res/gold', 'Gold', 18, 12)}</td><td><a href="/shop?tab=buy">${fmtNum(credits)}</a>${help('gold')}</td>
   </tr></table></div>`;
 }
 
@@ -156,7 +157,7 @@ function sideNavi(c: Chrome | null | undefined, csrf: string, nav: NavKey | unde
   return html`<nav id="side_navi" class="sp" aria-label="Menu">
     <a class="sp-user sp-card" href="/player/${u.id}" title="Your profile"><img class="avatar" src="${avatarUrl(u)}" width="44" height="44" alt="">
       <b>${u.username}</b><small>${TRIBES[u.tribe as TribeId]?.name ?? ''}</small>
-      <span class="sp-chips"><span title="Population">${icon('res/pop', 'Population', 12, 12)} ${fmtNum(c.villages.reduce((a, v) => a + v.pop, 0))}</span><span title="Gold">${icon('res/gold', 'Gold', 14, 10)} ${fmtNum(c.credits)}</span></span></a>
+      <span class="sp-chips"><span title="Population">${icon('res/pop', 'Population', 12, 12)} ${fmtNum(c.villages.reduce((a, v) => a + v.pop, 0))}${help('population')}</span><span title="Gold">${icon('res/gold', 'Gold', 14, 10)} ${fmtNum(c.credits)}</span></span></a>
     <div class="sp-body">
       <div class="sp-label">Village</div>
       ${mi('/fields', 'home', 'Overview', nav === 'fields')}
