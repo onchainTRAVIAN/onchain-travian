@@ -60,3 +60,26 @@ def variants(out: pathlib.Path, ref_png: pathlib.Path) -> None:
             for k, d in VARIANTS.items() if not (out / f'{k}.png').exists()]
     for r in generate_many(jobs, workers=4):
         print(r, flush=True)
+
+
+# Twitter banner backgrounds (2026-10-09): wide painted scenes, logo composited later by social.py.
+BANNER_STYLE = (
+    'Ultra-wide panoramic key art for a cosy classic medieval / ancient Roman browser strategy game (villages, fields, armies, tribes). '
+    'Hand-painted 2D game illustration, rich painterly style like a polished strategy game loading screen, warm golden-hour light, '
+    'vibrant natural colours, atmospheric depth. Keep the centre and right half calmer and slightly darker (open sky / soft distance) '
+    'so a logo can be placed over it; put the busiest detail on the left third and lower edge. '
+    'No text, no letters, no logo, no watermark, no frame, no UI. Original artwork. '
+)
+BANNERS = {
+    'banner-village': 'A green valley at sunset: a thriving village with half-timbered houses and red roofs on a hill, a stone watchtower with a red banner, golden wheat fields, a winding river, woods and distant blue mountains under a glowing orange sky.',
+    'banner-legion': 'A Roman legion with red shields and crested helmets marching over rolling hills toward a walled hilltop town, banners waving, long shadows, dramatic sunset sky with golden clouds.',
+    'banner-map': 'A bird\'s-eye painted world map of the game seen at a low angle: patchwork of villages, wheat and clay fields, forests, lakes, oases and mountains fading into golden mist, a few tiny marching armies.',
+    'banner-camp': 'Dusk at a Roman army camp on a hill: tents, torches, a banner pole, an open treasure chest overflowing with glowing gold coins in the foreground left, a fortified town and purple-orange sky in the distance.',
+}
+
+
+def banners(out: pathlib.Path) -> None:
+    jobs = [{'prompt': BANNER_STYLE + d, 'out': out / f'{k}.png', 'ratio': '21:9'}
+            for k, d in BANNERS.items() if not (out / f'{k}.png').exists()]
+    for r in generate_many(jobs, workers=4):
+        print(r, flush=True)

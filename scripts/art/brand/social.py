@@ -1,6 +1,6 @@
 """Twitter/X images (JPG, no transparency): profile picture + header banner.
 
-python scripts/art/brand/social.py   (scraping venv: playwright; needs branding/coin-1024.png, wordmark.svg)
+python scripts/art/brand/social.py   (scraping venv: playwright; needs branding/coin-1024.png, wordmark.svg)\nPainted banner variants use ~/art-raw/logo/banner-*.png (gen_logo.banners).
 """
 import asyncio
 import pathlib
@@ -25,21 +25,33 @@ html, body {{ margin: 0; }}
 AVATAR = BASE + f'''<div class="bg" style="--gx:50%;width:1000px;height:1000px">
 <img class="coin" src="{(OUT / "coin-1024.png").as_uri()}" style="left:60px;top:60px;width:880px;height:880px"></div>'''
 
-BANNER = BASE + f'''<div class="bg" style="--gx:30%;width:1500px;height:500px">
-<img class="coin" src="{(OUT / "coin-1024.png").as_uri()}" style="left:330px;top:85px;width:330px;height:330px">
-<div style="position:absolute;z-index:1;left:700px;top:150px">
-  <img src="{(OUT / "wordmark.svg").as_uri()}" style="display:block;width:660px;height:auto">
-  <div style="font:700 27px Cinzel;color:#f3dca0;letter-spacing:3px;margin:22px 0 0 8px;text-shadow:0 2px 4px #000">
+def banner(bg: pathlib.Path | None = None) -> str:
+    """Coin + wordmark + tagline; over a painted scene (kie.ai, gen_logo.banners) when bg is given."""
+    scene = (f'<img src="{bg.as_uri()}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
+             '<div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(12,7,3,0) 25%,'
+             'rgba(12,7,3,.55) 50%,rgba(12,7,3,.72) 100%),linear-gradient(0deg,rgba(12,7,3,.35),rgba(12,7,3,0) 40%)"></div>'
+             ) if bg else ''
+    left = 520 if bg else 330
+    return BASE + f'''<div class="{'' if bg else 'bg'}" style="--gx:30%;position:relative;overflow:hidden;width:1500px;height:500px">{scene}
+<img class="coin" src="{(OUT / "coin-1024.png").as_uri()}" style="left:{left}px;top:100px;width:300px;height:300px">
+<div style="position:absolute;z-index:1;left:{left + 330}px;top:160px">
+  <img src="{(OUT / "wordmark.svg").as_uri()}" style="display:block;width:{560 if bg else 660}px;height:auto;filter:drop-shadow(0 3px 6px #000)">
+  <div style="font:700 {24 if bg else 27}px Cinzel;color:#f6e2a8;letter-spacing:3px;margin:20px 0 0 6px;text-shadow:0 2px 5px #000,0 0 12px #000">
     Build &middot; Raid &middot; Conquer &middot; On-chain</div>
-  <div style="font:400 20px Cinzel;color:#c9a96a;letter-spacing:2px;margin:10px 0 0 8px;text-shadow:0 2px 4px #000">
+  <div style="font:400 {17 if bg else 20}px Cinzel;color:#e0c48a;letter-spacing:1.5px;white-space:nowrap;margin:10px 0 0 6px;text-shadow:0 2px 5px #000,0 0 12px #000">
     The classic browser strategy game, with its own coin</div>
 </div></div>'''
+
+
+RAW = pathlib.Path.home() / 'art-raw' / 'logo'
 
 
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch()
-        for name, body, w, h in (('twitter-avatar', AVATAR, 1000, 1000), ('twitter-banner', BANNER, 1500, 500)):
+        pages = [('twitter-avatar', AVATAR, 1000, 1000), ('twitter-banner', banner(), 1500, 500)]
+        pages += [(f'twitter-{bg.stem}', banner(bg), 1500, 500) for bg in sorted(RAW.glob('banner-*.png'))]
+        for name, body, w, h in pages:
             pg = await b.new_page(viewport={'width': w, 'height': h})
             tmp = OUT / '_social.html'
             tmp.write_text(body)
