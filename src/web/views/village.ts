@@ -145,7 +145,7 @@ export function fieldsView(d: VillageViewData & { layout: string }): SafeHtml {
       const kind = FIELD_KIND[s.building ?? ''];
       const deco = stage >= 2 && kind ? html`<img class="fo ra${s.slot}" src="${assetUrl(`img/fields/stage/${kind}-${stage}.svg`)}" width="46" height="40" alt="">` : '';
       const hinted = d.hint?.slot === s.slot;
-      return html`${deco}<a class="ra ra${s.slot}" href="/slot/${s.slot}" title="${label}" aria-label="${label}"></a><span class="rf rf${s.slot} ${badgeClass(d, s.slot, s.level, cap)}${hinted ? ' hint' : ''}">${s.level}</span>${hinted ? html`<span class="hintbub rf${s.slot}">${d.hint?.text} — click here</span>` : ''}`;
+      return html`${deco}<a class="ra ra${s.slot}" href="/slot/${s.slot}" title="${label}" aria-label="${label}"></a><span class="rf rf${s.slot} ${badgeClass(d, s.slot, s.level, cap)}${hinted ? ' hint' : ''}">${s.level}</span>${hinted ? html`<span class="hintbub rf${s.slot}">${d.hint?.text} - click here</span>` : ''}`;
     })}
     <a class="vlink" href="/village" title="Village centre" aria-label="Village centre"></a>
   </div>
@@ -193,7 +193,7 @@ export function townView(d: VillageViewData): SafeHtml {
       : ''}
     ${buildings}
     ${levels}
-    ${d.hint && d.hint.slot >= 19 ? html`<span class="hintring l${d.hint.slot}"></span><span class="hintbub l${d.hint.slot}">${d.hint.text} — click here</span>` : ''}
+    ${d.hint && d.hint.slot >= 19 ? html`<span class="hintring l${d.hint.slot}"></span><span class="hintbub l${d.hint.slot}">${d.hint.text} - click here</span>` : ''}
     <svg class="hitmap" viewBox="0 0 540 448" aria-label="Buildings">
       ${TOWN_SPOTS.map((p) => {
         const label = labels.get(p.slot) ?? 'Building site';

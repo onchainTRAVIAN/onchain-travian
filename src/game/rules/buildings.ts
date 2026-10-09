@@ -227,7 +227,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     'Bread is baked here from the mill’s flour: another +5% crop production per level.'),
   brewery: B({ id: 'brewery', name: 'Brewery', icon: '🍺', cost: [1460, 930, 1250, 1740], costFactor: 1.4, maxLevel: 10,
     time: { a: 8000 + 3750, k: 1.16, b: 3750 }, pop: 6, cp: 4, requires: [['granary', 20], ['rally', 10]], tribe: 'teutons', capitalOnly: true,
-    description: 'Tasty mead makes Teuton soldiers braver: +1% attack per level for all your troops — but drunk catapults aim at random and chiefs persuade only half as well.' }),
+    description: 'Tasty mead makes Teuton soldiers braver: +1% attack per level for all your troops - but drunk catapults aim at random and chiefs persuade only half as well.' }),
   trapper: B({ id: 'trapper', name: 'Trapper', icon: '🪤', cost: [100, 100, 100, 100], costFactor: 1.28, maxLevel: 20,
     time: { a: 2000, k: 1.16, b: 0 }, pop: 4, cp: 1, requires: [['rally', 1]], tribe: 'gauls', multiple: true,
     description: 'The Gauls dig well-hidden traps that capture attacking soldiers.' }),

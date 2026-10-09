@@ -19,7 +19,7 @@ export function endgameView(d: Overview & { now: number }): SafeHtml {
     ${d.winner
       ? html`<div class="spanel pad"><b>The world has been won!</b> ${d.winner.alliance ?? d.winner.user} completed the World Wonder in ${d.winner.village} on ${fmtDateTime(d.winner.at)} UTC.</div>`
       : ''}
-    <p class="small">The ancient Natars guard powerful artifacts in their Treasuries. Destroy a Treasury with catapults, then win an attack with your hero — your attacking village needs an empty Treasury (level 10 for small artifacts, 20 for large and unique ones). Later the Natars reveal World Wonder villages and construction plans: the first alliance to raise a World Wonder to level 100 wins.</p>
+    <p class="small">The ancient Natars guard powerful artifacts in their Treasuries. Destroy a Treasury with catapults, then win an attack with your hero - your attacking village needs an empty Treasury (level 10 for small artifacts, 20 for large and unique ones). Later the Natars reveal World Wonder villages and construction plans: the first alliance to raise a World Wonder to level 100 wins.</p>
     ${panel('Artifacts', d.artifactsReleasedAt === null
       ? html`<p class="none pad">Not released yet.</p>`
       : html`<div class="tblwrap"><table class="tb"><thead><tr><th>Artifact</th><th>Effect</th><th>Holder</th><th>Village</th></tr></thead><tbody>

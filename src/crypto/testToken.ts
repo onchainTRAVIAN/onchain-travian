@@ -1,4 +1,4 @@
-// AUTO-GENERATED from contracts/out/TestToken.sol/TestToken.json by contracts/abi/generate.mjs — do not edit by hand.
+// AUTO-GENERATED from contracts/out/TestToken.sol/TestToken.json by contracts/abi/generate.mjs - do not edit by hand.
 export const testTokenAbi = [
   {
     "type": "function",

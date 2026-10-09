@@ -51,7 +51,7 @@ adminRouter.get('/admin', (req, res) => {
         villages: db.select({ n: sql<number>`count(*)` }).from(villages).get()?.n ?? 0,
         creditsIssued: db.select({ n: sql<number>`coalesce(sum(${creditsLedger.amount}), 0)` }).from(creditsLedger).where(sql`${creditsLedger.amount} > 0`).get()?.n ?? 0,
         deposits: db.select({ n: sql<number>`count(*)` }).from(deposits).get()?.n ?? 0,
-        indexerBlock: getMeta(db, 'indexer_block') ?? '—',
+        indexerBlock: getMeta(db, 'indexer_block') ?? '-',
       },
       announcement: getMeta(db, 'announcement') ?? '',
       endgame: { artifacts: Number(getMeta(db, 'artifacts_released_at') ?? 0) || null, wonders: Number(getMeta(db, 'wonders_released_at') ?? 0) || null },

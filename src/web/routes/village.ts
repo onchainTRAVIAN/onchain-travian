@@ -318,7 +318,7 @@ villageRouter.post('/train/auto', (req, res, next) =>
     }
     const plan = startAutoTrain(db, ctx.user.id, ctx.villageId, d.hours, perHour, ctx.now);
     const n = parseItems(plan.items).reduce((a, i) => a + i.trained, 0);
-    setFlash(rs, 'ok', `Auto training started for ${plan.hours} hour${plan.hours === 1 ? '' : 's'}: ${n.toLocaleString('en-US')} units queued from your stock right away; every minute it spends new resources by your shares. It stops by itself — start it again when it ends.`);
+    setFlash(rs, 'ok', `Auto training started for ${plan.hours} hour${plan.hours === 1 ? '' : 's'}: ${n.toLocaleString('en-US')} units queued from your stock right away; every minute it spends new resources by your shares. It stops by itself - start it again when it ends.`);
     rs.redirect(303, '/troops/train#auto');
   }, '/troops/train#auto')(req, res, next),
 );
@@ -369,7 +369,7 @@ villageRouter.post('/train/all', (req, res, next) =>
       }
     }
     if (trained.length === 0 && failed.length === 0) throw new GameError('Enter how many units to train');
-    setFlash(rs, trained.length ? 'ok' : 'error', [trained.length ? `Training: ${trained.join(', ')}.` : '', failed.length ? `Not trained — ${failed.join('; ')}.` : ''].filter(Boolean).join(' '));
+    setFlash(rs, trained.length ? 'ok' : 'error', [trained.length ? `Training: ${trained.join(', ')}.` : '', failed.length ? `Not trained - ${failed.join('; ')}.` : ''].filter(Boolean).join(' '));
     rs.redirect(303, '/troops/train');
   }, '/troops/train')(req, res, next),
 );

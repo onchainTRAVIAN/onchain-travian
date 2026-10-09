@@ -39,7 +39,7 @@ export function creditHistory(q: Q, userId: number, limit = 30) {
 /** Finish-now price: see FINISH_X1_MINUTES_PER_GOLD (scaled by world speed), minimum 2. */
 /**
  * "Finish now" price follows the world speed: it is based on how long the remaining work
- * would take on a normal-speed (x1) world — 1 Gold per 100 minutes at x1, at least 2.
+ * would take on a normal-speed (x1) world - 1 Gold per 100 minutes at x1, at least 2.
  * (At x100 that is 1 Gold per real minute.)
  */
 export const FINISH_X1_MINUTES_PER_GOLD = 100;
@@ -72,7 +72,7 @@ export function finishConstructionNow(db: DB, userId: number, orderId: number, n
 }
 
 /**
- * Finish a training batch now — and every batch queued before it in the same building, since the
+ * Finish a training batch now - and every batch queued before it in the same building, since the
  * queue trains in order. The price is the time until this batch would be done (its Duration).
  */
 export function finishTrainingNow(db: DB, userId: number, orderId: number, now: number): number {
@@ -359,7 +359,7 @@ export function cleanTickerText(text: string): string {
 
 /**
  * Post a message to the news ticker: it starts now and runs for the hours paid for. Any number of
- * messages can run at once — they take turns on the ticker.
+ * messages can run at once - they take turns on the ticker.
  */
 export function bookTicker(db: DB, userId: number, text: string, hours: number, now: number) {
   const body = cleanTickerText(text);

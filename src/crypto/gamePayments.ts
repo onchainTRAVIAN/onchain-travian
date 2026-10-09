@@ -1,4 +1,4 @@
-// AUTO-GENERATED from contracts/out/GamePayments.sol/GamePayments.json by contracts/abi/generate.mjs — do not edit by hand.
+// AUTO-GENERATED from contracts/out/GamePayments.sol/GamePayments.json by contracts/abi/generate.mjs - do not edit by hand.
 export const gamePaymentsAbi = [
   {
     "type": "constructor",

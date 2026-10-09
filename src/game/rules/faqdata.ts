@@ -1165,12 +1165,12 @@ export const FAQ_TOPICS: FaqTopic[] = [
         steps: [
           'Open [Train troops](/troops/train#auto) and scroll to **Auto training**.',
           'Pick how long it runs: 1 to 8 hours.',
-          'Give troops a **share in %** — e.g. Praetorian 60%, Equites Imperatoris 40%. Or press a **Quick setup** (strongest attack, strongest defence, most loot), or **rest** on a row to give it all % not used yet.',
+          'Give troops a **share in %** - e.g. Praetorian 60%, Equites Imperatoris 40%. Or press a **Quick setup** (strongest attack, strongest defence, most loot), or **rest** on a row to give it all % not used yet.',
           'Check the forecast, then press **Start auto training**.',
         ],
       },
       { p: 'Right away and then every minute, each troop gets its share of your **current stock** and as many as that buys go into the queue (you see them under In training). Whatever is left over (troops are limited by their scarcest resource) is split again, up to three times, so little stays idle.' },
-      { p: 'Shares below 100% keep the rest in stock — e.g. 80% in total keeps 20% for buildings.' },
+      { p: 'Shares below 100% keep the rest in stock - e.g. 80% in total keeps 20% for buildings.' },
       { p: 'Each row shows how many it trains **now** from your stock and **per hour** from your income, and which resource limits it. The cards show how much of each resource\'s income the plan uses. The busy bar shows whether a building can keep up; above 100% resources pile up.' },
       { p: 'Queues are never filled past the end of the run. Orders for the same troop are added to one queue line.' },
       { note: 'When the time is up auto training stops and the Info box tells you. Your settings are kept: open Train troops and press **Start** again. Settlers and chiefs are never auto-trained.' },
@@ -1536,7 +1536,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     category: 'oases',
     title: 'Which animals live in oases?',
     keywords: ['animals', 'nature', 'oasis animals', 'rat', 'spider', 'snake', 'bat', 'wild boar', 'wolf', 'bear', 'crocodile', 'tiger', 'elephant', 'beasts'],
-    summary: 'Free oases are guarded by animals that only defend. Each oasis type has its own mix; new animals appear while nobody holds the oasis — 350 defence power per real day, up to 8,000 power per oasis.',
+    summary: 'Free oases are guarded by animals that only defend. Each oasis type has its own mix; new animals appear while nobody holds the oasis - 350 defence power per real day, up to 8,000 power per oasis.',
     body: [
       {
         table: {
@@ -1629,7 +1629,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
           ],
         },
       },
-      { p: "Loyalty regrows by 2 per hour per level of the owner's Hero's Mansion (Mansion 10: 20 per hour, Mansion 20: 40 per hour). Send your hero attacks close together — on this fast world they arrive within minutes, so a few attacks in a row take the oasis." },
+      { p: "Loyalty regrows by 2 per hour per level of the owner's Hero's Mansion (Mansion 10: 20 per hour, Mansion 20: 40 per hour). Send your hero attacks close together - on this fast world they arrive within minutes, so a few attacks in a row take the oasis." },
       { note: 'Raids, attacks without the hero, oases further than 3 fields, or no free oasis slot: the report explains what is missing.' },
       {
         tips: [

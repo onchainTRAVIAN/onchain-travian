@@ -134,7 +134,7 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
   } else if (tile.villageId === null) {
     assertGame(input.kind === 'settle', 'There is no village at that location');
     targetName = `Valley (${x}|${y})`;
-    targetOwner = '—';
+    targetOwner = '-';
     targetKind = 'valley';
   } else {
     assertGame(input.kind !== 'settle', 'That land is already taken');

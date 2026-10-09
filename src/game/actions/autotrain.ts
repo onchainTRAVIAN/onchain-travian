@@ -216,7 +216,7 @@ export function startAutoTrain(db: DB, userId: number, villageId: number, hours:
     const rows = autoUnitRows(tx, state, now);
     const items: AutoTrainItem[] = [];
     const total = Object.values(shares).reduce((x, v) => x + (v > 0 ? v : 0), 0);
-    assertGame(total <= 100, `The shares add up to ${total}% — at most 100%`);
+    assertGame(total <= 100, `The shares add up to ${total}% - at most 100%`);
     for (const [key, share] of Object.entries(shares)) {
       if (!(share > 0)) continue;
       assertGame(Number.isInteger(share) && share <= 100, 'Shares are whole percentages from 0 to 100');

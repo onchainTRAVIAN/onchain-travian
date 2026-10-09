@@ -497,7 +497,7 @@ socialRouter.get(['/help/buildings', '/help/buildings/:id'], (req, res) => {
   }
   const tribe = (req.ctx.user?.tribe as TribeId | undefined) ?? 'romans';
   const mb = Math.max(1, Math.min(20, Math.floor(Number(req.query.mb) || 1)));
-  sendPage(req, res, id ? `${BUILDINGS[id].name} — all levels` : 'Buildings', buildingsGuideView({ tribe, id, mainLevel: mb }), { nav: 'help', chrome });
+  sendPage(req, res, id ? `${BUILDINGS[id].name} - all levels` : 'Buildings', buildingsGuideView({ tribe, id, mainLevel: mb }), { nav: 'help', chrome });
 });
 
 socialRouter.get('/help', (req, res) => {

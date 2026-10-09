@@ -688,6 +688,12 @@ svg.meter.pts .fg { fill: #9ccc5a; }
 form.spanel, details.spanel { display: block; }
 .herohelp summary.sp-head { display: list-item; list-style: none; }
 .herohelp summary.sp-head::-webkit-details-marker { display: none; }
+details.autotrain > summary.sp-head { cursor: pointer; list-style: none; padding-right: 34px; align-items: center; }
+details.autotrain > summary.sp-head::-webkit-details-marker { display: none; }
+details.autotrain > summary .at-title::before { content: ''; display: inline-block; margin-right: 7px; vertical-align: 1px; border: 5px solid transparent; border-left: 6px solid #6b5a2e; border-right: 0; transition: transform 0.15s; }
+details.autotrain[open] > summary .at-title::before { transform: rotate(90deg); }
+details.autotrain:not([open]) > summary.sp-head { border-bottom: 0; }
+details.autotrain:not([open]) { padding-bottom: 0; }
 /* Village name plaque (village overview and centre) */
 .vtitle { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 10px; padding: 0 0 6px; border-bottom: 1px solid #e3ddc8; }
 .vtitle h1 { margin: 0; font: bold 24px/1.15 Georgia, 'Times New Roman', serif; color: #2f2a17; letter-spacing: 0.2px; }

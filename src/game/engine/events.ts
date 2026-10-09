@@ -76,7 +76,7 @@ function countType(tribe: TribeId, units: UnitCounts, type: string): number {
 
 /**
  * Where a catapult volley lands: the requested building type if the attacker's Rally Point allows it
- * (highest level of that type), otherwise random — random hits can land on any building or field
+ * (highest level of that type), otherwise random - random hits can land on any building or field
  * (never the wall; rams deal with that).
  */
 function pickCatapultTarget(state: VillageState, requested: string | null, rallyLevel: number, forceRandom: boolean): VillageState['slots'][number] | undefined {

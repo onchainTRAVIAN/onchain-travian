@@ -54,7 +54,7 @@ export function loadGamePage(req: Request): GamePage {
         0,
       );
       if (incoming > 0) out.push({ kind: 'bad', text: `${incoming} incoming attack${incoming === 1 ? '' : 's'}!`, href: '/troops?tab=in#movements' });
-      if (hero && hero.status === 'dead') out.push({ kind: 'warn', text: 'Your hero has fallen — revive it', href: '/hero' });
+      if (hero && hero.status === 'dead') out.push({ kind: 'warn', text: 'Your hero has fallen - revive it', href: '/hero' });
       else if (hero && heroPoints(hero.level) - pointsUsed(hero) > 0) out.push({ kind: 'info', text: `Your hero has ${heroPoints(hero.level) - pointsUsed(hero)} free skill points`, href: '/hero' });
       for (const b of activeBoosts(db, ctx.user.id, ctx.now)) {
         if ((b.expiresAt ?? 0) - ctx.now < 24 * 3_600_000) {
@@ -63,7 +63,7 @@ export function loadGamePage(req: Request): GamePage {
         }
       }
       for (const f of finishedAutoTrains(db, ctx.user.id)) {
-        out.push({ kind: 'warn', text: `Auto training finished in ${f.name} — set it again`, href: `/troops/auto/${f.villageId}` });
+        out.push({ kind: 'warn', text: `Auto training finished in ${f.name} - set it again`, href: `/troops/auto/${f.villageId}` });
       }
       const unread = unreadCounts(db, ctx.user.id);
       if (unread.reports > 0) out.push({ kind: 'info', text: `${unread.reports} new report${unread.reports === 1 ? '' : 's'}`, href: '/reports' });

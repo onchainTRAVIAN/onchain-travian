@@ -31,7 +31,7 @@ export function walletView(d: {
     ${d.address
       ? html`<p class="cardrow"><span>Linked wallet <b class="nowrap" title="${d.address}">${short(d.address)}</b></span>
           <form method="post" action="/wallet/unlink">${csrfField(d.csrf)}<button type="submit" class="small secondary">Unlink</button></form></p>`
-      : html`<p class="small">Link your crypto wallet to unlock <b>${config.TOKEN_SYMBOL} holder perks</b> and to log in with one tap. Signing is free — no transaction, no gas.</p>
+      : html`<p class="small">Link your crypto wallet to unlock <b>${config.TOKEN_SYMBOL} holder perks</b> and to log in with one tap. Signing is free - no transaction, no gas.</p>
           <button type="button" class="gbtn" data-action="link">${icon('menu/wallet', '', 16)} Connect &amp; link wallet</button>`}
     <p class="small" data-status role="status"></p>
     </div></section>

@@ -3,6 +3,8 @@
 ## 0.20.5 — 2026-10-09 — painted header, lowercase "onchain"
 - The page header shows the painted world map from the Twitter banner (villages, river, lake) behind the logo and the menu buttons; server time and the speed note are light text with a shadow.
 - Wordmark: "onchain" in lowercase (Cormorant Garamond Bold) next to "TRAVIAN" (Cinzel).
+- Auto training panel folds open/closed (click its title); it remembers your choice.
+- Game texts use a plain dash "-" instead of the long dash.
 - Coin logo: the version with a gem where the laurel is tied, the gem now emerald green (header, favicon, front page, Twitter picture).
 
 ## 0.20.4 — 2026-10-08 — onchainTRAVIAN logo

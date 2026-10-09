@@ -76,7 +76,7 @@ const buildTask = (id: string, building: string, lvl: number, chapter: number, t
 const pop = (c: TaskContext) => c.villages.reduce((s, v) => s + v.pop, 0);
 
 export const TASKS: TaskDef[] = [
-  // 1 — First steps
+  // 1 - First steps
   {
     id: 'field-1', chapter: 0, title: 'Upgrade a resource field',
     how: 'Resource fields produce the materials for everything. Click a field on your village overview and upgrade it.',
@@ -86,7 +86,7 @@ export const TASKS: TaskDef[] = [
   },
   {
     id: 'fields-all-1', chapter: 0, title: 'Every field to level 1',
-    how: 'Bring all 18 resource fields to level 1 — cheap upgrades, steady income.',
+    how: 'Bring all 18 resource fields to level 1 - cheap upgrades, steady income.',
     link: (c) => `/slot/${lowestField(c) ?? 1}`, hint: lowestField,
     check: (c) => { const f = fieldsAtLeast(c, 1); return { done: f.have >= f.need, ...f }; },
     reward: r(300, 300, 300, 200), guide: 'production-fields',
@@ -103,7 +103,7 @@ export const TASKS: TaskDef[] = [
   buildTask('granary-1', 'granary', 1, 0, 'Build a Granary', 'Crop is stored in the Granary. Build it so your crop doesn’t overflow.', r(300, 300, 300, 200), 'storage'),
   buildTask('cranny-1', 'cranny', 1, 0, 'Build a Cranny', 'The Cranny hides part of your resources from raiders. Build one before your protection ends.', r(250, 250, 250, 250), 'cranny'),
 
-  // 2 — Getting stronger
+  // 2 - Getting stronger
   {
     id: 'fields-all-2', chapter: 1, title: 'Every field to level 2',
     how: 'Keep growing your income: all 18 fields to level 2.',
@@ -113,7 +113,7 @@ export const TASKS: TaskDef[] = [
   },
   buildTask('main-5', 'main', 5, 1, 'Main Building to level 5', 'A level 5 Main Building builds noticeably faster and unlocks more buildings.', r(700, 700, 700, 400), 'main-building'),
   buildTask('rally-1', 'rally', 1, 1, 'Build a Rally Point', 'The Rally Point is where your troops gather. You need it to send any troops.', r(400, 400, 400, 300), 'rally-point'),
-  buildTask('barracks-1', 'barracks', 1, 1, 'Build Barracks', 'In the Barracks you train infantry — your first soldiers.', r(600, 600, 600, 400, 5), 'military-buildings'),
+  buildTask('barracks-1', 'barracks', 1, 1, 'Build Barracks', 'In the Barracks you train infantry - your first soldiers.', r(600, 600, 600, 400, 5), 'military-buildings'),
   {
     id: 'train-5', chapter: 1, title: 'Train 5 soldiers',
     how: 'Train at least 5 soldiers in the Barracks (or use Train troops in the menu).',
@@ -129,7 +129,7 @@ export const TASKS: TaskDef[] = [
     reward: r(500, 500, 500, 300), guide: 'walls',
   },
 
-  // 3 — Into the world
+  // 3 - Into the world
   {
     id: 'scout', chapter: 2, title: 'Scout a neighbour',
     how: 'Train a scout unit and send it with "Scouting" to a village near you to see its resources and troops.',
@@ -161,7 +161,7 @@ export const TASKS: TaskDef[] = [
     reward: r(800, 800, 800, 800, 10), guide: 'alliance-join',
   },
 
-  // 4 — Your hero
+  // 4 - Your hero
   buildTask('mansion-1', 'heromansion', 1, 3, "Build a Hero's Mansion", "In the Hero's Mansion you turn one of your soldiers into a hero.", r(700, 700, 700, 500), 'heros-mansion'),
   {
     id: 'hero', chapter: 3, title: 'Train your hero',
@@ -178,7 +178,7 @@ export const TASKS: TaskDef[] = [
     reward: r(1200, 1200, 1200, 1000), guide: 'hero-skills',
   },
 
-  // 5 — Growing your empire
+  // 5 - Growing your empire
   {
     id: 'research', chapter: 4, title: 'Research a new unit',
     how: 'Build an Academy and research a new unit type.',

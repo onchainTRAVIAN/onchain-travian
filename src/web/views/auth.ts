@@ -64,7 +64,7 @@ export function registerView(csrf: string, values: { username?: string; tribe?: 
       ${TRIBE_IDS.map((id) => {
         const t = TRIBES[id];
         return html`<div class="choice tribepick"><label for="tribe-${id}"><img src="${pic(`img/units/big/${id}-1`)}" width="60" height="70" alt=""><input id="tribe-${id}" type="radio" name="tribe" value="${id}"${id === selected ? html` checked` : ''}>
-          <strong>${t.name}</strong> <span class="muted small">— ${t.tagline}</span></label>
+          <strong>${t.name}</strong> <span class="muted small">- ${t.tagline}</span></label>
           <div class="small">${t.description}</div>
           <ul class="small">${t.strengths.map((s) => html`<li>${s}</li>`)}</ul>
         </div>`;

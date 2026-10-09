@@ -90,7 +90,7 @@ function moveTab(m: MovementView): MoveTab {
   return m.direction === 'in' ? 'in' : m.direction === 'home' ? 'back' : 'out';
 }
 
-/** Village overview: one classic line per kind of movement ("3 Returning — first in 0:05:12"). */
+/** Village overview: one classic line per kind of movement ("3 Returning - first in 0:05:12"). */
 export function movementSummary(moves: MovementView[], now: number): SafeHtml {
   if (moves.length === 0) return html``;
   const groups: { key: string; tab: MoveTab; ico: string; label: string; cls?: string; list: MovementView[] }[] = [

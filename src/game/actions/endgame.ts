@@ -21,7 +21,7 @@ export function treasuryNeeded(size: ArtifactSize): number {
 const NATAR_NAME = 'Natars';
 
 /**
- * The Natar NPC account (created on first use; it can't log in). Found by its tribe — never by
+ * The Natar NPC account (created on first use; it can't log in). Found by its tribe - never by
  * name, so a player can't impersonate it (the name is also reserved at registration).
  */
 export function natarUser(q: Q, now: number): number {
@@ -141,7 +141,7 @@ export function artifactsIn(q: Q, villageId: number): ArtifactRow[] {
 
 /**
  * After a won normal attack with a living hero: if the target's Treasury is destroyed, the hero
- * carries one artifact home — if the attacking village has a Treasury big enough and empty.
+ * carries one artifact home - if the attacking village has a Treasury big enough and empty.
  * Returns a note for the report.
  */
 export function tryCaptureArtifact(q: Q, attackerVillageId: number, targetVillageId: number, now: number): string | null {

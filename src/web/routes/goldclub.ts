@@ -154,7 +154,7 @@ goldclubRouter.post(
   formAction(z.object({ on: z.enum(['0', '1']) }), (req, r, d) => {
     const ctx = authed(req);
     setRaiderEnabled(db, ctx.user.id, ctx.villageId, d.on === '1', userTribe(db, ctx.user.id), ctx.now);
-    setFlash(r, 'ok', d.on === '1' ? 'Oasis Raider is on — it starts with the next check.' : 'Oasis Raider is off.');
+    setFlash(r, 'ok', d.on === '1' ? 'Oasis Raider is on - it starts with the next check.' : 'Oasis Raider is off.');
     r.redirect(303, '/troops/farmlist');
   }, '/troops/farmlist'),
 );
@@ -173,8 +173,8 @@ goldclubRouter.post(
         : e.note
           ? `No raids sent: ${e.note}`
           : onWay
-            ? `Nothing new to send — ${onWay} raids are already on the way.`
-            : 'No raids sent — no oasis is worth raiding right now, or your troops are out.',
+            ? `Nothing new to send - ${onWay} raids are already on the way.`
+            : 'No raids sent - no oasis is worth raiding right now, or your troops are out.',
     );
     r.redirect(303, '/troops/farmlist');
   }, '/troops/farmlist'),
@@ -216,7 +216,7 @@ goldclubRouter.post(
   formAction(z.object({ name: z.string().max(30).default('') }), (req, r, d) => {
     const ctx = authed(req);
     const listId = createFarmList(db, ctx.user.id, ctx.villageId, d.name, ctx.now);
-    setFlash(r, 'ok', 'Farm list created — now add targets in step 2.');
+    setFlash(r, 'ok', 'Farm list created - now add targets in step 2.');
     r.redirect(303, `/troops/farmlist?list=${listId}#list`);
   }, '/troops/farmlist'),
 );

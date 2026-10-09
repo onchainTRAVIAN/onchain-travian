@@ -102,7 +102,7 @@ export function allianceView(d: {
       ? html`<p class="muted small">No treaties.</p>`
       : html`<ul class="list">${d.diplomacy.map(
           (t) => html`<li><span class="grow">${DIPLO_LABEL[t.kind]} with <a href="/alliance/${t.otherId}">[${t.otherTag}]</a>
-            <span class="sub">${t.status === 'proposed' ? (t.incoming ? 'They propose — waiting for your answer' : 'Waiting for their answer') : 'Active'}</span></span>
+            <span class="sub">${t.status === 'proposed' ? (t.incoming ? 'They propose - waiting for your answer' : 'Waiting for their answer') : 'Active'}</span></span>
             ${canManage && t.status === 'proposed' && t.incoming
               ? html`<form method="post" action="/alliance/diplomacy/answer" class="inline">${csrfField(d.csrf)}<input type="hidden" name="id" value="${t.id}"><input type="hidden" name="accept" value="1"><button type="submit" class="small">Accept</button></form>`
               : ''}

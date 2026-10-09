@@ -300,5 +300,5 @@ export function attackBlockedBy(q: Q, userId: number, targetUserId: number | nul
     .all()
     .find((d) => d.kind === 'confed' || d.kind === 'nap');
   if (!pact) return null;
-  return pact.kind === 'confed' ? 'Your alliances are in a confederacy — allies cannot attack each other' : 'Your alliances have a non-aggression pact';
+  return pact.kind === 'confed' ? 'Your alliances are in a confederacy - allies cannot attack each other' : 'Your alliances have a non-aggression pact';
 }

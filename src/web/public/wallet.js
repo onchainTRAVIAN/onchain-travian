@@ -167,7 +167,7 @@
           });
       })
       .then(function (hash) {
-        say('Payment sent! Credits arrive after a few confirmations — you will get a message. Tx: ' + hash);
+        say('Payment sent! Credits arrive after a few confirmations - you will get a message. Tx: ' + hash);
       })
       .catch(fail)
       .then(function () { busy(btn, false); });

@@ -71,7 +71,7 @@ export type ResearchKind = 'academy' | UpgradeKind;
 export function upgradeOptions(q: Q, state: VillageState, kind: UpgradeKind, now: number): ResearchOption[] {
   const levels = parseLevels(state.village[kind]);
   const buildingLevel = levelOf(state, kind);
-  // One upgrade at a time per building — two with the Master Trainer.
+  // One upgrade at a time per building - two with the Master Trainer.
   const running = researchOrdersOf(q, state.village.id).filter((o) => o.kind === kind);
   const slots = getModifiers(q, state.userId, now).smithyQueue;
   const stock = stockOf(state.village);

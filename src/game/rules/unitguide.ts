@@ -3,7 +3,7 @@ export const UNIT_GUIDE: Record<string, { kind: string; use: string }> = {
   // Romans
   legionnaire: { kind: 'Balanced infantry', use: 'All-rounder for early raids and village defence; cheap backbone of a young Roman army.' },
   praetorian: { kind: 'Defensive infantry', use: 'Best Roman defence against infantry attacks; keep at home or send as reinforcement.' },
-  imperian: { kind: 'Offensive infantry', use: 'Main Roman attacker: strong, cheap attack per crop — the core of a hammer army.' },
+  imperian: { kind: 'Offensive infantry', use: 'Main Roman attacker: strong, cheap attack per crop - the core of a hammer army.' },
   equites_legati: { kind: 'Scout (cavalry)', use: 'Spies on enemy troops and resources before you attack; also defends against enemy scouts.' },
   equites_imperatoris: { kind: 'Offensive cavalry', use: 'Fast, strong raider and attacker; great for farming resources from inactive villages.' },
   equites_caesaris: { kind: 'Heavy cavalry', use: 'Strong attack and the best Roman defence against cavalry; slow but very powerful.' },
@@ -47,7 +47,7 @@ export const UNIT_GUIDE: Record<string, { kind: string; use: string }> = {
   // Natars
   pikeman: { kind: 'Natar infantry', use: 'Natar defender guarding artifacts and World Wonders.' },
   thorned_warrior: { kind: 'Natar infantry', use: 'Natar fighter guarding artifacts and World Wonders.' },
-  guardsman: { kind: 'Natar heavy infantry', use: 'Elite Natar defender — expect heavy losses attacking it.' },
+  guardsman: { kind: 'Natar heavy infantry', use: 'Elite Natar defender - expect heavy losses attacking it.' },
   birds_of_prey: { kind: 'Natar scout', use: 'Natar scout.' },
   axerider: { kind: 'Natar cavalry', use: 'Natar cavalry guarding their strongholds.' },
   natarian_knight: { kind: 'Natar heavy cavalry', use: 'Elite Natar cavalry.' },

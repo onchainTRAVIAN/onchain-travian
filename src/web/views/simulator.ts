@@ -113,7 +113,7 @@ export function simResultPanel(input: SimInput, r: SimResult): SafeHtml {
     <p class="simhead ${r.attackerWon ? 'att' : 'def'}"><b>${r.attackerWon ? (input.mode === 'raid' ? 'The raid succeeds' : 'The attacker wins') : 'The defender holds'}</b>
       <span class="small muted"> · attack ${fmtNum(Math.round(r.attackPower))} vs defence ${fmtNum(Math.round(r.defensePower))}${input.village && r.morale < 0.999 ? ` · morale ${pct(r.morale)}` : ''}</span></p>
     ${lossTable(att.tribe, 'Attacker', 'att', att.units, r.attackerLosses, !!att.hero, r.heroDied.attacker, r.trapped)}
-    ${r.trapped.some((n) => n > 0) ? html`<p class="small">${fmtNum(r.trapped.reduce((a, b) => a + b, 0))} attackers are caught in traps before the fight — they are held prisoner until the Gaul frees them or an attack on this village wins.</p>` : ''}
+    ${r.trapped.some((n) => n > 0) ? html`<p class="small">${fmtNum(r.trapped.reduce((a, b) => a + b, 0))} attackers are caught in traps before the fight - they are held prisoner until the Gaul frees them or an attack on this village wins.</p>` : ''}
     ${input.defenders.map((d, k) => lossTable(d.tribe, k === 0 ? (input.village ? 'Defender' : 'Animals') : `Reinforcement ${k}`, 'def', d.units, r.defenderLosses[k] ?? d.units.map(() => 0), !!d.hero, r.heroDied.defenders[k] ?? false))}
     <table class="simfacts"><tbody>
       ${input.village && input.mode === 'attack' && rams > 0 && input.wall > 0
@@ -144,8 +144,8 @@ export function simulatorView(d: { input: SimPageInput; result: SimResult; world
         <button type="submit" name="natar" value="1" class="small secondary">${icon('tribe/natars', '', 14)} Natars attack it</button>
         <span class="small muted">Fills in the troops standing in that village (yours and reinforcements), your hero, wall, residence and traps.</span></div></div>
       ${i.natar
-        ? html`<div class="spanel pad small">A typical Natar ${i.mode === 'raid' ? 'raid' : 'attack'} on <b>${i.natar.name}</b>: Natars size their army to your strength (${fmtNum(i.natar.strength)} — your defence plus population), between ${Math.round(NATAR_FACTOR_MIN * 100)}% and ${Math.round(NATAR_FACTOR_MAX * 100)}% of it; this shows the middle.
-          ${i.natar.playerPop < NATAR_MIN_POP ? html` <b>You have ${fmtNum(i.natar.playerPop)} population — Natars only attack players with ${NATAR_MIN_POP} or more.</b>` : ''}</div>`
+        ? html`<div class="spanel pad small">A typical Natar ${i.mode === 'raid' ? 'raid' : 'attack'} on <b>${i.natar.name}</b>: Natars size their army to your strength (${fmtNum(i.natar.strength)} - your defence plus population), between ${Math.round(NATAR_FACTOR_MIN * 100)}% and ${Math.round(NATAR_FACTOR_MAX * 100)}% of it; this shows the middle.
+          ${i.natar.playerPop < NATAR_MIN_POP ? html` <b>You have ${fmtNum(i.natar.playerPop)} population - Natars only attack players with ${NATAR_MIN_POP} or more.</b>` : ''}</div>`
         : ''}
       <p class="simmode">
         <label><input type="radio" name="mode" value="attack"${i.mode === 'attack' ? html` checked` : ''}> Normal attack</label>

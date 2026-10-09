@@ -56,7 +56,7 @@ export function raiderPanel(d: RaiderPanelData): SafeHtml {
 
     <h3>Next check would send ${d.plan.raids.length ? html`<span class="small muted">${fmtNum(d.plan.raids.length)} raids · ${fmtNum(plannedTroops)} troops · can bring ${fmtNum(plannedLoot)}</span>` : ''}</h3>
     ${d.plan.raids.length === 0
-      ? html`<p class="small muted">Nothing right now — ${d.plan.targets.length === 0 ? 'no free oases in range (raise the range below)' : 'no oasis has enough loot and no animals, or your troops are out. It checks again automatically.'}</p>`
+      ? html`<p class="small muted">Nothing right now - ${d.plan.targets.length === 0 ? 'no free oases in range (raise the range below)' : 'no oasis has enough loot and no animals, or your troops are out. It checks again automatically.'}</p>`
       : html`<div class="mvscroll short"><table class="tb"><thead><tr><th>Oasis</th><th class="num">Dist.</th><th class="num">Loot there</th><th>Troops</th><th class="num">Carry</th></tr></thead><tbody>${d.plan.raids.map(
           (t) => html`<tr><td class="oname"><a href="/map/tile?x=${t.x}&amp;y=${t.y}" title="${t.name} (${t.bonus})">${t.name}</a> <span class="small muted">(${t.x}|${t.y})</span>${t.animals ? html`<br><span class="small bad">${t.animals} animals</span>` : ''}</td>
             <td class="num">${t.distance.toFixed(1)}</td><td class="num">${fmtNum(t.loot)}</td><td class="small">${unitsInline(d.tribe, t.units ?? [])}</td><td class="num">${fmtNum(t.carry ?? 0)}</td></tr>`,
@@ -73,9 +73,9 @@ export function raiderPanel(d: RaiderPanelData): SafeHtml {
           <tr><th>Every</th><td><select name="intervalMin">${RAIDER_INTERVALS.map((m) => html`<option value="${m}"${m === r.intervalMin ? html` selected` : ''}>${m} minutes</option>`)}</select>
             · at most <input type="number" name="maxRaids" min="1" max="100" value="${r.maxRaids}" class="w30" inputmode="numeric"> raids per check</td></tr>
           <tr><th>Raid size</th><td>
-            <label class="block"><input type="radio" name="sizeMode" value="auto"${r.sizeMode === 'auto' ? html` checked` : ''}> <b>Spread</b> (recommended) — share your free troops over many oases at once; each raid gets a fair share, never more than its loot needs</label>
-            <label class="block"><input type="radio" name="sizeMode" value="max"${r.sizeMode === 'max' ? html` checked` : ''}> <b>Richest first</b> — the richest oasis gets all the troops its loot needs, then the next one</label>
-            <label class="block"><input type="radio" name="sizeMode" value="fixed"${r.sizeMode === 'fixed' ? html` checked` : ''}> <b>Fixed</b> — the same group every raid (column "Fixed" below)</label>
+            <label class="block"><input type="radio" name="sizeMode" value="auto"${r.sizeMode === 'auto' ? html` checked` : ''}> <b>Spread</b> (recommended) - share your free troops over many oases at once; each raid gets a fair share, never more than its loot needs</label>
+            <label class="block"><input type="radio" name="sizeMode" value="max"${r.sizeMode === 'max' ? html` checked` : ''}> <b>Richest first</b> - the richest oasis gets all the troops its loot needs, then the next one</label>
+            <label class="block"><input type="radio" name="sizeMode" value="fixed"${r.sizeMode === 'fixed' ? html` checked` : ''}> <b>Fixed</b> - the same group every raid (column "Fixed" below)</label>
             <label>Max troops per raid <input type="number" name="maxPerRaid" min="0" value="${r.maxPerRaid || ''}" placeholder="no limit" class="w60" inputmode="numeric"></label></td></tr>
         </tbody></table>
         <table class="tb raider-units"><thead><tr><th>Use</th><th>Troop</th><th class="num">At home</th><th>Keep at home</th><th>Fixed</th></tr></thead><tbody>
@@ -93,7 +93,7 @@ export function raiderPanel(d: RaiderPanelData): SafeHtml {
     </details>
 
     <details class="raider-targets">
-      <summary><b>All oases in range</b> <span class="small muted">(${fmtNum(d.plan.targets.length)}) — status and "never raid"</span></summary>
+      <summary><b>All oases in range</b> <span class="small muted">(${fmtNum(d.plan.targets.length)}) - status and "never raid"</span></summary>
       <div class="mvscroll"><table class="tb"><thead><tr><th>Oasis</th><th class="num">Dist.</th><th class="num">Loot</th><th class="num">Animals</th><th>Status</th><th></th></tr></thead><tbody>
         ${d.plan.targets.map((t) => {
           const st = STATUS[t.status];
@@ -109,7 +109,7 @@ export function raiderPanel(d: RaiderPanelData): SafeHtml {
       ? html`<details class="raider-log"${r.enabled ? html` open` : ''}><summary><b>Activity</b> <span class="small muted">last ${log.length} checks</span></summary>
         <ul class="small raider-loglist">${log.map((e) => {
           const skips = Object.entries(e.skipped).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${SKIP_TEXT[k] ?? k}`).join(', ');
-          return html`<li><span class="muted">${fmtClock(e.at).slice(0, 5)} (${fmtAgo(e.at, d.now)})</span> — ${e.sent ? html`<b>sent ${e.sent} raids</b> (${fmtNum(e.troops)} troops)` : 'nothing sent'}${skips ? html` · skipped: ${skips}` : ''}${e.note ? html` · <span class="bad">${e.note}</span>` : ''}</li>`;
+          return html`<li><span class="muted">${fmtClock(e.at).slice(0, 5)} (${fmtAgo(e.at, d.now)})</span> - ${e.sent ? html`<b>sent ${e.sent} raids</b> (${fmtNum(e.troops)} troops)` : 'nothing sent'}${skips ? html` · skipped: ${skips}` : ''}${e.note ? html` · <span class="bad">${e.note}</span>` : ''}</li>`;
         })}</ul></details>`
       : ''}
   </div>`;

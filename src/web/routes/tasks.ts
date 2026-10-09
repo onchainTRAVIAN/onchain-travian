@@ -20,7 +20,7 @@ tasksRouter.post(
   formAction(z.object({ id: z.string().max(40) }), (req, res, d) => {
     const ctx = authed(req);
     const t = claimTask(db, ctx.user.id, ctx.villageId, d.id, ctx.now);
-    setFlash(res, 'ok', `Task done: ${t.title} — reward collected${t.reward.gold ? ` (+${t.reward.gold} Gold)` : ''}.`);
+    setFlash(res, 'ok', `Task done: ${t.title} - reward collected${t.reward.gold ? ` (+${t.reward.gold} Gold)` : ''}.`);
     res.redirect(303, backUrl(req, '/tasks'));
   }, '/tasks'),
 );

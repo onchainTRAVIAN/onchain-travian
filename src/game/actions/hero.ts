@@ -84,7 +84,7 @@ export function trainHero(db: DB, userId: number, villageId: number, unitSlot: n
     };
     if (existing) {
       // House rule (2026-10-06): a hero retrained from another unit keeps its level, experience and
-      // skill points — only the unit it fights as (base stats, speed) changes.
+      // skill points - only the unit it fights as (base stats, speed) changes.
       const keep = { ...fresh, level: existing.level, xp: existing.xp, strength: existing.strength, defPoints: existing.defPoints, offBonus: existing.offBonus, defBonus: existing.defBonus, regen: existing.regen };
       tx.update(heroes).set(keep).where(eq(heroes.id, existing.id)).run();
       return { ...existing, ...keep };

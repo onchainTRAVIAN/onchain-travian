@@ -64,7 +64,7 @@ export function heroTrainTimeMs(u: UnitDef, speed: number): number {
   return Math.round((u.trainTime * 1.6 * 1000) / speed);
 }
 
-/** Reviving: like training at the hero's level — 2 × cost (+30 after level 0) × (level+1)^1.25. */
+/** Reviving: like training at the hero's level - 2 × cost (+30 after level 0) × (level+1)^1.25. */
 export function heroReviveCost(u: UnitDef, level: number): Resources {
   const f = Math.pow(Math.min(60, level) + 1, 1.25);
   const add = level > 0 ? 30 : 0;

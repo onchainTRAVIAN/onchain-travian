@@ -24,7 +24,7 @@ export function productionView(d: { villageName: string; speed: number; rows: Re
           ${r.bonuses.length === 0
             ? html`<tr><td colspan="3" class="none">No bonuses. Oases, ${r.key === 'crop' ? 'Grain Mill, Bakery' : r.key === 'wood' ? 'Sawmill' : r.key === 'clay' ? 'Brickyard' : 'Iron Foundry'} and Gold boosts add more.</td></tr>`
             : r.bonuses.map(
-                (b) => html`<tr><td>${b.label}${b.endsAt ? html` <span class="small muted">(ends in ${timer(b.endsAt, d.now, false)})</span>` : ''}${b.note ? html` <span class="small muted">— ${b.note}</span>` : ''}</td>
+                (b) => html`<tr><td>${b.label}${b.endsAt ? html` <span class="small muted">(ends in ${timer(b.endsAt, d.now, false)})</span>` : ''}${b.note ? html` <span class="small muted">- ${b.note}</span>` : ''}</td>
                   <td class="small ${b.perHour < 0 ? 'bad' : 'good'}">${b.pct !== null ? pctText(b.pct) : ''}</td><td class="num ${b.perHour < 0 ? 'bad' : ''}">${signed(b.perHour)}</td></tr>`,
               )}
           <tr class="sum"><td><b>Production</b></td><td class="small">${r.base > 0 ? pctText(r.gross / r.base - 1) : ''}</td><td class="num"><b>${fmtNum(Math.round(r.gross))}</b></td></tr>

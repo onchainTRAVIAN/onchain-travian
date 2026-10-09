@@ -203,8 +203,8 @@ function tribeOfVillage(q: Q, villageId: number): TribeId {
 }
 
 /**
- * Crop eaten by troops for which this village pays (T3.6): every army stationed here — its own
- * and reinforcements from others — plus its own troops on the move and its own soldiers held
+ * Crop eaten by troops for which this village pays (T3.6): every army stationed here - its own
+ * and reinforcements from others - plus its own troops on the move and its own soldiers held
  * in enemy traps. Its troops stationed in other villages are fed by those hosts.
  */
 export function fedTroopUpkeep(q: Q, villageId: number, tribe: TribeId, now = clock.now()): number {

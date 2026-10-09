@@ -85,7 +85,7 @@ function buyTab(d: { balance: number; accountId: number; ethUsd: number; ethUsdA
         ? html`<button type="button" class="gold paybtn" data-pay="eth" data-units="${weiForUsd(sel.usd, d.ethUsd).toString()}">Pay with wallet</button>
           <p class="small" data-status role="status"></p>`
         : html`<button type="button" class="paybtn secondary" disabled>Pay with wallet</button>
-          <p class="small muted">Payments open soon — buying Gold isn't switched on on this server yet. You can still earn Gold in the weekly Top 10 and the Gold market.</p>`}
+          <p class="small muted">Payments open soon - buying Gold isn't switched on on this server yet. You can still earn Gold in the weekly Top 10 and the Gold market.</p>`}
       <p class="small muted">1 ETH = $${fmtNum(Math.round(d.ethUsd))}${d.ethUsdAt ? ` · live price, updated ${fmtAgo(d.ethUsdAt, d.now)}` : ''}. Gold arrives after ${config.CONFIRMATIONS} confirmation${config.CONFIRMATIONS === 1 ? '' : 's'} on ${config.CHAIN_NAME}, with a message. Your account number #${d.accountId} is sent with the payment.</p>
       ${on
         ? html`<details class="small"><summary>Other amount${config.TOKEN_ADDRESS ? ` or pay with ${config.TOKEN_SYMBOL} (+${Math.round(config.TOKEN_BONUS * 100)}% Gold)` : ''}</summary>
@@ -145,7 +145,7 @@ function specialsTab(d: {
         ? html`<p class="small good">All your villages already have it.</p>`
         : html`<form method="post" action="/shop/storage" class="row">${csrfField(d.csrf)}
             <div><label for="sv" class="sr">Village</label><select id="sv" name="villageId">${d.storage.filter((v) => !v.boosted).map(
-              (v) => html`<option value="${v.id}">${v.name} — ${fmtNum(v.current)} → ${fmtNum(Math.floor(v.current * 1.5))}</option>`,
+              (v) => html`<option value="${v.id}">${v.name} - ${fmtNum(v.current)} → ${fmtNum(Math.floor(v.current * 1.5))}</option>`,
             )}</select></div>
             <div>${goldPrice(STORAGE_BOOST_PRICE, d.balance >= STORAGE_BOOST_PRICE, 'Expand')}</div></form>`}
       ${d.storage.some((v) => v.boosted) ? html`<p class="small muted">Already expanded: ${d.storage.filter((v) => v.boosted).map((v) => v.name).join(', ')}</p>` : ''}</div></section>
@@ -226,11 +226,11 @@ export function tickerView(d: {
     <div class="woodbody">
     <section class="spanel"><h3 class="sp-head">News ticker: post a message<span>${config.TICKER_PRICE_PER_HOUR} Gold per hour · ${d.live} running now</span></h3>
       <form method="post" action="/shop/ticker" class="pad block">${csrfField(d.csrf)}
-        <p class="small">Your message scrolls across the top of the game for <b>every player</b>, starting now. Post as many as you like — they take turns. No links. Balance: <b>${fmtNum(d.balance)} Gold</b> · <a href="/wallet">get Gold</a></p>
+        <p class="small">Your message scrolls across the top of the game for <b>every player</b>, starting now. Post as many as you like - they take turns. No links. Balance: <b>${fmtNum(d.balance)} Gold</b> · <a href="/wallet">get Gold</a></p>
         <label for="tb" class="sr">Message</label>
         <input id="tb" type="text" name="body" required minlength="3" maxlength="${TICKER_MAX_LENGTH}" placeholder="e.g. [RT] Round Table is recruiting!" class="tickerin">
         <p><label for="th">Show it for</label> <select id="th" name="hours">${Array.from({ length: TICKER_MAX_HOURS }, (_, i) => i + 1).map(
-          (h) => html`<option value="${h}">${h} hour${h === 1 ? '' : 's'} — ${h * config.TICKER_PRICE_PER_HOUR} Gold</option>`,
+          (h) => html`<option value="${h}">${h} hour${h === 1 ? '' : 's'} - ${h * config.TICKER_PRICE_PER_HOUR} Gold</option>`,
         )}</select> ${goldBtn('Post and pay', config.TICKER_PRICE_PER_HOUR, d.balance >= config.TICKER_PRICE_PER_HOUR)} <span class="small muted">× hours</span></p>
       </form></section>
     <section class="spanel"><h3 class="sp-head">Your messages<span>${d.mine.length}</span></h3>

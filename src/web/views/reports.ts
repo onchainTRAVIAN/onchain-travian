@@ -106,7 +106,7 @@ export function reportListView(d: {
         ].map((o) => html`<a href="${q({ o: o.key })}" class="${(d.outcome ?? null) === o.key ? 'on' : ''}">${o.ico ? icon(o.ico, '', 14) : ''} ${o.label}</a>`)}</p></div>
       ${selRow('chkall')}
       <table class="tb rlist"><thead><tr><th class="chk"></th><th class="rico"></th><th>Subject:</th>
-        <th class="rrecv"><a href="${q({ old: !d.oldest })}" title="${d.oldest ? 'Oldest first — click for newest first' : 'Newest first — click for oldest first'}">Received ${d.oldest ? '▲' : '▼'}</a></th></tr></thead><tbody>
+        <th class="rrecv"><a href="${q({ old: !d.oldest })}" title="${d.oldest ? 'Oldest first - click for newest first' : 'Newest first - click for oldest first'}">Received ${d.oldest ? '▲' : '▼'}</a></th></tr></thead><tbody>
       ${d.rows.length === 0
         ? html`<tr><td colspan="4" class="rnone">${d.outcome ? 'No reports match this filter.' : 'There are no reports available.'}</td></tr>`
         : d.rows.map(
@@ -155,9 +155,9 @@ function sideBlock(title: string, role: 'att' | 'def', s: ReportSide, hideUnits 
     <h3 class="sp-head"><span class="rrole">${title}</span>
       <span class="rwho"><img src="/static/img/units/${s.tribe}-1.svg" width="14" height="14" alt="${TRIBES[s.tribe].name}" class="tmark"> <a href="/player/${s.userId ?? 0}">${s.username}</a> · <a href="/map/tile?x=${s.x}&amp;y=${s.y}">${s.villageName}</a> <span class="co">(${s.x}|${s.y})</span></span></h3>
     <div class="pad">${hideUnits
-      ? html`<p class="muted small">No information was gathered — none of your soldiers survived.</p>`
+      ? html`<p class="muted small">No information was gathered - none of your soldiers survived.</p>`
       : html`${unitsTable(s.tribe, s.units, s.losses, { hero: !!hero, heroLost: hero?.died })}
-        <p class="rloss small">${sent > 0 ? html`Lost <b>${fmtNum(lost)}</b> of ${fmtNum(sent)} soldiers${lost === 0 ? ' — no losses' : lost >= sent ? ' — all troops lost' : ''}` : 'No soldiers'}</p>
+        <p class="rloss small">${sent > 0 ? html`Lost <b>${fmtNum(lost)}</b> of ${fmtNum(sent)} soldiers${lost === 0 ? ' - no losses' : lost >= sent ? ' - all troops lost' : ''}` : 'No soldiers'}</p>
         ${hero ? html`<p class="small herorow">${unitIcon(s.tribe, 10, 16, false)} <b>${hero.name}</b>: ${hero.died ? html`<b class="bad">fell in battle</b>` : html`health ${hero.health}%`} · +${fmtNum(hero.xp)} experience</p>` : ''}`}
       ${extra ?? ''}</div></section>`;
 }

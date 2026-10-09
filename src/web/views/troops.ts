@@ -139,7 +139,7 @@ export function confirmView(d: { tribe: TribeId; input: SendInput; preview: Send
     ${panel(html`Confirm: ${m?.label ?? d.input.kind}`, html`<ul class="list">
       <li><span class="grow">Target <span class="sub">${d.preview.targetName} (${d.input.x}|${d.input.y}) · ${d.preview.targetOwner}</span></span></li>
       <li><span class="grow">Distance <span class="sub">${d.preview.distance.toFixed(1)} fields</span></span></li>
-      <li><span class="grow">Travel time <span class="sub">${fmtDuration(d.preview.travelMs)} — arrives in ${timer(arrive, d.now, false)}</span></span></li>
+      <li><span class="grow">Travel time <span class="sub">${fmtDuration(d.preview.travelMs)} - arrives in ${timer(arrive, d.now, false)}</span></span></li>
       ${d.input.kind !== 'scout' && d.input.kind !== 'reinforce' && d.input.kind !== 'settle'
         ? html`<li><span class="grow">Can carry <span class="sub">${fmtNum(d.carry)} resources</span></span></li>`
         : ''}

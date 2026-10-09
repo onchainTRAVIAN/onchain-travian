@@ -221,7 +221,7 @@ export const reports = sqliteTable(
     title: text('title').notNull(),
     data: text('data').notNull(),
     isRead: integer('is_read', { mode: 'boolean' }).notNull().default(false),
-    /** For battles: how the recipient's own troops fared — 'none' | 'some' | 'all' lost; '-' otherwise. */
+    /** For battles: how the recipient's own troops fared - 'none' | 'some' | 'all' lost; '-' otherwise. */
     outcome: text('outcome'),
     /** Where it happened, for "your reports on this tile": the sending village and the target tile. */
     fromX: integer('from_x'),

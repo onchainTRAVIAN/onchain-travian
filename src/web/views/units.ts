@@ -50,7 +50,7 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
     <div class="unitinfo spanel pad"><h2 class="unitname">${u.name}</h2>
       <img class="unitbig" src="${pic(`img/units/big/${d.tribe}-${n}`)}" width="120" height="140" alt="${u.name}">
       <div class="unitstats">
-        <p><b>${UNIT_GUIDE[u.id]?.kind ?? ''}</b> — ${UNIT_GUIDE[u.id]?.use ?? u.description}</p>
+        <p><b>${UNIT_GUIDE[u.id]?.kind ?? ''}</b> - ${UNIT_GUIDE[u.id]?.use ?? u.description}</p>
         <table><tbody>
           <tr><th>Type</th><td>${TYPE_LABEL[u.type] ?? u.type}</td></tr>
           <tr><th>Attack</th><td>${icon('ui/attack', 'Attack', 16)} ${fmtNum(u.attack)}</td></tr>
@@ -72,7 +72,7 @@ export function unitInfoView(d: { tribe: TribeId; slot: number }): SafeHtml {
           <tr><th>Training time</th><td>${icon('res/clock', 'Duration', 18, 12)} ${fmtUnitTime(train)} <span class="small muted">(level 1 building${config.WORLD_SPEED !== 1 ? `, x${config.WORLD_SPEED} world` : ''}; faster with higher levels)</span></td></tr>
           <tr><th>Trained in</th><td>${BUILDING_NAME[u.building]}</td></tr>
           <tr><th>Requirements</th><td>${u.requires.length === 0
-            ? html`<span class="none">none${d.slot === 0 ? ' — available from the start' : ''}</span>`
+            ? html`<span class="none">none${d.slot === 0 ? ' - available from the start' : ''}</span>`
             : u.requires.map((r, i) => html`${i > 0 ? ', ' : ''}<span class="nowrap">${BUILDINGS[r.building].name} level ${r.level}</span>`)}</td></tr>
           ${research
             ? html`<tr><th>Research (Academy)</th><td>${costRow(researchCost(u))} · ${fmtDuration(researchTimeMs(u, config.WORLD_SPEED))}</td></tr>`

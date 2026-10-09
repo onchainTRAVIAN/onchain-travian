@@ -159,7 +159,7 @@ export function allianceRankingView(d: {
     <table class="ranks"><thead><tr><th colspan="5">${tab?.title ?? ''}</th></tr>
       <tr><td></td><td>Alliance</td><td>Members</td><td>Ø per member</td><td>${tab?.col ?? ''}</td></tr></thead><tbody>
       ${d.rows.length === 0
-        ? html`<tr><td colspan="5" class="none center">No alliances yet — found one at the Embassy (level 3).</td></tr>`
+        ? html`<tr><td colspan="5" class="none center">No alliances yet - found one at the Embassy (level 3).</td></tr>`
         : d.rows.map(
             (r, i) => html`<tr class="${r.id === d.mine?.id ? 'hl' : ''}"${r.id === d.mine?.id ? html` id="myally"` : ''}>${rankCell(d.offset + i + 1)}
               <td class="pla">${allyShield(r.tag, d.offset + i + 1, 16)} <a href="/alliance/${r.id}">${r.name}</a> <span class="atag">${r.tag}</span></td>
@@ -222,7 +222,7 @@ export function weeklyView(d: {
   const end = d.weekStart + WEEK_MS;
   const box = (c: WeeklyCategory, rows: WeeklyRow[]) => html`<section class="spanel topbox"><h3 class="sp-head">${WEEKLY_LABEL[c].title}<span>${WEEKLY_LABEL[c].col}</span></h3>
     ${rows.length === 0
-      ? html`<p class="none small center">Nobody yet — be the first.</p>`
+      ? html`<p class="none small center">Nobody yet - be the first.</p>`
       : html`<ol class="toplist">${rows.map(
           (r, i) => html`<li class="${r.userId === d.myId ? 'me' : ''}"><span class="rk">${i < 3 ? medalImg(i + 1, 16) : `${i + 1}.`}</span>
             <img class="av" src="${avatarUrl({ id: r.userId, tribe: r.tribe, avatarAt: r.avatarAt })}" width="18" height="18" alt="">

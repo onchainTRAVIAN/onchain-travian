@@ -113,7 +113,7 @@ export function mapView(d: {
   let sides: { x: number; y: number; rot: number; href: string; title: string; key: string }[];
 
   if (d.style === 'diamond') {
-    // Tile (i, j): centre = (37·(i+j), 20·(i−j)) — x grows down-right, y grows up-right (north).
+    // Tile (i, j): centre = (37·(i+j), 20·(i−j)) - x grows down-right, y grows up-right (north).
     W = 74 * n + 2 * m;
     H = 40 * (n - 1) + 74 + 2 * m;
     const ox = m;
@@ -176,7 +176,7 @@ export function mapView(d: {
   const tiles = placed.map((p) => {
     const c = p.c;
     const label = c.village
-      ? `${c.village.name} (${c.x}|${c.y}) — ${c.village.owner}, population ${c.village.pop}`
+      ? `${c.village.name} (${c.x}|${c.y}) - ${c.village.owner}, population ${c.village.pop}`
       : c.kind === 'oasis'
         ? `Oasis (${c.x}|${c.y})`
         : `Abandoned valley (${c.x}|${c.y})`;
@@ -337,7 +337,7 @@ export function tileView(d: TileViewData): SafeHtml {
           <li><span class="grow">Population <span class="sub">${fmtNum(v.pop)}</span></span></li>`
         : d.kind === 'oasis'
           ? html`<li><span class="grow">${OASIS_LABEL[(d.oasis ?? 'wood') as OasisType]}
-              <span class="sub">${d.oasisOwner ? html`Held by ${d.oasisOwner.name} (${d.oasisOwner.villageName})` : 'Unoccupied — wild animals live here'}</span></span></li>`
+              <span class="sub">${d.oasisOwner ? html`Held by ${d.oasisOwner.name} (${d.oasisOwner.villageName})` : 'Unoccupied - wild animals live here'}</span></span></li>`
           : html`<li><span class="grow">Fields <span class="sub">${d.layout ?? '4-4-4-6'} (wood-clay-iron-crop) · free to settle</span></span></li>`}
       <li><span class="grow">Distance <span class="sub">${d.distance.toFixed(1)} fields</span></span></li>
       ${d.travel.map((t) => html`<li>${unitIcon(d.tribe, t.slot, 16, false)}<span class="grow">${t.label} <span class="sub">${fmtDuration(t.ms)} travel</span></span></li>`)}

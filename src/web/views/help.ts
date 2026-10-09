@@ -30,7 +30,7 @@ const CHIPS = ['capture oasis', 'cranny', 'raid', 'protection', 'gold club', 'he
 function searchBox(q: string): SafeHtml {
   return html`<form method="get" action="/help" class="fsearch" role="search">
       <label for="faqq" class="sr">Search the guide</label>
-      <input id="faqq" type="search" name="q" value="${q}" placeholder="Search the guide — e.g. capture oasis, cranny, hero…" autocomplete="off" data-faq-index="/help/index.json">
+      <input id="faqq" type="search" name="q" value="${q}" placeholder="Search the guide - e.g. capture oasis, cranny, hero…" autocomplete="off" data-faq-index="/help/index.json">
       <button type="submit">Search</button>
     </form>
     <div id="faqlive" class="flive" hidden></div>`;
@@ -50,7 +50,7 @@ export function helpHome(d: { q: string; results: { topic: FaqTopic; score: numb
   const chosen = d.category ? cats.find((c) => c.id === d.category) : undefined;
   return html`${head('Game guide', `${FAQ.length} topics · search or browse`)}
     ${woodTabs([{ href: '/help', label: 'Guide', on: true }, { href: '/help/buildings', label: 'Buildings' }, { href: '/units', label: 'Troops' }], 'Game guide')}
-    ${FAQ.length < 10 ? html`<p class="small muted">The full guide is being written — more topics are coming very soon.</p>` : ''}
+    ${FAQ.length < 10 ? html`<p class="small muted">The full guide is being written - more topics are coming very soon.</p>` : ''}
     ${searchBox(d.q)}
     ${d.results
       ? html`<section class="spanel fres"><h3 class="sp-head">${d.results.length ? `Results for “${d.q}”` : `Nothing found for “${d.q}”`}<span>${d.results.length}</span></h3>

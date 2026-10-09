@@ -45,7 +45,7 @@ export function postChat(db: DB, userId: number, channel: Channel, body: string,
     assertGame(text.length > 0, 'Write something first');
     assertGame(text.length <= CHAT_MAX_LENGTH, `Messages can be at most ${CHAT_MAX_LENGTH} characters`);
     const wait = u.role === 'admin' ? 0 : chatCooldownLeft(tx, userId, now);
-    assertGame(wait <= 0, `Slow down a little — you can write again in ${Math.ceil(wait / 1000)} s`);
+    assertGame(wait <= 0, `Slow down a little - you can write again in ${Math.ceil(wait / 1000)} s`);
     tx.insert(chatMessages).values({ userId, allianceId: channel.kind === 'alliance' ? channel.allianceId : null, body: text, createdAt: now }).run();
   });
 }

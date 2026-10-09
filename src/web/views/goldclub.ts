@@ -65,7 +65,7 @@ function customLists(d: ListsData): SafeHtml {
       <button type="submit" class="small">+ New list</button></form>`;
   const overview = html`<section class="spanel" id="lists"><h3 class="sp-head">Custom farm lists<span>your own targets, sent with one click</span></h3>
     ${d.lists.length === 0
-      ? html`<div class="pad fl-empty"><p><b>No lists yet.</b> A farm list is a saved set of targets (enemy villages or oases) with the troops to send to each. Create one, add targets, then press <b>Raid all</b> whenever your troops are home — or let it repeat by itself.</p>${createForm}</div>`
+      ? html`<div class="pad fl-empty"><p><b>No lists yet.</b> A farm list is a saved set of targets (enemy villages or oases) with the troops to send to each. Create one, add targets, then press <b>Raid all</b> whenever your troops are home - or let it repeat by itself.</p>${createForm}</div>`
       : html`<table class="tb fl-table"><thead><tr><th>List</th><th class="num">Targets</th><th>Auto</th><th>Last raid</th><th></th></tr></thead><tbody>
           ${d.lists.map(
             (l) => html`<tr class="${open?.id === l.id ? 'hl' : ''}"><td><a href="/troops/farmlist?list=${l.id}#list"><b>${l.name}</b></a><br><span class="small muted">from ${l.villageName}</span></td>
@@ -87,7 +87,7 @@ function customLists(d: ListsData): SafeHtml {
       <div class="pad">
       <h4 class="fl-step"><span>1</span> Targets</h4>
       ${l.entries.length === 0
-        ? html`<p class="fl-empty small">This list is empty. Add targets in step 2 — one village or oasis by its coordinates, or all free oases near ${l.villageName} at once.</p>`
+        ? html`<p class="fl-empty small">This list is empty. Add targets in step 2 - one village or oasis by its coordinates, or all free oases near ${l.villageName} at once.</p>`
         : html`<form method="post" action="/goldclub/raid">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
           <div class="mvscroll"><table class="tb"><thead><tr><th class="chk"><input type="checkbox" data-checkall title="Select all" checked aria-label="Select all"></th><th>Target</th><th>Troops</th><th>Last raid</th><th></th></tr></thead><tbody>
           ${l.entries.map((e) => {

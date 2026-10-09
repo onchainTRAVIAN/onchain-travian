@@ -123,7 +123,7 @@
         if (scored.length === 0) {
           var none = document.createElement('p');
           none.className = 'none small';
-          none.textContent = 'No topic yet — press Enter to search all text.';
+          none.textContent = 'No topic yet - press Enter to search all text.';
           faqLive.appendChild(none);
         }
         scored.forEach(function (x) {
@@ -605,7 +605,7 @@
         load[b] = (load[b] || 0) + ph * Number(inp.getAttribute('data-time')) / 3600000;
       });
       var as = document.getElementById('at-assigned');
-      as.innerHTML = 'Assigned: <b>' + assigned + '%</b>' + (assigned < 100 ? ' · <span class="muted">' + (100 - assigned) + '% stays in your stock</span>' : '') + (assigned > 100 ? ' · <b class="bad">more than 100% — lower some shares</b>' : '');
+      as.innerHTML = 'Assigned: <b>' + assigned + '%</b>' + (assigned < 100 ? ' · <span class="muted">' + (100 - assigned) + '% stays in your stock</span>' : '') + (assigned > 100 ? ' · <b class="bad">more than 100% - lower some shares</b>' : '');
       for (var k = 0; k < 4; k++) {
         var u = document.querySelector('[data-at-used="' + atKeys[k] + '"]');
         if (u) u.textContent = atFmt(used[k]) + '/h';
@@ -621,7 +621,7 @@
       Array.prototype.forEach.call(document.querySelectorAll('[data-load-b]'), function (el) {
         var l = load[el.getAttribute('data-load-b')] || 0;
         atBar(el, l * 100, l > 1);
-        var sp = el.querySelector('span'); if (sp) sp.textContent = Math.round(l * 100) + '% busy' + (l > 1 ? ' — can’t keep up, resources pile up' : '');
+        var sp = el.querySelector('span'); if (sp) sp.textContent = Math.round(l * 100) + '% busy' + (l > 1 ? ' - can’t keep up, resources pile up' : '');
       });
       Array.prototype.forEach.call(document.querySelectorAll('[data-at-goal]'), function (a) {
         a.setAttribute('href', '/troops/train?auto=' + a.getAttribute('data-at-goal') + '&hours=' + h + '#auto');
@@ -642,5 +642,20 @@
     });
     var atClear = document.querySelector('[data-at-clear]');
     if (atClear) atClear.addEventListener('click', function (e) { e.preventDefault(); atInputs.forEach(function (i) { i.value = ''; }); atCalc(); });
+  }
+
+  // Auto training panel folds; remember the player's choice, open it for #auto links.
+  var afDet = document.getElementById('auto');
+  if (afDet && afDet.tagName === 'DETAILS') {
+    var afKey = 'autoTrainOpen';
+    var afOpen = function () { afDet.open = true; };
+    try { if (localStorage.getItem(afKey) === '1') afOpen(); } catch (e) { /* storage blocked */ }
+    if (location.hash === '#auto') afOpen();
+    afDet.addEventListener('toggle', function () {
+      try { localStorage.setItem(afKey, afDet.open ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('a[href$="#auto"]'), function (a) {
+      if (!afDet.contains(a)) a.addEventListener('click', afOpen);
+    });
   }
 })();

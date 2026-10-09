@@ -42,7 +42,7 @@ export function trainAllView(d: { tribe: TribeId; groups: TrainGroup[]; have: Re
     ${d.groups.map(
       (g) => html`<section class="spanel tgroup"><h3 class="sp-head"><a href="/slot/${g.slot}">${BUILDINGS[g.building].name}</a><span>level ${g.level}</span></h3>
         ${g.options.length === 0
-          ? html`<p class="pad small muted">No units researched for this building yet — research them in the ${d.academySlot ? html`<a href="/slot/${d.academySlot}">Academy</a>` : 'Academy'}.</p>`
+          ? html`<p class="pad small muted">No units researched for this building yet - research them in the ${d.academySlot ? html`<a href="/slot/${d.academySlot}">Academy</a>` : 'Academy'}.</p>`
           : html`<table class="build_details tall"><tbody>${g.options.map(
               (o) => html`<tr>
                 <td class="desc">${unitIcon(d.tribe, o.slot)} <b>${o.unit.name}</b> <span class="avail" title="${fmtNum(d.home[o.slot] ?? 0)} at home now · ${fmtNum(d.owned[o.slot] ?? 0)} in total (incl. away and on the move)">(You have: ${fmtNum(d.owned[o.slot] ?? 0)})</span>
@@ -92,7 +92,7 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
     ? html`<div class="at-status ${running ? 'on' : 'off'}">
         ${running
           ? html`<p><b class="ok">Running</b> · ends in ${timer(p.endsAt, now)} · started for ${p.hours} h</p>`
-          : html`<p><b>Finished</b> ${fmtDuration(Math.max(0, now - p.endsAt))} ago (${p.hours} h run). Your settings are kept below — press <b>Start</b> to run it again.</p>`}
+          : html`<p><b>Finished</b> ${fmtDuration(Math.max(0, now - p.endsAt))} ago (${p.hours} h run). Your settings are kept below - press <b>Start</b> to run it again.</p>`}
         <table class="build_details at-progress"><thead><tr><th>Unit</th><th>Share</th><th title="Units put into the training queues by this run">Queued so far</th></tr></thead><tbody>
         ${p.items.map((i) => html`<tr><td>${unitIcon(tribe, i.slot)} ${a.rows.find((r) => r.building === i.building && r.slot === i.slot)?.unit.name ?? ''} <span class="small muted">(${BUILDINGS[i.building].name})</span></td><td class="num">${i.share}%</td><td class="num"><b>${fmtNum(i.trained)}</b></td></tr>`)}
         </tbody></table>
@@ -100,11 +100,12 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
       </div>`
     : '';
   const goalLink = (goal: AutoGoal) => `/troops/train?auto=${goal}&hours=${a.hours}#auto`;
-  return html`<section class="spanel autotrain" id="auto">
-    <h3 class="sp-head">Auto training<span>${running ? 'running' : 'off'}</span></h3>
+  // Foldable: closed by default; open after a quick-setup pick, on #auto links and when the player left it open (app.js).
+  return html`<details class="spanel autotrain" id="auto"${a.goal ? html` open` : ''}>
+    <summary class="sp-head"><span class="at-title">Auto training</span><span>${running && p ? html`running · ends in ${timer(p.endsAt, now)}` : p ? 'finished' : 'off'}</span></summary>
     <div class="pad">
       ${status}
-      <p class="small">Give the troops you want a <b>share of your resources</b> (in %). Every minute auto training spends what the village has: each troop gets its share of your current stock and as many as that buys go into the queue (see <a href="#queue">In training</a>); what's left over is split again. Shares below 100% keep the rest in stock. It runs for the hours you choose, then stops — you start it again yourself.</p>
+      <p class="small">Give the troops you want a <b>share of your resources</b> (in %). Every minute auto training spends what the village has: each troop gets its share of your current stock and as many as that buys go into the queue (see <a href="#queue">In training</a>); what's left over is split again. Shares below 100% keep the rest in stock. It runs for the hours you choose, then stops - you start it again yourself.</p>
       <div class="at-quick"><b>Quick setup</b> <span class="small">best unit for each building, shares sized so all buildings stay about equally busy:</span>
         <span class="at-goals">${(Object.keys(AUTO_GOALS) as AutoGoal[]).map((g) => html`<a class="gbtn${a.goal === g ? '' : ' secondary'}" data-at-goal="${g}" href="${goalLink(g)}">${AUTO_GOALS[g]}</a>`)}<a class="small" href="/troops/train#auto" data-at-clear>clear</a></span></div>
       <form method="post" action="/train/auto" id="at-form" data-income="${RESOURCE_KEYS.map((k) => Math.round(a.income[k])).join(',')}" data-stock="${RESOURCE_KEYS.map((k) => Math.floor(a.stock[k])).join(',')}">${csrfField(csrf)}
@@ -142,13 +143,13 @@ function autoTrainPanel(tribe: TribeId, a: AutoTrainData, csrf: string, now: num
           </div>`)}</div>
           <ul class="at-facts">
             <li>Right away from your stock: <b id="at-now">${fmtNum(sm.units.reduce((x, u) => x + u.now, 0))}</b> units · then about <b id="at-uph">${fmtNum(sm.units.reduce((x, u) => x + u.perHour, 0))}</b> per hour from income</li>
-            <li>In <b id="at-h">${a.hours}</b> h about <b id="at-units">${fmtNum(Math.round(sm.totalUnits))}</b> units (if the buildings keep up — see the busy bars)</li>
+            <li>In <b id="at-h">${a.hours}</b> h about <b id="at-units">${fmtNum(Math.round(sm.totalUnits))}</b> units (if the buildings keep up - see the busy bars)</li>
             <li id="at-crop">They eat <b>+${fmtNum(Math.round(sm.extraUpkeep))}</b> crop per hour (crop income then about <b>${fmtNum(Math.round(a.income.crop - sm.extraUpkeep))}</b>/h).</li>
           </ul>
-          <p class="small muted">"Used" is what your income pays for at these shares. A troop is limited by its scarcest resource, so some of the others can stay unused — mix troops with different costs to use more of everything.</p>
+          <p class="small muted">"Used" is what your income pays for at these shares. A troop is limited by its scarcest resource, so some of the others can stay unused - mix troops with different costs to use more of everything.</p>
         </div>
         <p><button type="submit" class="gbtn green">${running ? 'Restart with these settings' : 'Start auto training'}</button> <span class="small muted">Settlers and chiefs are never auto-trained. You can still train by hand at the same time.</span></p>
       </form>
     </div>
-  </section>`;
+  </details>`;
 }
