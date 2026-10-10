@@ -26,17 +26,17 @@
     "deploy": "railway up --service game --ci"
   },
   "dependencies": {
-    "@node-rs/argon2": "^2.2.1",
+    "@node-rs/argon2": "^2.2.2",
     "better-sqlite3": "^13.0.3",
     "cookie-parser": "^1.4.7",
-    "dotenv": "^18.0.5",
+    "dotenv": "^18.0.6",
     "drizzle-orm": "^0.45.3",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.7.0",
+    "express-rate-limit": "^8.7.1",
     "helmet": "^8.3.0",
     "multer": "^2.4.0",
     "sharp": "^0.35.5",
-    "viem": "^2.57.2",
+    "viem": "^2.57.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
