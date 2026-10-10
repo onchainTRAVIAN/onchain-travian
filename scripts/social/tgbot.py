@@ -91,7 +91,9 @@ class Conn:
         self.c: http.client.HTTPSConnection | None = None
 
     def request(self, path: str, body: bytes, ctype: str, timeout: int) -> dict:
-        if self.c is None:
+        # http.client drops `sock` when the server closes the connection; reconnect then too
+        if self.c is None or self.c.sock is None:
+            self.reset()
             self.c = http.client.HTTPSConnection('api.telegram.org', timeout=20)
             self.c.connect()
         self.c.sock.settimeout(timeout)
@@ -128,7 +130,7 @@ def api(method: str, data: dict | None = None, files: dict[str, pathlib.Path] | 
             if not res.get('ok'):
                 log('api error', method, res.get('description'))
             return res
-        except (OSError, http.client.HTTPException, ValueError) as e:
+        except (OSError, http.client.HTTPException, ValueError, AttributeError) as e:
             CONN.reset()
             if attempt == tries - 1:
                 raise
@@ -248,6 +250,7 @@ def run() -> None:
             wait = 5
         except Exception as e:  # network hiccups: back off, never die
             log('error', type(e).__name__, e)
+            CONN.reset()
             time.sleep(wait)
             wait = min(wait * 2, 30)
 
