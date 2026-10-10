@@ -156,11 +156,14 @@ def send_post(chat: int, p: dict) -> None:
         api('sendDocument', {'chat_id': chat, 'caption': head}, {'document': p['file']}, timeout=120)
     elif p['file']:
         say(chat, f'<b>{html.escape(head)}</b>\n⚠️ media not made yet: {html.escape(p["file"].name)}')
+    elif p['poll']:
+        say(chat, f'<b>{html.escape(head)}</b>\nPoll post: no picture (X does not allow media on a poll).\n'
+                  'On X tap the poll icon, paste the text, then add these options.')
     else:
         say(chat, f'<b>{html.escape(head)}</b>\n{html.escape(p["media"])}')
     say(chat, f'<pre>{html.escape(p["text"])}</pre>')
     if p['poll']:
-        say(chat, f'📊 Poll options: <b>{html.escape(p["poll"])}</b>')
+        say(chat, 'Poll options: <b>' + html.escape(p['poll']).replace(' / ', '</b> | <b>') + '</b>')
     if p['reply']:
         say(chat, f'Reply under it:\n<pre>{html.escape(p["reply"])}</pre>')
     say(chat, f'Posted #{p["n"]} on X?', buttons(p['n']))
