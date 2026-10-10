@@ -1,518 +1,374 @@
 # onchainTRAVIAN - X post queue
 
 Posted by hand from the X Premium account (long posts allowed), 2-3 a day.
-Rules: the first 2-3 lines are the hook (X folds long posts behind "Show more" at about 280 characters);
-plain "-" (never the long dash); no token talk; max 1-2 hashtags; the game link goes in a reply
-(X shows link posts to fewer people).
-Media key: 🎨 painted (kie.ai) · 📸 framed screenshot · 🎬 short screen video · 📊 poll (no media allowed).
-Status (last word of each heading): draft → ready (text approved + media made, `File:` line set) → posted / skipped.
-Delivered by the Telegram bot @onchainTRAVIAN_bot (`scripts/social/tgbot.py`): Next sends the first ready post; ✅ Posted updates the heading here.
+Voice: a real indie developer writing about their game. Plain sentences, "we", concrete facts and numbers, varied length.
+No emojis, no dash punctuation (ranges as "1 to 8"), no hashtags, no slogan endings, no token talk.
+The game link goes in a reply (X shows link posts to fewer people).
+Each post: heading `### n. Title - status`, then `Media: ...` (what the picture/video shows) or `Poll: a / b / c (24 h)`,
+`File: <path>` once the media exists, the post in the first code block, optional `Reply under it: `...``.
+Status (last word of each heading): draft → ready (text approved + media made, `File:` set) → posted / skipped.
+Delivered by the Telegram bot @onchainTRAVIAN_bot (`scripts/social/tgbot.py`): Next sends the first ready post; Posted updates the heading here.
 
 ---
 
 ## Day 1
 
 ### 1. Launch - ready
-🎨 painted Roman commander over his town, oasis and Wonder
+Media: painting, a Roman commander on a cliff above his town, an oasis and the World Wonder
 File: branding/social/what-hero.jpg
 ```
-🏰 What is onchainTRAVIAN?
+onchainTRAVIAN is live.
 
-A faithful remake of the browser strategy classic, built on the original T3.6 rules - the same formulas, build times and battle maths veterans remember.
+It's a remake of the classic browser strategy game, built on the original T3.6 rules: the same formulas, the same build times, the same battle maths.
 
-What you do:
-- grow your village from 18 resource fields
-- raise 38 buildings, each one grander every 5 levels
-- train 10 units per tribe and lead a hero
-- capture oases, forge alliances, conquer villages
-- race for the World Wonder
+You start with one village and 18 resource fields. From there it's 38 buildings, three tribes, heroes, oases, alliances and conquest, and at the end of the world, the race to finish a World Wonder.
 
-Hand-drawn art. Plays in any browser, on PC and phone. Free.
+All the art is drawn from scratch. It runs in the browser on desktop and phone, and it's free to play.
 ```
-Reply under it: `Play here: https://ancient-realms.up.railway.app`
+Reply under it: `You can play here: https://ancient-realms.up.railway.app`
 
 ### 2. Pick your tribe - draft
-📊 poll: Romans / Teutons / Gauls (24 h)
+Poll: Romans / Teutons / Gauls (24 h)
 ```
-Pick your side. ⚔️
+Which tribe are you starting with?
 
-🔴 Romans - strong all-rounders. They build a field and a building at the same time, and their City Wall gives the biggest defence bonus.
-🔵 Teutons - cheap troops and brutal raiders. Their clubswingers clear a farm before breakfast.
-🟢 Gauls - the fastest riders in the game, traps that capture attackers, and hiding spots twice as big.
+Romans can build in the fields and in the village at the same time, and their City Wall gives the highest defence bonus.
 
-Which tribe are you playing?
+Teutons have the cheapest troops in the game and are built for raiding.
+
+Gauls have the fastest cavalry, a Trapper that captures attackers, and a cranny that hides twice as much.
 ```
 
 ### 3. Combat simulator - draft
-🎬 typing troops into the simulator, result changes live (10-15 s)
+Media: video, troops typed into the simulator while the result changes live (10 to 15 s)
 ```
-🛠️ Devlog: Combat simulator
+We added a combat simulator.
 
-Plan a fight before you send it. Results update as you type.
+You enter both armies with their upgrades, heroes, morale and bonuses, plus the wall, Residence, Stonemason, traps and up to two reinforcing armies. The result updates while you type: who wins, the losses on each side, what the rams and catapults destroy, how much the survivors can carry, and what the lost troops cost.
 
-You can set:
-- both armies, with Blacksmith and Armoury levels
-- heroes, morale and attack/defence bonuses
-- wall, Residence, Stonemason, Gaul traps
-- up to two armies of reinforcements
-
-It shows the winner, losses on both sides, what the rams and catapults break, how much loot the survivors carry, and what your dead soldiers cost.
-
-It runs the exact same battle code as the server, and our tests check it against real fights.
-
-#gamedev
+It calls the same battle code the server uses for real attacks, and a test compares the two after every change.
 ```
 
 ## Day 2
 
 ### 4. Auto training - draft
-📸 auto training panel with shares and busy bars
+Media: screenshot, the auto training panel with troop shares and building load
 ```
-🛠️ Devlog: Auto training
+Auto training is in.
 
-Going to sleep? Let your village train for you.
+You give each troop a share of your resources, for example 60% Legionnaires and 40% Imperians, and choose how long it should run, from 1 to 8 hours. Every minute it spends your current stock by those shares and queues whatever that buys.
 
-Split your resources between troops - say 60% Legionnaires, 40% Imperians - and pick 1 to 8 hours. Every minute it spends what you have by those shares and keeps the barracks busy.
-
-- quick setups: strongest attack, strongest defence, most loot
-- a forecast per troop and how busy each building will be
-- whatever you don't assign stays in your storage
-- it stops by itself when the time is up and tells you
+Anything you don't assign stays in storage. When the time is up it stops on its own and leaves a note in your Info box.
 ```
 
 ### 5. Live map - draft
-🎬 dragging and zooming the live map, minimap jump (10-15 s)
+Media: video, dragging and zooming the live map, then jumping somewhere from the minimap (10 to 15 s)
 ```
-🗺️ Devlog: Live map
+The world map is now a live map.
 
-The whole world in one smooth, draggable map.
+You can drag it with the mouse or a finger, zoom between 35% and 200%, and jump anywhere from a minimap of the whole world. Your villages, your alliance, other players, the Natars and the oases each have their own colour.
 
-- drag with mouse or finger, zoom from 35% to 200%
-- a minimap of the entire world: you, your alliance, enemies, Natars and oases in their own colours
-- hover any field for details, click to open it
-- your attacks, raids and reinforcements show as markers, refreshed every 15 seconds
-
-Prefer the old diamond view? It's still there under "Classic".
-
-#browsergame
+Your attacks, raids and reinforcements are marked on the map and refresh every 15 seconds. If you prefer the old diamond view, it's still there under Classic.
 ```
 
 ### 6. Hand-drawn troops - draft
-📸 line-up of all 30 troops on parchment
+Media: screenshot, all 30 troops lined up on parchment
 ```
-🎨 Every troop is hand-drawn in the classic comic style.
+All 30 units and the oasis animals are drawn by hand in the old comic style: thick outlines, flat colours and slightly ridiculous faces.
 
-Bold outlines, bright colours, funny faces and cartoon horses - 30 units across 3 tribes, plus the wild animals that guard the oases.
-
-No stock art, no copied pictures: everything in the game is original.
-
-Which one is your favourite?
+None of it is taken from the original game. If you had to pick one for the front page, which would it be?
 ```
 
 ## Day 3
 
 ### 7. The hero - draft
-📸 the 5 hero portrait frames side by side (wood → jewelled gold)
+Media: screenshot, the five hero portrait frames side by side, from wood to jewelled gold
 ```
-🦸 Your hero
+How the hero works.
 
-Every empire needs a face.
+You train it from one of your own fighting units, and it keeps that unit's speed and base strength. Every level gives 5 skill points for attack, defence, the two army bonuses or regeneration.
 
-Train your hero from one of your own fighting units - it keeps that unit's speed and strength. Every level gives 5 skill points for attack, defence, army bonuses or regeneration.
-
-The hero leads your army into battle, is the only one who can capture oases, and earns experience from every fight.
-
-Its portrait frame grows with it: plain wood, bronze, silver, gold, and finally jewelled gold with a crown.
+The hero fights with its army, is needed to capture oases, and gains experience from every battle. Its portrait frame changes every 5 levels, from plain wood up to jewelled gold.
 ```
 
-### 8. Fair play audit - draft
-🎨 painting: a Roman scribe checking scrolls and scales by lamplight
+### 8. Closing loopholes - draft
+Media: painting, a Roman scribe checking scrolls and a pair of scales by lamplight
 ```
-🔒 Behind the scenes: we checked every rule for loopholes.
+Before more players arrived, we went through the rules looking for ways to cheat. A few of the things we closed:
 
-Before the world filled up, we went through the whole game looking for ways to cheat. Some we fixed:
+The Gold market can no longer be used to hide goods from an incoming attack.
+Gold from tasks and medals can't be sent to other accounts.
+A running upgrade can't undo damage from rams or catapults.
+Releasing an oasis no longer respawns its animals for free hero experience.
+Names like Natars or Admin can't be registered.
 
-- the Gold market can't hide goods from an incoming attack
-- Gold from tasks and medals can't be farmed with extra accounts
-- rams and catapults can't be undone by an upgrade already running
-- releasing an oasis doesn't respawn its animals for easy hero XP
-- reserved names like "Natars" or "Admin" can't be registered
-
-Fair play first. Found something we missed? Tell us.
+If you find something we missed, please let us know.
 ```
 
-### 9. New or returning player - draft
-📸 game guide search + a "?" help bubble open
+### 9. New and returning players - draft
+Media: screenshot, the game guide search with a help bubble open
 ```
-📖 New to the game, or coming back after 15 years?
+For new players, and for anyone coming back after a few years away.
 
-You won't need a wiki open in another tab.
+The game has a built-in guide with more than 120 searchable topics, a list of 29 tasks with rewards that walks you through the first days, and a small help icon next to every stat that explains it in one sentence.
 
-- a game guide with 120+ topics and live search
-- 29 tasks in 5 chapters that walk you through your first days, with rewards
-- a small "?" next to every stat that explains it in one line
-- full level tables for every building and every troop
-
-Start slow, learn as you play.
+Every building and every troop also has a table with all of its levels.
 ```
 
 ## Day 4
 
 ### 10. The Natars - draft
-🎨 painting: Natar army with war elephants at dawn outside a walled village
+Media: painting, a Natar army with war elephants outside a walled village at dawn
 ```
-☠️ The Natars are coming.
+Once your account passes 300 population, the Natars start to notice you.
 
-Grow past 300 population and the NPC empire starts raiding you - at most once a day, at a random hour.
+They attack at most once a day, at a random hour, with an army sized at 50 to 90% of your own strength, counting your troops, wall, Residence and population. Usually it's a raid. Sometimes they bring war elephants.
 
-Their army is sized to 50-90% of your own strength: troops, wall, Residence and population. Mostly raids, sometimes a full attack with war elephants.
-
-Small players are left alone. Big players never sleep easy.
-
-Test your defence first: the simulator has a "Natars attack it" button.
+Players under 300 population are never targeted. If you want to see what's coming, the simulator can load your village and show a typical Natar army against it.
 ```
 
 ### 11. Oasis raider - draft
-📸 oasis raider panel with the next planned raids
+Media: screenshot, the oasis raider panel with the next planned raids
 ```
-🌴 Devlog: Oasis raider
+New in the Gold Club: an oasis raider.
 
-Free oases fill up with resources over time. Collecting them by hand gets old fast.
+Free oases collect resources over time. With the raider switched on, it checks the free oases within your chosen range every few minutes, skips the guarded ones unless you allow enough troops to beat the animals, and sends only as many troops as the loot needs, fastest units first. It never sends a second raid to an oasis that already has one on the way.
 
-Turn on the oasis raider and every few minutes it:
-- scans the free oases within your range (up to 35 fields)
-- skips the ones guarded by animals, or brings enough troops to beat them
-- sends just enough troops to carry the loot home, fastest first
-- never sends a second raid while one is on the way
-
-Part of the Gold Club, together with farm lists, trade routes and troop evasion.
+The Gold Club also includes farm lists, trade routes and troop evasion.
 ```
 
-### 12. Villages grow on the map - draft
-📸 the 5 map village stages in a row, hamlet → golden-domed city
+### 12. Villages on the map - draft
+Media: screenshot, the five map village pictures in a row, from a few huts to a domed city
 ```
-🏘️ Watch your neighbours grow.
+Villages on the map change as they grow. A new one is a handful of huts. At 250 and 500 population it becomes a proper village, at 1,000 a walled town, and at 1,500 a city with a domed palace.
 
-Every village on the map changes with its population:
-- a few huts at the start
-- a busy village at 250 and 500
-- a walled town at 1,000
-- a grand city with a golden-domed palace at 1,500
-
-One look at the map tells you who's farming and who's ready for war.
+It makes it much easier to read a neighbourhood at a glance.
 ```
 
 ## Day 5
 
 ### 13. Battle reports - draft
-📸 a battle report (result banner, losses, loot bar, "Attack again")
+Media: screenshot, a battle report with the result bar, losses and loot
 ```
-📜 Devlog: Battle reports
+We redesigned the battle reports.
 
-Know what happened in two seconds.
+The report list is coloured by outcome: green when you lost nothing, yellow for some losses, red when nobody came back. Inside, a bar compares attack and defence, both sides' losses are listed along with your hero's health and experience, and the loot shows how full your troops were.
 
-- the list is colour-coded: green no losses, yellow some, red everything lost
-- an attack vs defence bar shows how close it was
-- losses on both sides, your hero's health and experience
-- loot with a carry bar, so you know if you sent enough
-
-And an "Attack again" button that refills the same troops, hero and target in one click.
+There's also an Attack again button that refills the same troops, hero and target.
 ```
 
 ### 14. On your phone - draft
-📸 3 phone screens side by side (village, map, reports)
+Media: screenshot, three phone screens side by side (village, map, reports)
 ```
-📱 The same game on your phone.
+The game works on phones without an app.
 
-No app store, no download - open your browser and play.
-
-The menu folds away behind one button, so pages start with what matters. Tabs swipe. The map moves with one finger and zooms with a pinch. Incoming attacks stay visible at the top.
-
-Check your raids on the bus, plan your attacks on the PC.
+On a small screen the menu folds behind a single button, so every page opens on its content. Tabs scroll sideways, the map pans with one finger and zooms with a pinch, and incoming attacks stay pinned at the top.
 ```
 
 ### 15. Weekly medals - draft
-📸 the weekly Top 10 page with medals
+Media: screenshot, the weekly Top 10 page with medals
 ```
-🏅 Every Monday at midnight, the medals are handed out.
+Every Monday at midnight UTC we hand out the weekly medals.
 
-The top 3 of the week in five rankings - attackers, defenders, climbers, robbers and expanders - get a gold, silver or bronze medal for their profile, plus 300, 200 or 100 Gold.
-
-Rankings reset each week, so a new player can take one too.
-
-Who's taking the first ones?
+The top three in five rankings (attackers, defenders, climbers, robbers and expansion) get a gold, silver or bronze medal on their profile, together with 300, 200 or 100 Gold. The rankings only count that week, so anyone has a shot.
 ```
 
 ## Day 6
 
 ### 16. Every building, every level - draft
-📸 a building page with its "All levels" table
+Media: screenshot, a building page with its full level table
 ```
-🏗️ Every building, every level.
+Each building page now has a table with every level: the cost in all four resources, the build time with your current Main Building, the population and culture points it adds, and what that level actually gives you.
 
-Each building page has an "All levels" table:
-- cost in wood, clay, iron and crop
-- build time with your own Main Building
-- population and culture points it adds
-- what each level gives - production, storage, merchants, defence - and the gain over the last level
-
-The game guide has the same table for every building. Plan your village twenty levels ahead.
+The game guide has the same tables for every building, so you can plan ahead without a spreadsheet.
 ```
 
 ### 17. The endgame - draft
-🎨 painting: a golden World Wonder rising over a battlefield, alliance banners around it
+Media: painting, a golden World Wonder rising over a battlefield with alliance banners around it
 ```
-🏛️ How a world ends.
+How a world ends.
 
-22 artifacts lie in Natar treasuries - faster troops, bigger storage, sharper scouts. Take one with catapults and your hero.
+There are 22 artifacts held in Natar treasuries. To take one you need catapults to destroy the treasury, a winning attack with your hero, and an empty treasury of your own to carry it home.
 
-Then the Wonder building plans appear. An alliance that holds a plan can raise a World Wonder. The first to reach level 100 wins the world.
-
-Every other alliance will try to stop them.
+Later, the construction plans for the World Wonder are released. An alliance that holds a plan can build a Wonder, and the first one to reach level 100 wins the world.
 ```
 
-### 18. Built in the open - draft
-📸 GitHub page + green tests badge
+### 18. Tests - draft
+Media: screenshot, the GitHub page with the passing checks
 ```
-🧪 How we keep the game honest.
+Every change to the game goes through more than 200 automated tests before it reaches the live world. They check the battle formulas against known reference values, building costs and times, troop stats, production, the simulator against real fights, and security.
 
-200+ automated tests run on every change before it reaches the live world:
-- the battle formulas against known reference values
-- building costs and times, troop stats, production
-- the simulator against real fights
-- security checks
-
-The code is public on GitHub. Have a look.
-
-#indiedev
+The source is public on GitHub if you'd like to look.
 ```
 Reply under it: `https://github.com/onchainTRAVIAN/onchain-travian`
 
 ## Day 7
 
-### 19. Click exactly what you see - draft
-🎬 moving the mouse over the village centre, each building glows under the cursor (8-10 s)
+### 19. Precise clicks - draft
+Media: video, the cursor moving over the village centre while each building highlights (8 to 10 s)
 ```
-🖱️ Devlog: Click exactly what you see
+A detail most people won't notice: in the village centre, the building under your cursor highlights, and a click opens exactly that building.
 
-In the village centre, the building under your mouse lights up - and a click opens exactly that one.
-
-Every building and wall picture has a pixel outline, checked front to back, so a tower standing in front of the barracks never steals your click. Grass and roads do nothing.
-
-Small thing. You notice it every day.
+Each picture has a pixel outline that's checked from front to back, so a tower standing in front of the barracks doesn't swallow the click, and empty grass does nothing.
 ```
 
-### 20. Raider or builder - draft
-📊 poll: Raider / Builder / Defender / A bit of everything (24 h)
+### 20. First move - draft
+Poll: Raid / Build / Defend / A mix (24 h)
 ```
-Be honest. ⚔️
-
-When a new world starts, what's your plan?
-
-🔥 Raider - farms first, questions later
-🏗️ Builder - fields to 10, then we talk
-🛡️ Defender - walls up, troops home, let them come
-🎲 A bit of everything
+When a new world starts, what's the first thing you do?
 ```
 
-### 21. Three tribes, three walls - draft
-📸 the three level-20 walls side by side (marble, fieldstone fortress, sandstone with thatched towers)
+### 21. Three walls - draft
+Media: screenshot, the three level 20 walls side by side
 ```
-🧱 Three tribes, three walls.
+Each tribe has its own wall. They all start as wooden stakes and change four times as they level up.
 
-Every wall starts as wooden spikes and grows through four grander stages.
-
-At level 20:
-🔴 Romans - a white marble city wall, the strongest defence bonus
-🔵 Teutons - a grey fieldstone fortress with timber towers, the hardest to break with rams
-🟢 Gauls - a sandstone wall with round thatched towers and green-and-yellow banners
+At level 20 the Romans have a white marble city wall with the highest defence bonus. The Teutons have a stone fortress with timber towers, the hardest to bring down with rams. The Gauls have a sandstone wall with round thatched towers.
 ```
 
 ## Day 8
 
 ### 22. Buildings that grow - draft
-📸 one building in its 5 stages (levels 1, 5, 10, 15, 20) in a row
+Media: screenshot, one building in its five stages (levels 1, 5, 10, 15, 20)
 ```
-🏗️ Your village grows up with you.
+Every building has five pictures, for levels 1, 5, 10, 15 and 20. Timber and thatch gradually turn into stone, towers and gold trim.
 
-Every building has five pictures - levels 1, 5, 10, 15 and 20. Wood and thatch turn into stone, towers and gold trim as you upgrade.
-
-Walk through your village centre and you can see how far you've come.
+After a couple of weeks your village centre looks noticeably different from the one you started with.
 ```
 
-### 23. Alliances with teeth - draft
-🎨 painting: three chieftains clasping hands over a war table, banners behind them
+### 23. Alliance treaties - draft
+Media: painting, three chieftains clasping hands over a war table
 ```
-🤝 Alliances with teeth.
+Alliance treaties are enforced by the game.
 
-Same alliance, a confederacy or a non-aggression pact? Then you simply can't attack, raid or scout each other. The game blocks it.
+Members of the same alliance, or of alliances in a confederacy or a non-aggression pact, can't attack, raid or scout each other. Reinforcing and trading still work, and declaring war is still public.
 
-Reinforcements and trade still work. War stays a public statement.
-
-No more "sorry, my farm list hit you by mistake".
+So no more accidental farm list hits on an ally.
 ```
 
 ### 24. The cranny - draft
-📸 the cranny building page with its "hides" table
+Media: screenshot, the cranny page showing how much it hides
 ```
-🕳️ Know your cranny.
+A note on the cranny.
 
-Each level hides 3.5% of your storage from raiders, up to 35% at level 10. Gauls hide twice as much, so they hit the 35% cap at level 5.
-
-Anything hidden can't be stolen. Anything above it is fair game.
-
-Build it before your neighbours find you.
+Each level hides 3.5% of your storage from raiders, up to 35% at level 10. A Gaul cranny hides twice as much, so Gauls reach the 35% cap at level 5. Whatever is hidden can't be taken. Everything above it can.
 ```
 
 ## Day 9
 
 ### 25. Oases - draft
-🎨 painting: a hero and riders charging wolves and boars at a palm oasis
+Media: painting, a hero and riders charging wolves and boars at a palm oasis
 ```
-🌴 Oases are worth the fight.
+Free oases collect resources and are guarded by wild animals, which grow back every day until a neglected oasis holds a sizeable force.
 
-Free oases fill up with resources and are guarded by wild animals that grow back every day - up to a real army if nobody clears them.
-
-Beat the animals and the loot is yours. Bring your hero with a Hero's Mansion at level 10 and the oasis itself becomes yours, adding a production bonus to your village.
-
-Someone else holds it? Attack with your hero until its loyalty breaks.
+Beat the animals and you take the resources. With a Hero's Mansion at level 10 and your hero in the attack, you can take the oasis itself and add its production bonus to your village. If another player already holds it, each hero attack lowers its loyalty until it changes hands.
 ```
 
 ### 26. Artifacts - draft
-📸 the Artifacts & Wonders page (artifact list with holders)
+Media: screenshot, the Artifacts and Wonders page
 ```
-🏺 22 artifacts, waiting in Natar treasuries.
+The 22 artifacts and what they do.
 
-- Architects' secret - buildings that shrug off catapults
-- Boots of the mercenary - faster troops
-- Eyes of the eagle - sharper scouts
-- Diet control - armies that eat less
-- Trainers' talent - faster training
-- Storage master plan - giant warehouses
-- Rivals' confusion - bigger crannies, enemy catapults hit at random
-- Artifact of the fool - a new random effect every day
+Architects' secret makes buildings and walls sturdier against siege.
+Boots of the mercenary make troops move faster.
+Eyes of the eagle strengthen scouts.
+Diet control cuts crop upkeep.
+Trainers' talent speeds up training.
+Storage master plan unlocks the Great Warehouse and Great Granary.
+Rivals' confusion enlarges crannies and makes enemy catapults hit at random.
+The Artifact of the fool picks a different effect every day.
 
-Smash the treasury with catapults, win with your hero, and carry one home.
+Small artifacts work for one village, large and unique ones for the whole account.
 ```
 
 ### 27. Gold market - draft
-📸 the Gold market list of offers
+Media: screenshot, the Gold market offer list
 ```
-💰 Devlog: Gold market
+There's a Gold market where players sell resources or troops to each other for Gold.
 
-Sell resources or troops to other players for Gold.
+Goods are held until the sale goes through. Troops can only be sold to players of the same tribe, and they march to the buyer like any other army.
 
-Goods are held safely until someone buys. Troops can only be bought by the same tribe, and they march to the buyer like any army.
-
-And no tricks: listing your goods doesn't hide them from an incoming attack.
+It can't be used as a vault either. Cancelled or reduced offers walk back to the village instead of reappearing there instantly.
 ```
 
 ## Day 10
 
 ### 28. Conquest - draft
-🎨 painting: a senator on horseback raising a banner over a captured village
+Media: painting, a senator on horseback raising a banner over a captured village
 ```
-👑 Take a village, don't just raid it.
+To take a village rather than just raid it, you need chiefs: Senators for Romans, Chiefs for Teutons, Chieftains for Gauls. Each successful attack with them lowers the village's loyalty, and when it reaches zero the village is yours.
 
-Train chiefs - Senators, Chiefs or Chieftains - and every attack lowers the village's loyalty. At 0 the village is yours.
-
-You need culture points and a free expansion slot first. Capitals can never be taken, and nobody can lose their last village.
+You also need enough culture points and a free expansion slot. Capitals can't be conquered, and no player can lose their last village.
 ```
 
 ### 29. Catapult targets - draft
-📸 send troops form with the catapult target dropdown
+Media: screenshot, the send troops form with the catapult target list open
 ```
-🎯 Where do your catapults hit?
+Where your catapults hit depends on your Rally Point.
 
-It depends on your Rally Point:
-- below level 3 - a random building
-- level 3 - you can aim at storage
-- level 5 - fields and bonus buildings too
-- level 10 - almost anything
-- level 20 with 20+ catapults - two targets in one attack
+Below level 3 they pick a random building. At level 3 you can aim at storage, at level 5 at fields and bonus buildings, and at level 10 at nearly everything. At level 20, with at least 20 catapults, one attack can hit two targets.
 
-Rams hit the wall before the battle starts, so the defence fights behind a weaker wall.
+Rams strike the wall before the battle, so the defenders fight behind whatever is left of it.
 ```
 
 ### 30. The Info box - draft
-📸 the Info box with an incoming attack and hero notice
+Media: screenshot, the Info box with an incoming attack and a hero notice
 ```
-🔔 Never miss what matters.
+The Info box under the menu lists what needs your attention: incoming attacks, how much beginner protection you have left, a hero waiting to be revived or with unspent points, boosts about to run out, and new reports.
 
-The Info box under the menu tells you, without hunting through pages:
-- incoming attacks
-- how long your beginner protection lasts
-- your hero needs reviving or has free skill points
-- boosts that end soon
-- new reports
-
-Open the game, glance left, you're up to date.
+It saves a lot of clicking around.
 ```
 
 ## Day 11
 
 ### 31. Cropper finder - draft
-📸 the cropper finder results (9- and 15-crop fields with oasis bonus)
+Media: screenshot, cropper finder results with oasis bonuses
 ```
-🌾 Looking for the perfect cropper?
+Gold Club members get a cropper finder. It lists every 9 and 15 crop field within 10, 20 or 30 fields of your village, along with the crop bonus from the oases around each one.
 
-The cropper finder lists every 9-crop and 15-crop field within 10, 20 or 30 fields of your village, with the crop bonus of the oases around it.
-
-The capital that feeds your hammer starts here. Part of the Gold Club.
+That's usually where the capital that feeds your army ends up.
 ```
 
-### 32. Your hero keeps going - draft
-📸 hero page: level, skill points, revive button
+### 32. Hero progress - draft
+Media: screenshot, the hero page with level, skill points and the revive option
 ```
-🦸 Lost your hero? Not your progress.
+One rule we changed on purpose: if your hero dies and you train a new one, even from a different unit, it keeps its level, experience and skill points. Only the unit it fights as changes.
 
-When your hero falls you can revive it - or train a new one from another unit. Either way it keeps its level, experience and skill points.
-
-Only the unit it fights as changes. Years of fights don't vanish in one bad attack.
+Losing your hero still costs you, but it doesn't wipe out everything it earned.
 ```
 
 ### 33. Gaul traps - draft
-🎨 painting: Gaul trappers hauling netted Roman soldiers into a palisade
+Media: painting, Gaul trappers dragging netted soldiers into a palisade
 ```
-🪤 Gauls don't just defend. They catch.
+Gauls have the Trapper. Its traps catch attackers before the battle starts, and the captured troops stay in the village as prisoners, still eating their owner's crop.
 
-The Trapper builds traps that capture attackers before the fight. Caught troops sit in your village as prisoners - their owner keeps feeding them.
-
-Free them by attacking, or the trapper can let them go. Either way someone pays.
+The owner can try to free them with an attack. The Gaul can also let them go at any time.
 ```
 
 ## Day 12
 
 ### 34. Battle maths - draft
-📸 a battle report next to the simulator showing the same result
+Media: screenshot, a battle report next to the simulator showing the same result
 ```
-🧮 For the veterans: the battle maths.
+For the veterans: combat follows the classic T3 model.
 
-Combat follows the classic T3 model:
-- morale that softens attacks from much bigger players
-- rams that hit the wall before the fight
-- catapult damage by attack strength, building sturdiness and the Stonemason
-- Gaul traps, hero bonuses, Blacksmith and Armoury upgrades
+Morale weakens attacks on much smaller players. Rams hit the wall before the fight. Catapult damage depends on attack strength, building sturdiness and the Stonemason. Traps, hero bonuses and smithy upgrades all count.
 
-Our tests pin the formulas to known reference values. If you remember the numbers, they still add up.
+Our tests pin these formulas to known reference values, so the numbers you remember should still work.
 ```
 
 ### 35. A fast world - draft
-🎨 painting: a village growing in fast-forward, sun and moon racing across the sky
+Media: painting, a village growing in fast motion while the sun and moon cross the sky
 ```
-⚡ A fast world.
+The live world runs at high speed. Production, construction, training and marching are all many times faster than on a classic server, so what used to take a month takes days.
 
-The live world runs at high speed: production, building, training and marching all move many times faster than a classic server.
-
-What used to take a month takes days. Crop upkeep stays normal, so big armies still need real farms behind them.
+Crop upkeep isn't sped up, so a big army still needs real farmland behind it.
 ```
 
 ### 36. How the art was made - draft
-📸 one troop in three versions: painted, old-school, final comic
+Media: screenshot, one troop in its three versions (painted, old-school, final comic)
 ```
-🎨 Behind the scenes: we redrew the troops three times.
+We redrew the troops three times. The first version was painted, the second was a set of simple old-school figures, and neither looked like the game we remembered.
 
-First a painted style. Then simple old-school figures. Neither felt like the game we remember.
-
-The final version is hand-made in the classic comic look - bold lines, bright colours, funny faces. Sometimes the old way is the right way.
+The final set is drawn by hand in the old comic style.
 ```

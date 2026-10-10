@@ -26,7 +26,7 @@ KEYBOARD = {'keyboard': [[{'text': 'Next'}, {'text': 'List'}, {'text': 'Help'}]]
 HELP = ('<b>onchainTRAVIAN post queue</b>\n'
         'Next - the next ready post (file + text to copy)\n'
         'List - all posts and their status\n'
-        '/post 3 - show post 3 (also drafts)\n'
+        '/post 3 or just 3 - show post 3 (also drafts)\n'
         'After posting on X tap ✅ Posted.')
 
 
@@ -60,7 +60,7 @@ def posts() -> list[dict]:
         code = re.search(r'```\n(.*?)```', body, re.S)
         file = re.search(r'^File: (.+?)\s*$', body, re.M)
         reply = re.search(r'^Reply under it: `(.+?)`', body, re.M)
-        poll = re.search(r'^📊 poll: (.+?)\s*$', body, re.M)
+        poll = re.search(r'^Poll: (.+?)\s*$', body, re.M)
         out.append({
             'n': int(h[1]), 'title': h[2], 'status': h[3],
             'media': lines[0] if lines else '',
@@ -199,8 +199,8 @@ def handle_message(m: dict, owner: int | None) -> None:
             say(chat, 'No ready posts right now. Ask Claude for the next batch.')
     elif cmd == 'list':
         say(chat, queue_text())
-    elif re.fullmatch(r'post\s+\d+', cmd):
-        p = find(int(cmd.split()[1]))
+    elif re.fullmatch(r'(post\s+)?\d+', cmd):
+        p = find(int(cmd.split()[-1]))
         if p:
             send_post(chat, p)
         else:
