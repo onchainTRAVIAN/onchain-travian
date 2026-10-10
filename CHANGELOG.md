@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased - tooling (not part of the game)
+- X post queue `branding/social/posts.md` and the Telegram bot @onchainTRAVIAN_bot (`scripts/social/tgbot.py`, runs on the dev PC) that hands out each post with its picture on request; it keeps one connection alive and retries because the link to Telegram is flaky.
+
 ## 0.20.6 - 2026-10-09 - source on GitHub
 - Source code published at https://github.com/onchainTRAVIAN/onchain-travian with screenshots, automatic checks on every change, issue templates and a security policy.
 - No more white gap under the footer on short pages: the footer always reaches the bottom of the screen (also on big zoomed screens).
