@@ -9,13 +9,12 @@ posts.md is the source of truth: headings `### <n>. <Title> - <status>` (draft|r
 optional `File: <path>` line, the first ``` block is the post, `Reply under it: `...`` the reply.
 """
 import html
+import http.client
 import json
 import pathlib
 import re
 import sys
 import time
-import urllib.error
-import urllib.request
 import uuid
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -85,8 +84,32 @@ def set_status(n: int, status: str) -> None:
 
 # ---------- Telegram API ----------
 
-def api(method: str, data: dict | None = None, files: dict[str, pathlib.Path] | None = None, timeout: int = 70) -> dict:
-    url = f'https://api.telegram.org/bot{TOKEN}/{method}'
+class Conn:
+    """One kept-alive HTTPS connection: this PC's link to api.telegram.org often hangs on new
+    connections (TCP/TLS handshake), so reuse it and reconnect + retry on any failure."""
+    def __init__(self) -> None:
+        self.c: http.client.HTTPSConnection | None = None
+
+    def request(self, path: str, body: bytes, ctype: str, timeout: int) -> dict:
+        if self.c is None:
+            self.c = http.client.HTTPSConnection('api.telegram.org', timeout=20)
+            self.c.connect()
+        self.c.sock.settimeout(timeout)
+        self.c.request('POST', path, body, {'Content-Type': ctype})
+        r = self.c.getresponse()
+        return json.loads(r.read())
+
+    def reset(self) -> None:
+        if self.c:
+            self.c.close()
+        self.c = None
+
+
+CONN = Conn()
+
+
+def api(method: str, data: dict | None = None, files: dict[str, pathlib.Path] | None = None,
+        timeout: int = 30, tries: int = 5) -> dict:
     if files:
         boundary = uuid.uuid4().hex
         parts = []
@@ -96,17 +119,22 @@ def api(method: str, data: dict | None = None, files: dict[str, pathlib.Path] | 
         for k, path in files.items():
             parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"; filename="{path.name}"\r\n'
                          'Content-Type: application/octet-stream\r\n\r\n'.encode() + path.read_bytes() + b'\r\n')
-        body = b''.join(parts) + f'--{boundary}--\r\n'.encode()
-        req = urllib.request.Request(url, body, {'Content-Type': f'multipart/form-data; boundary={boundary}'})
+        body, ctype = b''.join(parts) + f'--{boundary}--\r\n'.encode(), f'multipart/form-data; boundary={boundary}'
     else:
-        req = urllib.request.Request(url, json.dumps(data or {}).encode(), {'Content-Type': 'application/json'})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        res = json.load(e)
-        log('api error', method, res.get('description'))
-        return res
+        body, ctype = json.dumps(data or {}).encode(), 'application/json'
+    for attempt in range(tries):
+        try:
+            res = CONN.request(f'/bot{TOKEN}/{method}', body, ctype, timeout)
+            if not res.get('ok'):
+                log('api error', method, res.get('description'))
+            return res
+        except (OSError, http.client.HTTPException, ValueError) as e:
+            CONN.reset()
+            if attempt == tries - 1:
+                raise
+            log('retry', method, type(e).__name__, e)
+            time.sleep(min(2 ** attempt, 8))
+    return {}
 
 
 def say(chat: int, text: str, markup: dict | None = None) -> None:
@@ -123,7 +151,7 @@ def buttons(n: int) -> dict:
 def send_post(chat: int, p: dict) -> None:
     head = f"#{p['n']} {p['title']} ({p['status']})"
     if p['file'] and p['file'].exists():
-        api('sendDocument', {'chat_id': chat, 'caption': head}, {'document': p['file']}, timeout=300)
+        api('sendDocument', {'chat_id': chat, 'caption': head}, {'document': p['file']}, timeout=120)
     elif p['file']:
         say(chat, f'<b>{html.escape(head)}</b>\n⚠️ media not made yet: {html.escape(p["file"].name)}')
     else:
@@ -160,6 +188,7 @@ def handle_message(m: dict, owner: int | None) -> None:
     if chat != owner:
         return
     cmd = text.lower().lstrip('/').split('@')[0]
+    log('cmd', cmd[:20])
     if cmd in ('start', 'help'):
         say(chat, HELP)
     elif cmd == 'next':
@@ -207,7 +236,8 @@ def run() -> None:
     offset, wait = 0, 5
     while True:
         try:
-            res = api('getUpdates', {'offset': offset, 'timeout': 50, 'allowed_updates': ['message', 'callback_query']})
+            res = api('getUpdates', {'offset': offset, 'timeout': 25, 'allowed_updates': ['message', 'callback_query']},
+                      timeout=40, tries=1)
             for u in res.get('result', []):
                 offset = u['update_id'] + 1
                 owner = owner_id()
