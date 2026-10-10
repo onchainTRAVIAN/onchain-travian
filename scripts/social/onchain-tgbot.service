@@ -1,0 +1,12 @@
+[Unit]
+Description=onchainTRAVIAN Telegram post bot
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/suruja/work/crypto wapgame
+ExecStart=/usr/bin/python3 -u "/home/suruja/work/crypto wapgame/scripts/social/tgbot.py"
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
