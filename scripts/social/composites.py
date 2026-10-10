@@ -88,6 +88,20 @@ def versions() -> str:
     return head + ''.join(rows)
 
 
+def tribes() -> str:
+    """Post 2: the three tribes, three signature units each."""
+    picks = (('romans', 'Romans', ((1, 'Legionnaire'), (3, 'Imperian'), (6, 'Equites Caesaris'))),
+             ('teutons', 'Teutons', ((1, 'Clubswinger'), (3, 'Axeman'), (6, 'Teutonic Knight'))),
+             ('gauls', 'Gauls', ((2, 'Swordsman'), (4, 'Theutates Thunder'), (6, 'Haeduan'))))
+    cols = []
+    for t, name, units in picks:
+        figs = ''.join(cell(f'{IMG}/units/big/{t}-{n}.svg', 190, 222, u) for n, u in units)
+        cols.append(f'<div class="cell" style="padding:0 18px"><img src="{IMG}/tribe/{t}.svg" width="64" height="64">'
+                    f'<div style="font:bold 30px Georgia,serif;margin:6px 0 12px">{name}</div><div class="row" style="gap:6px">{figs}</div></div>')
+    sep = '<div style="width:2px;align-self:stretch;background:linear-gradient(transparent,#c9b183,transparent)"></div>'
+    return f'<div class="row" style="align-items:flex-start">{sep.join(cols)}</div>'
+
+
 TEST_PICKS = ('combat.test.ts > classic T3.6 combat > catapult targets follow', 'combat.test.ts > classic T3.6 combat > rams lower the wall',
               'simulator.test.ts > combat simulator > gives the same result', 'simulator.test.ts > combat simulator vs real traps',
               'classic.test.ts > T3.6 reference numbers > woodcutter level 10', 'classic.test.ts > T3.6 reference numbers > cropland level 3',
@@ -110,7 +124,7 @@ def tests() -> str:
             f'<pre style="margin:14px 22px;white-space:pre-wrap">$ npm test\n\n{body}\n   ...\n\n{total}</pre></div>')
 
 
-SHEETS = {'06-troops': troops, '07-hero': heroes, '12-villages': villages, '21-walls': walls, '22-stages': stages, '36-versions': versions, '18-tests': tests}
+SHEETS = {'02-tribes': tribes, '06-troops': troops, '07-hero': heroes, '12-villages': villages, '21-walls': walls, '22-stages': stages, '36-versions': versions, '18-tests': tests}
 
 
 async def main() -> None:

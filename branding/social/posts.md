@@ -28,7 +28,8 @@ All the art is drawn from scratch. It runs in the browser on desktop and phone, 
 Reply under it: `You can play here: https://ancient-realms.up.railway.app`
 
 ### 2. Pick your tribe - ready
-Poll: Romans / Teutons / Gauls (24 h)
+Media: picture, the three tribes with three of their troops each
+File: branding/social/img/02-tribes.jpg
 ```
 Which tribe are you starting with?
 
@@ -37,6 +38,8 @@ Romans can build in the fields and in the village at the same time, and their Ci
 Teutons have the cheapest troops in the game and are built for raiding.
 
 Gauls have the fastest cavalry, a Trapper that captures attackers, and a cranny that hides twice as much.
+
+Tell us in the replies.
 ```
 
 ### 3. Combat simulator - ready

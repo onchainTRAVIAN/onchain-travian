@@ -19,6 +19,7 @@ W, H = 1600, 900
 TOP = 120  # title band
 
 POSTS: dict[str, dict] = {
+    '02-tribes': {'title': 'Pick your tribe', 'bg': 'what-council', 'shots': ['02-tribes.png']},
     '04-auto': {'title': 'Auto training', 'bg': 'what-empire', 'shots': ['04-auto.png'], 'crop': (0, 0.33)},
     '06-troops': {'title': 'Every unit, drawn by hand', 'bg': 'what-council', 'shots': ['06-troops.png']},
     '07-hero': {'title': 'The hero', 'bg': 'what-hero', 'shots': ['07-hero.png']},
