@@ -27,7 +27,7 @@ All the art is drawn from scratch. It runs in the browser on desktop and phone, 
 ```
 Reply under it: `You can play here: https://ancient-realms.up.railway.app`
 
-### 2. Pick your tribe - ready
+### 2. Pick your tribe - posted
 Media: picture, the three tribes with three of their troops each
 File: branding/social/img/02-tribes.jpg
 ```
@@ -42,7 +42,7 @@ Gauls have the fastest cavalry, a Trapper that captures attackers, and a cranny 
 Tell us in the replies.
 ```
 
-### 3. Combat simulator - ready
+### 3. Combat simulator - posted
 Media: video, troops typed into the simulator while the result changes live (10 to 15 s)
 File: branding/social/img/03-simulator.mp4
 ```
@@ -127,7 +127,7 @@ Every building and every troop also has a table with all of its levels.
 
 ## Day 4
 
-### 10. The Natars - ready
+### 10. The Natars - posted
 Media: painting, a Natar army with war elephants outside a walled village at dawn
 File: branding/social/img/10-natars.jpg
 ```
@@ -280,7 +280,7 @@ Each level hides 3.5% of your storage from raiders, up to 35% at level 10. A Gau
 
 ## Day 9
 
-### 25. Oases - ready
+### 25. Oases - posted
 Media: painting, a hero and riders charging wolves and boars at a palm oasis
 File: branding/social/img/25-oases.jpg
 ```
