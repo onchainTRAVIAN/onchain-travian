@@ -46,13 +46,34 @@ const cookieBase = {
   path: '/',
 };
 
-export function createSession(res: Response, userId: number, villageId: number | null): void {
+/** Store a new session and return its token (the `sid` cookie value). Scripts use it to log a browser in. */
+export function issueSession(userId: number, villageId: number | null): string {
   const token = randomBytes(32).toString('base64url');
   const now = clock.now();
   db.insert(sessions)
     .values({ id: sha256(token), userId, csrf: randomBytes(24).toString('base64url'), villageId, createdAt: now, expiresAt: now + SESSION_TTL_MS })
     .run();
-  res.cookie(SESSION_COOKIE, token, { ...cookieBase, maxAge: SESSION_TTL_MS });
+  return token;
+}
+
+export function createSession(res: Response, userId: number, villageId: number | null): void {
+  res.cookie(SESSION_COOKIE, issueSession(userId, villageId), { ...cookieBase, maxAge: SESSION_TTL_MS });
+}
+
+/** A verified wallet without an account: the signup ticket token rides in this cookie to /register. */
+export const SIGNUP_COOKIE = 'signup';
+
+export function setSignupCookie(res: Response, token: string, maxAge: number): void {
+  res.cookie(SIGNUP_COOKIE, token, { ...cookieBase, maxAge });
+}
+
+export function signupToken(req: Request): string | null {
+  const t: unknown = req.cookies?.[SIGNUP_COOKIE];
+  return typeof t === 'string' && /^[A-Za-z0-9_-]{20,64}$/.test(t) ? t : null;
+}
+
+export function clearSignupCookie(res: Response): void {
+  res.clearCookie(SIGNUP_COOKIE, cookieBase);
 }
 
 export function destroySession(req: Request, res: Response): void {

@@ -1,5 +1,6 @@
-// Wallet features: sign-in with Ethereum (link / log in) and paying for credits.
-// Uses the browser wallet (window.ethereum). No libraries needed.
+// Wallet features: sign-in with Ethereum (log in / join / link) and paying for credits.
+// Works with any EVM browser wallet: finds them through EIP-6963 (a picker when several are installed),
+// falls back to window.ethereum (older extensions, phone wallets' in-app browsers). No libraries needed.
 (function () {
   'use strict';
   var root = document.querySelector('[data-wallet]');
@@ -20,13 +21,128 @@
     statusEl.className = 'small ' + (bad ? 'bad' : 'good');
   }
 
+  // ---- Wallet discovery (EIP-6963) ----
+  var found = [];
+  var chosen = null;
+  window.addEventListener('eip6963:announceProvider', function (e) {
+    var d = e.detail;
+    if (!d || !d.provider || !d.info) return;
+    for (var i = 0; i < found.length; i++) if (found[i].info.uuid === d.info.uuid) return;
+    found.push(d);
+  });
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+  function lastUsed(set) {
+    try {
+      if (set) localStorage.setItem('walletRdns', set);
+      return localStorage.getItem('walletRdns');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function noWallet() {
+    var err = new Error('No wallet found.');
+    err.noWallet = true;
+    return err;
+  }
+
+  function showNoWallet() {
+    if (!statusEl) return;
+    statusEl.className = 'small bad';
+    statusEl.textContent = 'No wallet found in this browser. Install one, for example ';
+    [['MetaMask', 'https://metamask.io/download/'], ['Rabby', 'https://rabby.io/'], ['Coinbase Wallet', 'https://www.coinbase.com/wallet/downloads']].forEach(function (w, i, all) {
+      var a = document.createElement('a');
+      a.href = w[1];
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = w[0];
+      statusEl.appendChild(a);
+      statusEl.appendChild(document.createTextNode(i < all.length - 1 ? ', ' : ''));
+    });
+    statusEl.appendChild(document.createTextNode(", or open this page in your wallet app's browser."));
+  }
+
+  function picker() {
+    var box = root.querySelector('[data-picker]');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'wpick';
+      box.setAttribute('data-picker', '');
+      if (statusEl) statusEl.parentNode.insertBefore(box, statusEl);
+      else root.appendChild(box);
+    }
+    return box;
+  }
+
+  // Resolves with the EIP-1193 provider to use (asks the player when several wallets are installed).
+  function choose() {
+    if (chosen) return Promise.resolve(chosen);
+    var list = found.slice();
+    if (!list.length) {
+      if (window.ethereum) return Promise.resolve((chosen = window.ethereum));
+      return Promise.reject(noWallet());
+    }
+    if (list.length === 1) {
+      lastUsed(list[0].info.rdns);
+      return Promise.resolve((chosen = list[0].provider));
+    }
+    var last = lastUsed();
+    list.sort(function (a, b) { return (b.info.rdns === last) - (a.info.rdns === last); });
+    return new Promise(function (resolve, reject) {
+      var box = picker();
+      box.textContent = '';
+      var head = document.createElement('p');
+      head.className = 'small';
+      head.textContent = 'Choose your wallet:';
+      box.appendChild(head);
+      list.forEach(function (d) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'wopt';
+        if (/^data:image\//.test(d.info.icon || '')) {
+          var img = document.createElement('img');
+          img.src = d.info.icon;
+          img.width = 24;
+          img.height = 24;
+          img.alt = '';
+          b.appendChild(img);
+        }
+        b.appendChild(document.createTextNode(d.info.name || 'Wallet'));
+        b.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          box.hidden = true;
+          lastUsed(d.info.rdns);
+          resolve((chosen = d.provider));
+        });
+        box.appendChild(b);
+      });
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'small secondary';
+      cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        box.hidden = true;
+        reject(new Error('Cancelled.'));
+      });
+      box.appendChild(cancel);
+      box.hidden = false;
+      say('');
+    });
+  }
+
   function wallet() {
-    if (!window.ethereum) throw new Error('No wallet found. Install MetaMask (or open this page in your wallet app) and try again.');
-    return window.ethereum;
+    if (!chosen) throw noWallet();
+    return chosen;
   }
 
   function account() {
-    return wallet().request({ method: 'eth_requestAccounts' }).then(function (accs) {
+    return choose().then(function (p) {
+      return p.request({ method: 'eth_requestAccounts' });
+    }).then(function (accs) {
       if (!accs || !accs[0]) throw new Error('No account selected');
       return accs[0];
     });
@@ -82,6 +198,7 @@
   }
 
   function fail(err) {
+    if (err && err.noWallet) return showNoWallet();
     var msg = (err && (err.message || err.reason)) || String(err);
     if (err && err.code === 4001) msg = 'You cancelled the request in your wallet.';
     say(msg, true);
@@ -90,7 +207,7 @@
   // ---- Sign in with Ethereum ----
   function signIn(purpose, btn) {
     busy(btn, true);
-    say('Waiting for your wallet…');
+    say('Waiting for your wallet...');
     var address;
     account()
       .then(function (a) {
@@ -104,7 +221,7 @@
         });
       })
       .then(function (r) {
-        say('Done!');
+        say(r.redirect === '/register' ? 'Signed in. Now pick a name and a tribe...' : 'Done!');
         location.href = r.redirect || '/';
       })
       .catch(fail)

@@ -7,7 +7,7 @@ import { TIERS, type Tier } from '../../crypto/tiers.js';
 import { ETH_ASSET, formatUnitsShort, parseUnitsSafe } from '../../crypto/pricing.js';
 import { fmtDateTime, fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { csrfField, icon } from './layout.js';
+import { icon } from './layout.js';
 
 function perkList(t: Tier): SafeHtml {
   return html`<ul class="perks">${Object.entries(t.perks).map(([k, v]) => html`<li>${PERK_LABEL[k as PerkKind]} <b>+${Math.round((v ?? 0) * 100)}%</b></li>`)}</ul>`;
@@ -29,9 +29,10 @@ export function walletView(d: {
     <div class="woodbody">
     <section class="spanel"><h3 class="sp-head">Wallet<span>${config.CHAIN_NAME}</span></h3><div class="pad" data-wallet data-csrf="${d.csrf}" data-chain="${config.CHAIN_ID}" data-chain-name="${config.CHAIN_NAME}">
     ${d.address
-      ? html`<p class="cardrow"><span>Linked wallet <b class="nowrap" title="${d.address}">${short(d.address)}</b></span>
-          <form method="post" action="/wallet/unlink">${csrfField(d.csrf)}<button type="submit" class="small secondary">Unlink</button></form></p>`
-      : html`<p class="small">Link your crypto wallet to unlock <b>${config.TOKEN_SYMBOL} holder perks</b> and to log in with one tap. Signing is free - no transaction, no gas.</p>
+      ? html`<p class="cardrow"><span>Your wallet <b class="nowrap" title="${d.address}">${short(d.address)}</b></span>
+          <button type="button" class="small secondary" data-action="link">Change wallet</button></p>
+          <p class="small muted">You log in with this wallet. To move the account to another wallet, press Change wallet and sign with the new one.</p>`
+      : html`<p class="small">Link your crypto wallet to unlock <b>${config.TOKEN_SYMBOL} holder perks</b> and to log in. Signing is free - no transaction, no gas.</p>
           <button type="button" class="gbtn" data-action="link">${icon('menu/wallet', '', 16)} Connect &amp; link wallet</button>`}
     <p class="small" data-status role="status"></p>
     </div></section>

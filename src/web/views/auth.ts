@@ -16,49 +16,45 @@ export function landingView(stats: { players: number; online: number; villages: 
     <div><b>${fmtNum(stats.online)}</b>online now</div>
     <div><b>${fmtNum(stats.villages)}</b>villages</div>
   </div>
-  <p class="center"><a class="gbtn green big" href="/register">Play now, it's free</a></p>
-  ${panel('Log in', loginForm(csrf, ''))}
+  ${connectPanel(csrf)}
   ${panel('How it works', html`<ul class="list howto">
     <li>${icon('res/crop', '', 18, 12)}<span class="grow">Upgrade your <b>resource fields</b> to produce wood, clay, iron and crop every hour, even while you're offline.</span></li>
     <li>${icon('menu/village', '', 18)}<span class="grow">Build up your <b>village</b>: storage, barracks, stable, walls and more.</span></li>
     <li>${icon('menu/train', '', 18)}<span class="grow"><b>Train troops</b> to defend yourself, raid your neighbours and grow your empire.</span></li>
     <li>${icon('ui/reinforce', '', 18)}<span class="grow">New players get <b>${config.PROTECTION_HOURS} hours of protection</b> to get started safely.</span></li>
-  </ul>`, { pad: false })}`;
+  </ul>`, { pad: false })}
+  <script src="${assetUrl('wallet.js')}" defer></script>`;
 }
 
-function loginForm(csrf: string, username: string): SafeHtml {
-  return html`<form method="post" action="/login" class="stack">
-    ${csrfField(csrf)}
-    <label for="u">Player name</label>
-    <input id="u" type="text" name="username" value="${username}" autocomplete="username" required maxlength="20">
-    <label for="p">Password</label>
-    <input id="p" type="password" name="password" autocomplete="current-password" required maxlength="200">
-    <div class="actions"><button type="submit" class="block">Log in</button></div>
-  </form>`;
+/** The one way in: connect any EVM wallet, sign a free message; new wallets go on to /register. */
+function connectPanel(csrf: string): SafeHtml {
+  return html`<section class="spanel connect" data-wallet data-csrf="${csrf}">
+    <h3 class="sp-head">Play with your wallet</h3>
+    <div class="pad center">
+      <button type="button" class="gbtn green big" data-action="login">${icon('menu/wallet', '', 18)} Connect wallet</button>
+      <p class="small muted">MetaMask, Rabby, Coinbase Wallet, OKX, Trust or any other EVM wallet. You only sign a message: free, no gas, no transaction.</p>
+      <div class="wpick" data-picker hidden></div>
+      <p class="small" data-status role="status"></p>
+    </div>
+  </section>`;
 }
 
-export function loginView(csrf: string, username = ''): SafeHtml {
+export function loginView(csrf: string): SafeHtml {
   return html`<h1>Log in</h1>
-  ${panel('Your account', loginForm(csrf, username))}
-  <div data-wallet data-csrf="${csrf}" class="actions">
-    <button type="button" class="secondary" data-action="login">${icon('menu/wallet', '', 16)} Log in with wallet</button>
-    <p class="small" data-status role="status"></p>
-  </div>
-  <script src="${assetUrl('wallet.js')}" defer></script>
-  <p class="center small">New here? <a href="/register">Create a free account</a></p>`;
+  ${connectPanel(csrf)}
+  <p class="center small">New here? Connecting a wallet for the first time creates your account.</p>
+  <script src="${assetUrl('wallet.js')}" defer></script>`;
 }
 
-export function registerView(csrf: string, values: { username?: string; tribe?: string } = {}): SafeHtml {
+export function registerView(csrf: string, address: string, values: { username?: string; tribe?: string } = {}): SafeHtml {
   const selected = values.tribe && (TRIBE_IDS as readonly string[]).includes(values.tribe) ? values.tribe : 'romans';
   return html`<h1>Join ${config.WORLD_NAME}</h1>
   <form method="post" action="/register" class="spanel pad stack">
     ${csrfField(csrf)}
+    <p class="walletchip">${icon('menu/wallet', '', 16)} Wallet <b title="${address}">${address.slice(0, 6)}…${address.slice(-4)}</b> <span class="muted small">signed in, choose a name and a tribe</span></p>
     <label for="u">Player name</label>
-    <input id="u" type="text" name="username" value="${values.username ?? ''}" autocomplete="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_ .\\-]{3,20}" aria-describedby="uhelp">
-    <p id="uhelp" class="muted small">3–20 letters, numbers, spaces, dots, dashes or underscores.</p>
-    <label for="p">Password</label>
-    <input id="p" type="password" name="password" autocomplete="new-password" required minlength="8" maxlength="200" aria-describedby="phelp">
-    <p id="phelp" class="muted small">At least 8 characters.</p>
+    <input id="u" type="text" name="username" value="${values.username ?? ''}" autocomplete="nickname" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_ .\\-]{3,20}" aria-describedby="uhelp">
+    <p id="uhelp" class="muted small">3 to 20 letters, numbers, spaces, dots, dashes or underscores.</p>
     <fieldset class="choices plain">
       <legend><b>Choose your tribe</b> <span class="muted small">(this cannot be changed later)</span></legend>
       ${TRIBE_IDS.map((id) => {
@@ -72,5 +68,5 @@ export function registerView(csrf: string, values: { username?: string; tribe?: 
     </fieldset>
     <div class="actions"><button type="submit" class="gbtn green big">Found my village</button></div>
   </form>
-  <p class="center small">Already playing? <a href="/login">Log in</a></p>`;
+  <p class="center small">Wrong wallet? <a href="/">Start again</a></p>`;
 }

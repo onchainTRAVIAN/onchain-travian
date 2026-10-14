@@ -1,7 +1,8 @@
-import { hash, verify } from '@node-rs/argon2';
+import { hash } from '@node-rs/argon2';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
-import { users, villages } from '../../db/schema.js';
+import { users, villages, wallets } from '../../db/schema.js';
+import { consumeSignupTicket } from '../../crypto/wallet.js';
 import { config } from '../../config.js';
 import type { PlayableTribeId } from '../rules/units.js';
 import { GameError, assertGame } from '../errors.js';
@@ -22,20 +23,29 @@ export function isReservedName(name: string): boolean {
   return RESERVED_NAMES.some((r) => n === r);
 }
 
+/**
+ * New player + capital. Real players join with a verified wallet (`wallet` + the `signupTicket` it got, used up here);
+ * `password` is only for scripts and tests that create players directly (wallet-only accounts store an unusable hash).
+ */
 export async function registerPlayer(
   db: DB,
-  input: { username: string; password: string; tribe: PlayableTribeId },
+  input: { username: string; tribe: PlayableTribeId; wallet?: string; signupTicket?: string; password?: string },
   now: number,
 ): Promise<{ userId: number; villageId: number }> {
   const usernameLower = input.username.toLowerCase();
   if (isReservedName(input.username)) throw new GameError('That name is reserved');
   const taken = db.select({ id: users.id }).from(users).where(eq(users.usernameLower, usernameLower)).get();
   if (taken) throw new GameError('That name is already taken');
-  const passwordHash = await hash(input.password, ARGON);
+  const address = input.wallet?.toLowerCase();
+  const passwordHash = input.password ? await hash(input.password, ARGON) : '!wallet';
   return db.transaction((tx) => {
     // Re-check inside the transaction: the hash above is async.
     const again = tx.select({ id: users.id }).from(users).where(eq(users.usernameLower, usernameLower)).get();
     if (again) throw new GameError('That name is already taken');
+    if (address) {
+      assertGame(!tx.select({ id: wallets.userId }).from(wallets).where(eq(wallets.address, address)).get(), 'This wallet already has an account');
+      if (input.signupTicket) consumeSignupTicket(tx, input.signupTicket, now);
+    }
     const isFirst = !tx.select({ id: users.id }).from(users).limit(1).get();
     const user = tx
       .insert(users)
@@ -62,30 +72,11 @@ export async function registerPlayer(
       isCapital: true,
       now,
     });
+    if (address) tx.insert(wallets).values({ userId: user.id, address, linkedAt: now }).run();
     ensureHero(tx, user.id, now);
     starterCredits(tx, user.id, now);
     return { userId: user.id, villageId };
   });
-}
-
-/** Constant-ish time login: always runs a verify to avoid leaking which usernames exist. */
-let dummyHash: Promise<string> | undefined;
-function getDummyHash(): Promise<string> {
-  dummyHash ??= hash('not-a-real-password', ARGON);
-  return dummyHash;
-}
-
-export async function authenticate(db: DB, username: string, password: string): Promise<UserRow | null> {
-  const user = db.select().from(users).where(eq(users.usernameLower, username.toLowerCase())).get();
-  let ok = false;
-  try {
-    ok = await verify(user?.passwordHash ?? (await getDummyHash()), password);
-  } catch {
-    ok = false;
-  }
-  if (!user || !ok) return null;
-  if (user.banned) throw new GameError('This account has been banned');
-  return user;
 }
 
 export function renameVillage(db: DB, userId: number, villageId: number, name: string): void {

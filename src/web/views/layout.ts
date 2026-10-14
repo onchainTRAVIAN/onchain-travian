@@ -150,7 +150,7 @@ function infoBox(c: Chrome): SafeHtml {
 function sideNavi(c: Chrome | null | undefined, csrf: string, nav: NavKey | undefined): SafeHtml {
   if (!c) {
     return html`<nav id="side_navi" class="sp" aria-label="Menu"><div class="sp-body">
-      ${mi('/', 'home', 'Home')}${mi('/login', 'profile', 'Login')}${mi('/register', 'plus', 'Register')}
+      ${mi('/', 'home', 'Home')}${mi('/login', 'wallet', 'Connect wallet')}
       <div class="sp-sep"></div>${mi('/stats', 'stats', 'Statistics')}${mi('/help', 'help', 'Instructions')}</div></nav>`;
   }
   const u = c.user;
@@ -239,7 +239,7 @@ export function layout(o: PageOpts): SafeHtml {
     </div>
     <nav class="flinks" aria-label="Footer"><a href="/help">Game guide</a><a href="/units">Troop guide</a><a href="/stats">Statistics</a>${c
       ? html`<a href="/simulator">Simulator</a><a href="/shop">Plus &amp; Gold</a><a href="/wallet">Wallet</a>`
-      : html`<a href="/register">Create account</a><a href="/">Log in</a>`}</nav>
+      : html`<a href="/login">Connect wallet</a>`}</nav>
     <div class="fbar">© ${new Date(o.now).getUTCFullYear()} ${config.WORLD_NAME} · ${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic speed'} · server time ${fmtClock(o.now)} UTC</div>
   </footer>
 </div>

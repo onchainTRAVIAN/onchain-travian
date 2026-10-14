@@ -1238,6 +1238,17 @@ a.gbtn { display: inline-flex; text-decoration: none; }
 .choice.tribepick { display: block; padding: 8px 10px; margin: 6px 0; border: 1px solid #e3dcc4; border-radius: 6px; background: rgba(255, 255, 255, 0.5); }
 .choice.tribepick label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .choice.tribepick ul { margin: 4px 0 0 70px; }
+.connect .pad { padding: 14px 12px 10px; }
+.connect .gbtn.big { font-size: 17px; padding: 10px 28px; }
+.connect p.small { margin: 8px auto 0; max-width: 420px; }
+.wpick { display: flex; flex-direction: column; align-items: stretch; gap: 6px; max-width: 280px; margin: 10px auto 0; text-align: left; }
+.wpick[hidden] { display: none; }
+.wpick p { margin: 0 0 2px; font-weight: bold; }
+.wopt { display: flex; align-items: center; gap: 10px; padding: 7px 10px; background: #fff; border: 1px solid #d6cfb8; border-radius: 6px; color: #3b2f16; font-weight: bold; cursor: pointer; }
+.wopt:hover, .wopt:focus-visible { border-color: #71d000; background: #f6fbea; }
+.wopt img { width: 24px; height: 24px; border-radius: 5px; }
+.wpick .secondary { align-self: center; }
+.walletchip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 4px; padding: 6px 10px; background: #f6fbea; border: 1px solid #cfe5a8; border-radius: 6px; }
 .msgbody { white-space: pre-wrap; }
 .stack label { display: block; margin: 8px 0 3px; font-weight: bold; }
 .stack input[type=text], .stack input[type=password] { width: 60%; max-width: 320px; }

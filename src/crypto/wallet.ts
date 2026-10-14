@@ -1,12 +1,14 @@
-import { and, eq, lt } from 'drizzle-orm';
+import { createHash, randomBytes } from 'node:crypto';
+import { and, eq, gte, lt } from 'drizzle-orm';
 import { getAddress, isAddress, verifyMessage } from 'viem';
 import { createSiweMessage, generateSiweNonce, parseSiweMessage, validateSiweMessage } from 'viem/siwe';
-import type { DB } from '../db/index.js';
-import { walletNonces, wallets } from '../db/schema.js';
+import type { DB, Tx } from '../db/index.js';
+import { signupTickets, walletNonces, wallets } from '../db/schema.js';
 import { config } from '../config.js';
 import { assertGame, GameError } from '../game/errors.js';
 
 const NONCE_TTL_MS = 10 * 60_000;
+export const SIGNUP_TTL_MS = 15 * 60_000;
 
 export interface SiweRequest {
   domain: string;
@@ -65,14 +67,32 @@ export function linkWallet(db: DB, userId: number, address: string, now: number)
   });
 }
 
-export function unlinkWallet(db: DB, userId: number): void {
-  db.delete(wallets).where(eq(wallets.userId, userId)).run();
-}
-
 export function walletOf(db: DB, userId: number) {
   return db.select().from(wallets).where(eq(wallets.userId, userId)).get();
 }
 
 export function userByWallet(db: DB, address: string) {
   return db.select().from(wallets).where(and(eq(wallets.address, address.toLowerCase()))).get();
+}
+
+const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex');
+
+/** A wallet that signed in but has no account yet: returns the token for the signup cookie. */
+export function createSignupTicket(db: DB, address: string, now: number): string {
+  db.delete(signupTickets).where(lt(signupTickets.expiresAt, now)).run();
+  const token = randomBytes(32).toString('base64url');
+  db.insert(signupTickets).values({ tokenHash: tokenHash(token), address: address.toLowerCase(), expiresAt: now + SIGNUP_TTL_MS }).run();
+  return token;
+}
+
+/** The address behind a still-valid signup token (not consumed). */
+export function peekSignupTicket(db: DB, token: string, now: number): string | null {
+  const row = db.select().from(signupTickets).where(and(eq(signupTickets.tokenHash, tokenHash(token)), gte(signupTickets.expiresAt, now))).get();
+  return row?.address ?? null;
+}
+
+/** Use up a signup token (inside the account-creating transaction); throws if it is gone or expired. */
+export function consumeSignupTicket(db: DB | Tx, token: string, now: number): void {
+  const res = db.delete(signupTickets).where(and(eq(signupTickets.tokenHash, tokenHash(token)), gte(signupTickets.expiresAt, now))).run();
+  assertGame(res.changes === 1, 'Your wallet sign-in expired. Connect your wallet again.');
 }

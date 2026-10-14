@@ -57,7 +57,7 @@ Classic Travian 3.6 rules, hand-painted art, phones and PC, and an onchain econo
 - Task system with rewards, a news ticker, chat, and live map movement markers.
 
 **Onchain layer (Robinhood Chain, Arbitrum Orbit L2)**
-- Sign-In with Ethereum: link a wallet or log in with it.
+- Wallet-only accounts: join and log in with any EVM wallet (Sign-In with Ethereum, EIP-6963 wallet picker). No passwords.
 - Token-holder tiers (Bronze to Diamond). A tier uses the *lowest* of your recent balance snapshots, so a short buy doesn't qualify.
 - ETH and token top-ups through the `GamePayments` contract, credited exactly once after confirmations by an indexer.
 - Gold economy on an append-only ledger: shop boosts, instant finish, Gold market and player-to-player transfers.
@@ -69,11 +69,11 @@ git clone https://github.com/onchainTRAVIAN/onchain-travian.git
 cd onchain-travian
 npm install
 cp .env.example .env        # world speed, map size, prices, crypto settings
-npm run seed                # optional demo data: log in as "demo" / "demo12345"
+npm run seed                # optional demo data: "demo" uses Anvil test wallet #0
 npm run dev                 # http://localhost:3000
 ```
 
-The first account that registers becomes the admin (`/admin`). In production, run `npm run build && npm start` with `NODE_ENV=production` and a real `SESSION_SECRET`.
+The first account that joins becomes the admin (`/admin`). In production, run `npm run build && npm start` with `NODE_ENV=production` and a real `SESSION_SECRET`.
 
 <details>
 <summary><b>Crypto on a local chain (Foundry)</b></summary>

@@ -6,7 +6,7 @@ import { clock } from '../src/clock.js';
 import { ensureWorld } from '../src/game/engine/world.js';
 import { processDue } from '../src/game/engine/events.js';
 import { catchUp, troopsAt, setTroopsAt, loadVillage } from '../src/game/engine/state.js';
-import { registerPlayer, authenticate } from '../src/game/actions/account.js';
+import { registerPlayer } from '../src/game/actions/account.js';
 import { startBuild, cancelBuild, buildOrdersOf } from '../src/game/actions/build.js';
 import { startTraining } from '../src/game/actions/train.js';
 import { sendTroops, withdrawTroops } from '../src/game/actions/troops.js';
@@ -62,12 +62,6 @@ describe('registration', () => {
   it('first player is admin, names are unique case-insensitively', async () => {
     expect(db.select().from(users).where(eq(users.id, a.userId)).get()?.role).toBe('admin');
     await expect(registerPlayer(db, { username: 'attila', password: 'password123', tribe: 'gauls' }, clock.now())).rejects.toBeInstanceOf(GameError);
-  });
-
-  it('authenticates with the right password only', async () => {
-    expect(await authenticate(db, 'ATTILA', 'password123')).not.toBeNull();
-    expect(await authenticate(db, 'Attila', 'wrong-password')).toBeNull();
-    expect(await authenticate(db, 'nobody', 'password123')).toBeNull();
   });
 });
 

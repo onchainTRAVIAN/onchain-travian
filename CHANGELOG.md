@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased - wallet accounts
+- You join and log in with a crypto wallet only: any EVM wallet (MetaMask, Rabby, Coinbase Wallet, OKX, Trust and others, also inside phone wallet apps). No more player name + password.
+- The front page has one big "Connect wallet" button. With several wallets installed you pick one from a list. You sign a free message (no gas, no transaction).
+- A new wallet goes on to a short form: player name and tribe, then your village is founded. The same wallet then logs straight in. One wallet = one account.
+- The Wallet page can change the wallet of your account (sign with the new one); it can no longer be unlinked.
+- Accounts made with a password that never linked a wallet can no longer log in.
+
 ## Unreleased - tooling (not part of the game)
 - Media for all 35 X posts that need one: 9 paintings (8 new), 23 framed screenshots and art line-ups, 3 short videos (simulator, live map, village clicks), made from a staged demo world with scripts in `scripts/social/`; posts 12, 21 and 22 reworded to match the art; post 2 is now a picture post instead of a poll.
 - X post queue `branding/social/posts.md` and the Telegram bot @onchainTRAVIAN_bot (`scripts/social/tgbot.py`, runs on the dev PC) that hands out each post with its picture on request; it keeps one connection alive and retries because the link to Telegram is flaky. It reconnects when Telegram closes that connection (it used to stop answering), and poll posts explain why they have no picture.

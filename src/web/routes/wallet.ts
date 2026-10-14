@@ -4,12 +4,12 @@ import { db } from '../../db/index.js';
 import { config } from '../../config.js';
 import { GameError } from '../../game/errors.js';
 import { creditBalance } from '../../game/actions/credits.js';
-import { prepareSiwe, verifySiwe, linkWallet, unlinkWallet, userByWallet, walletOf, type SiweRequest } from '../../crypto/wallet.js';
+import { createSignupTicket, prepareSiwe, verifySiwe, linkWallet, userByWallet, walletOf, SIGNUP_TTL_MS, type SiweRequest } from '../../crypto/wallet.js';
 import { latestSnapshots } from '../../crypto/holders.js';
 import { tierById } from '../../crypto/tiers.js';
 import { users, villages } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { authed, createSession, requireAuth, setFlash } from '../session.js';
+import { authed, clearSignupCookie, createSession, requireAuth, setFlash, setSignupCookie } from '../session.js';
 import { walletView } from '../views/wallet.js';
 import { formAction, loadGamePage, sendPage } from './helpers.js';
 
@@ -88,25 +88,21 @@ walletRouter.post('/wallet/verify', async (req, res) => {
     }
     const address = await verifySiwe(db, siweReq(req), message, signature, 'login', null, req.ctx.now);
     const w = userByWallet(db, address);
-    if (!w) throw new GameError('No account is linked to this wallet yet. Log in with your password and link it in your profile.');
+    if (!w) {
+      // A new player: the verified wallet may now create one account (name + tribe on /register).
+      setSignupCookie(res, createSignupTicket(db, address, req.ctx.now), SIGNUP_TTL_MS);
+      res.json({ ok: true, redirect: '/register' });
+      return;
+    }
     const user = db.select().from(users).where(eq(users.id, w.userId)).get();
     if (!user || user.banned) throw new GameError('This account cannot log in');
     const village = db.select({ id: villages.id }).from(villages).where(eq(villages.userId, user.id)).get();
+    clearSignupCookie(res);
     createSession(res, user.id, village?.id ?? null);
     res.json({ ok: true, redirect: '/fields' });
   } catch (err) {
     jsonError(res, err);
   }
 });
-
-walletRouter.post(
-  '/wallet/unlink',
-  requireAuth,
-  formAction(z.object({}), (req, res) => {
-    unlinkWallet(db, authed(req).user.id);
-    setFlash(res, 'ok', 'Wallet unlinked. Holder perks stop at the next check.');
-    res.redirect(303, '/wallet');
-  }, '/wallet'),
-);
 
 walletRouter.get('/shop/topup', requireAuth, (_req, res) => res.redirect(302, '/shop?tab=buy'));

@@ -1,11 +1,12 @@
 """Short screen recordings for the X posts, from the staged local world (scripts/social/stage.ts).
 
-source ~/scraping-env/bin/activate && python scripts/social/videos.py <out_dir> [03-simulator 05-livemap 19-clicks]
+source ~/scraping-env/bin/activate && DEMO_SESSION=<scratch>/demo-session.txt python scripts/social/videos.py <out_dir> [03-simulator 05-livemap 19-clicks]
 
 Records a 960x540 page at 2x (1920x1080) through the CDP screencast (a drawn cursor is injected, headless Chromium has none), then
 converts to H.264 MP4 for X with the ffmpeg from imageio-ffmpeg in ~/art-env.
 """
 import asyncio
+import os
 import base64
 import pathlib
 import shutil
@@ -36,10 +37,10 @@ addEventListener('DOMContentLoaded', () => {
 
 
 async def login(pg: Page) -> None:
-    await pg.goto(B + '/login')
-    await pg.fill('#u', 'demo')
-    await pg.fill('#p', 'demo12345')
-    await pg.press('#p', 'Enter')
+    """Accounts are wallet-only: use demo's session token written by stage.ts (path in DEMO_SESSION)."""
+    token = pathlib.Path(os.environ['DEMO_SESSION']).read_text().strip()
+    await pg.context.add_cookies([{'name': 'sid', 'value': token, 'url': B}])
+    await pg.goto(B + '/village')
     await pg.wait_for_load_state('networkidle')
 
 

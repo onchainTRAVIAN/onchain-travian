@@ -644,6 +644,14 @@ export const walletNonces = sqliteTable('wallet_nonces', {
   expiresAt: integer('expires_at').notNull(),
 });
 
+/** A verified wallet with no account yet: lets that browser create one (cookie holds the token, row its sha256). */
+export const signupTickets = sqliteTable('signup_tickets', {
+  tokenHash: text('token_hash').primaryKey(),
+  /** Lower-case 0x address. */
+  address: text('address').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});
+
 export const holderSnapshots = sqliteTable(
   'holder_snapshots',
   {

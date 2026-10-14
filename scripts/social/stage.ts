@@ -3,11 +3,14 @@
  *
  *   DATABASE_PATH=<scratch>/game.db WORLD_SPEED=100 npx tsx scripts/social/stage.ts
  *
- * Plays ~10 days of game time (7 of fighting, then artifacts and market) with the game's own actions: a developed Roman capital ("demo" /
- * "demo12345", Gold Club, hero, big army), ~60 neighbours in alliances, raids and sieges both ways
+ * Plays ~10 days of game time (7 of fighting, then artifacts and market) with the game's own actions: a developed Roman capital ("demo",
+ * Gold Club, hero, big army), ~60 neighbours in alliances, raids and sieges both ways
  * (coloured reports), weekly medals, Gold market offers, released artifacts, oasis raider and auto
  * training. Then serve it with the same env and `npm run dev` / `node dist/server.js`.
+ * Accounts are wallet-only, so demo's session token is written to demo-session.txt next to the DB (shots.py / videos.py set it as the `sid` cookie).
  */
+import { writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { clock } from '../../src/clock.js';
 import { config } from '../../src/config.js';
@@ -24,6 +27,7 @@ const { db } = await import('../../src/db/index.js');
 const { slots, users, villages, heroes, alliances, allianceDiplomacy, movements } = await import('../../src/db/schema.js');
 const { ensureWorld } = await import('../../src/game/engine/world.js');
 const { registerPlayer } = await import('../../src/game/actions/account.js');
+const { issueSession } = await import('../../src/web/session.js');
 const { refreshPopulation, setTroopsAt } = await import('../../src/game/engine/state.js');
 const { emptyUnits } = await import('../../src/game/rules/units.js');
 const { processDue } = await import('../../src/game/engine/events.js');
@@ -69,7 +73,7 @@ function rich(villageId: number) {
 }
 
 async function player(name: string, tribe: Tribe, fields: number, main: number, wall: number, army: number[]) {
-  const r = await registerPlayer(db, { username: name, password: name === 'demo' ? 'demo12345' : `${name.toLowerCase()}-pass-123`, tribe }, clock.now());
+  const r = await registerPlayer(db, { username: name, tribe }, clock.now());
   for (let s = 1; s <= 18; s++) db.update(slots).set({ level: Math.max(1, fields + ((s * 7) % 3) - 1) }).where(and(eq(slots.villageId, r.villageId), eq(slots.slot, s))).run();
   setSlot(r.villageId, 26, 'main', main);
   setSlot(r.villageId, 19, 'warehouse', Math.min(20, fields + 2));
@@ -236,4 +240,6 @@ setTroopsAt(db, ragnar.villageId, ragnar.villageId, units([900, 200, 0, 20, 0, 1
 const home = db.select({ x: villages.x, y: villages.y }).from(villages).where(eq(villages.id, V)).get()!;
 const inc = sendTroops(db, ragnar.userId, ragnar.villageId, { x: home.x, y: home.y, kind: 'attack', units: units([900, 200, 0, 0, 0, 150, 30, 10]), catapultTarget: 'warehouse' }, Date.now());
 db.update(movements).set({ arriveAt: Date.now() + 3 * HOUR + 17 * 60_000 }).where(eq(movements.id, inc.id)).run();
-console.log('Staged. Log in as demo / demo12345.');
+const sessionFile = join(dirname(config.DATABASE_PATH), 'demo-session.txt');
+writeFileSync(sessionFile, issueSession(demo.userId, V));
+console.log(`Staged. demo's session token is in ${sessionFile} (cookie "sid").`);

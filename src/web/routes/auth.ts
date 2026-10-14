@@ -1,15 +1,16 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { villages } from '../../db/schema.js';
 import { config } from '../../config.js';
-import { authenticate, registerPlayer } from '../../game/actions/account.js';
+import { registerPlayer } from '../../game/actions/account.js';
+import { peekSignupTicket } from '../../crypto/wallet.js';
 import { onlineCount, playerCount } from '../../game/queries.js';
 import { TRIBE_IDS } from '../../game/rules/units.js';
 import { GameError } from '../../game/errors.js';
-import { createSession, destroySession, setFlash } from '../session.js';
+import { clearSignupCookie, createSession, destroySession, setFlash, signupToken } from '../session.js';
 import { landingView, loginView, registerView } from '../views/auth.js';
 import { sendPage } from './helpers.js';
 
@@ -22,7 +23,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   handler: (_req, res) => {
     setFlash(res, 'error', 'Too many attempts. Please wait a few minutes.');
-    res.redirect(303, '/login');
+    res.redirect(303, '/');
   },
 });
 
@@ -45,13 +46,7 @@ const RegisterSchema = z.object({
     .max(20, 'Name must be at most 20 characters')
     .regex(/^[A-Za-z0-9_ .-]+$/, 'Name can only use letters, numbers, spaces, dots, dashes and underscores')
     .refine((s) => !/\s{2,}/.test(s), 'Name cannot contain double spaces'),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(200),
   tribe: z.enum(TRIBE_IDS, { message: 'Choose a tribe' }),
-});
-
-const LoginSchema = z.object({
-  username: z.string().trim().min(1).max(20),
-  password: z.string().min(1).max(200),
 });
 
 authRouter.get('/', (req, res) => {
@@ -75,42 +70,38 @@ authRouter.get('/login', (req, res) => {
   sendPage(req, res, 'Log in', loginView(req.ctx.csrf));
 });
 
-authRouter.post('/login', authLimiter, async (req, res) => {
-  const parsed = LoginSchema.safeParse(req.body);
-  if (!parsed.success) {
-    setFlash(res, 'error', 'Enter your player name and password.');
-    res.redirect(303, '/login');
-    return;
-  }
-  try {
-    const user = await authenticate(db, parsed.data.username, parsed.data.password);
-    if (!user) {
-      res.status(401);
-      req.ctx.flash = { type: 'error', text: 'Wrong player name or password.' };
-      sendPage(req, res, 'Log in', loginView(req.ctx.csrf, parsed.data.username), { status: 401 });
-      return;
-    }
-    createSession(res, user.id, null);
-    res.redirect(303, '/fields');
-  } catch (err) {
-    if (err instanceof GameError) {
-      setFlash(res, 'error', err.message);
-      res.redirect(303, '/login');
-      return;
-    }
-    throw err;
-  }
-});
+/** The verified wallet waiting for an account (signup cookie from /wallet/verify), or null. */
+function pendingWallet(req: Request): { token: string; address: string } | null {
+  const token = signupToken(req);
+  const address = token ? peekSignupTicket(db, token, req.ctx.now) : null;
+  return token && address ? { token, address } : null;
+}
+
+function connectFirst(res: Response): void {
+  clearSignupCookie(res);
+  setFlash(res, 'error', 'Connect your wallet first.');
+  res.redirect(303, '/');
+}
 
 authRouter.get('/register', (req, res) => {
   if (req.ctx.user) {
     res.redirect(303, '/fields');
     return;
   }
-  sendPage(req, res, 'Join', registerView(req.ctx.csrf));
+  const w = pendingWallet(req);
+  if (!w) {
+    connectFirst(res);
+    return;
+  }
+  sendPage(req, res, 'Join', registerView(req.ctx.csrf, w.address));
 });
 
 authRouter.post('/register', authLimiter, registerLimiter, async (req, res) => {
+  const w = pendingWallet(req);
+  if (!w) {
+    connectFirst(res);
+    return;
+  }
   const parsed = RegisterSchema.safeParse(req.body);
   const body = (req.body ?? {}) as Record<string, unknown>;
   const values = {
@@ -119,18 +110,19 @@ authRouter.post('/register', authLimiter, registerLimiter, async (req, res) => {
   };
   if (!parsed.success) {
     req.ctx.flash = { type: 'error', text: parsed.error.issues[0]?.message ?? 'Please check the form.' };
-    sendPage(req, res, 'Join', registerView(req.ctx.csrf, values), { status: 422 });
+    sendPage(req, res, 'Join', registerView(req.ctx.csrf, w.address, values), { status: 422 });
     return;
   }
   try {
-    const { userId, villageId } = await registerPlayer(db, parsed.data, req.ctx.now);
+    const { userId, villageId } = await registerPlayer(db, { ...parsed.data, wallet: w.address, signupTicket: w.token }, req.ctx.now);
+    clearSignupCookie(res);
     createSession(res, userId, villageId);
     setFlash(res, 'ok', `Welcome, ${parsed.data.username}! Your village has been founded. Start by upgrading your resource fields.`);
     res.redirect(303, '/fields');
   } catch (err) {
     if (err instanceof GameError) {
       req.ctx.flash = { type: 'error', text: err.message };
-      sendPage(req, res, 'Join', registerView(req.ctx.csrf, values), { status: 409 });
+      sendPage(req, res, 'Join', registerView(req.ctx.csrf, w.address, values), { status: 409 });
       return;
     }
     throw err;

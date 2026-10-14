@@ -141,6 +141,13 @@
       "when": 1791273579412,
       "tag": "0019_auto_train",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1791987188967,
+      "tag": "0020_signup_tickets",
+      "breakpoints": true
     }
   ]
 }

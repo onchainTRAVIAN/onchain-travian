@@ -6,26 +6,13 @@ import { users } from '../src/db/schema.js';
 import { grantCredits } from '../src/game/actions/credits.js';
 import { ensureWorld } from '../src/game/engine/world.js';
 import { createApp } from '../src/app.js';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { csrfFrom, walletPlayer, walletSignIn } from './walletAuth.js';
 
 const app = createApp();
 
-function csrfFrom(body: string): string {
-  const m = /name="_csrf" value="([^"]+)"/.exec(body);
-  if (!m?.[1]) throw new Error('no csrf token in page');
-  return m[1];
-}
-
-/** A logged-in browser-like agent. */
 async function newPlayer(name: string, tribe = 'gauls') {
-  const agent = request.agent(app);
-  const page = await agent.get('/register');
-  const res = await agent
-    .post('/register')
-    .type('form')
-    .send({ _csrf: csrfFrom(page.text), username: name, password: 'supersecret1', tribe });
-  expect(res.status).toBe(303);
-  expect(res.headers.location).toBe('/fields');
-  return agent;
+  return (await walletPlayer(app, name, tribe)).agent;
 }
 
 beforeAll(() => {
@@ -46,8 +33,8 @@ describe('public pages', () => {
     expect(bad.status).toBe(303);
   });
 
-  it('landing, login, register, rankings and help render', async () => {
-    for (const path of ['/', '/login', '/register', '/stats', '/help']) {
+  it('landing, login, rankings and help render', async () => {
+    for (const path of ['/', '/login', '/stats', '/help']) {
       const res = await request(app).get(path);
       expect(res.status, path).toBe(200);
       expect(res.headers['content-type']).toMatch(/html/);
@@ -85,8 +72,9 @@ describe('account flow', () => {
 
   it('validates registration input', async () => {
     const agent = request.agent(app);
+    await walletSignIn(agent, privateKeyToAccount(generatePrivateKey()));
     const page = await agent.get('/register');
-    const res = await agent.post('/register').type('form').send({ _csrf: csrfFrom(page.text), username: 'x', password: 'short', tribe: 'romans' });
+    const res = await agent.post('/register').type('form').send({ _csrf: csrfFrom(page.text), username: 'x', tribe: 'romans' });
     expect(res.status).toBe(422);
     expect(res.text).toContain('at least 3 characters');
   });
@@ -136,19 +124,70 @@ describe('account flow', () => {
     expect((await request(app).get('/help/buildings/nope')).status).toBe(404);
   });
 
-  it('logs in and out', async () => {
-    await newPlayer('Boudicca', 'romans');
+  it('logs in and out with the wallet', async () => {
+    const { account } = await walletPlayer(app, 'Boudicca', 'romans');
     const agent = request.agent(app);
-    const page = await agent.get('/login');
-    const bad = await agent.post('/login').type('form').send({ _csrf: csrfFrom(page.text), username: 'Boudicca', password: 'nope-nope' });
-    expect(bad.status).toBe(401);
-    const ok = await agent.post('/login').type('form').send({ _csrf: csrfFrom(bad.text), username: 'boudicca', password: 'supersecret1' });
-    expect(ok.status).toBe(303);
+    const v = await walletSignIn(agent, account);
+    expect(v.body).toEqual({ ok: true, redirect: '/fields' });
     const fields = await agent.get('/fields');
     expect(fields.status).toBe(200);
+    expect(fields.text).toContain('Boudicca');
     const out = await agent.post('/logout').type('form').send({ _csrf: csrfFrom(fields.text) });
     expect(out.status).toBe(303);
     expect((await agent.get('/fields')).status).toBe(303);
+  });
+});
+
+describe('wallet-only accounts', () => {
+  it('has no password login or unlink any more', async () => {
+    const agent = request.agent(app);
+    const page = await agent.get('/login');
+    expect(page.text).toContain('data-action="login"');
+    expect(page.text).not.toContain('type="password"');
+    expect((await agent.post('/login').type('form').send({ _csrf: csrfFrom(page.text), username: 'Boudicca', password: 'supersecret1' })).status).toBe(404);
+    const { agent: p } = await walletPlayer(app, 'Unlinker');
+    const w = await p.get('/wallet');
+    expect(w.text).toContain('Change wallet');
+    expect(w.text).not.toContain('/wallet/unlink');
+    expect((await p.post('/wallet/unlink').type('form').send({ _csrf: csrfFrom(w.text) })).status).toBe(404);
+  });
+
+  it('the front page is a connect-wallet button', async () => {
+    const res = await request(app).get('/');
+    expect(res.text).toContain('Connect wallet');
+    expect(res.text).toContain('data-wallet');
+    expect(res.text).not.toContain('type="password"');
+  });
+
+  it('/register needs a signed-in wallet first', async () => {
+    const agent = request.agent(app);
+    const page = await agent.get('/register');
+    expect(page.status).toBe(303);
+    expect(page.headers.location).toBe('/');
+    const login = await agent.get('/login');
+    const post = await agent.post('/register').type('form').send({ _csrf: csrfFrom(login.text), username: 'Sneaky', tribe: 'romans' });
+    expect(post.status).toBe(303);
+    expect(post.headers.location).toBe('/');
+    expect((await request(app).get('/stats')).text).not.toContain('Sneaky');
+  });
+
+  it('a signup works once, keeps the wallet on a taken name, and one wallet = one account', async () => {
+    await walletPlayer(app, 'Taken');
+    const account = privateKeyToAccount(generatePrivateKey());
+    const agent = request.agent(app);
+    expect((await walletSignIn(agent, account)).body.redirect).toBe('/register');
+    const page = await agent.get('/register');
+    expect(page.text).toContain(account.address.toLowerCase().slice(0, 6));
+    const taken = await agent.post('/register').type('form').send({ _csrf: csrfFrom(page.text), username: 'taken', tribe: 'romans' });
+    expect(taken.status).toBe(409);
+    const ok = await agent.post('/register').type('form').send({ _csrf: csrfFrom(page.text), username: 'Fresh Name', tribe: 'teutons' });
+    expect(ok.headers.location).toBe('/fields');
+    // the same wallet now logs straight in, never makes a second account
+    const other = request.agent(app);
+    expect((await walletSignIn(other, account)).body.redirect).toBe('/fields');
+    expect((await other.get('/register')).headers.location).toBe('/fields');
+    const row = db.select().from(users).where(eq(users.usernameLower, 'fresh name')).get()!;
+    expect(row.passwordHash).toBe('!wallet');
   });
 });
 

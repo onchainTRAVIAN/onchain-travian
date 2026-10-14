@@ -1,11 +1,13 @@
 """Raw screenshots for the X posts, taken from a staged local world (scripts/social/stage.ts).
 
-source ~/scraping-env/bin/activate && python scripts/social/shots.py <out_dir> [name ...]
+source ~/scraping-env/bin/activate && DEMO_SESSION=<scratch>/demo-session.txt python scripts/social/shots.py <out_dir> [name ...]
 
-Expects the staged server on http://localhost:8099 (demo / demo12345). Writes <name>.png at 2x;
+Expects the staged server on http://localhost:8099 (logs in as demo with the session token stage.ts wrote). Writes <name>.png at 2x;
 scripts/social/frame.py turns them into the 1600x900 post images.
 """
 import asyncio
+import os
+import pathlib
 import sys
 
 from playwright.async_api import Page, async_playwright
@@ -16,10 +18,10 @@ ONLY = set(sys.argv[2:])
 
 
 async def login(pg: Page) -> None:
-    await pg.goto(B + '/login')
-    await pg.fill('#u', 'demo')
-    await pg.fill('#p', 'demo12345')
-    await pg.press('#p', 'Enter')
+    """Accounts are wallet-only: use demo's session token written by stage.ts (path in DEMO_SESSION)."""
+    token = pathlib.Path(os.environ['DEMO_SESSION']).read_text().strip()
+    await pg.context.add_cookies([{'name': 'sid', 'value': token, 'url': B}])
+    await pg.goto(B + '/village')
     await pg.wait_for_load_state('networkidle')
 
 
