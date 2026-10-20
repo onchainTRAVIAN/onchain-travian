@@ -1,6 +1,6 @@
 """Twitter/X images (JPG, no transparency): profile picture + header banner.
 
-python scripts/art/brand/social.py   (scraping venv: playwright; needs branding/coin-1024.png, wordmark.svg)\nPainted banner variants use ~/art-raw/logo/banner-*.png (gen_logo.banners).
+python scripts/art/brand/social.py   (scraping venv: playwright; needs branding/coin-1024.png, wordmark.svg)\nPainted banner variants use branding/raw/logo/banner-*.png (gen_logo.banners).
 """
 import asyncio
 import pathlib
@@ -46,7 +46,7 @@ def banner(bg: pathlib.Path | None = None, coin: bool = True, text: bool = True)
 </div></div>'''
 
 
-RAW = pathlib.Path.home() / 'art-raw' / 'logo'
+RAW = pathlib.Path(__file__).resolve().parents[3] / 'branding' / 'raw' / 'logo'
 
 
 async def main():

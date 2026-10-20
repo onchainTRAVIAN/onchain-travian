@@ -1,4 +1,4 @@
-"""Site header background from the painted map banner (kie.ai, ~/art-raw/logo/banner-map.png).
+"""Site header background from the painted map banner (kie.ai, branding/raw/logo/banner-map.png).
 
 ~/art-env/bin/python scripts/art/brand/header.py [top_y]
 Writes src/web/public/img/ui/header-scene.webp (1960x200 = 2x the 980x100 header).
@@ -9,7 +9,7 @@ import sys
 from PIL import Image, ImageDraw
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-SRC = pathlib.Path.home() / 'art-raw' / 'logo' / 'banner-map.png'
+SRC = pathlib.Path(__file__).resolve().parents[3] / 'branding' / 'raw' / 'logo' / 'banner-map.png'
 OUT = ROOT / 'src/web/public/img/ui/header-scene.webp'
 W, H = 1960, 200
 TOP = float(sys.argv[1]) if len(sys.argv) > 1 else 0.35  # band position (share of the free height)

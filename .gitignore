@@ -8,3 +8,4 @@ data/
 .claude-env-max/
 __pycache__/
 *.pyc
+branding/raw/
