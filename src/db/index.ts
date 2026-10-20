@@ -17,6 +17,8 @@ function open(path: string) {
   sqlite.pragma('synchronous = NORMAL');
   sqlite.pragma('foreign_keys = ON');
   sqlite.pragma('busy_timeout = 5000');
+  // Truncate the WAL back to 64 MB after checkpoints (it otherwise keeps its largest size on disk).
+  sqlite.pragma('journal_size_limit = 67108864');
   const db = drizzle(sqlite, { schema });
   migrate(db, { migrationsFolder: MIGRATIONS_DIR });
   return { sqlite, db };

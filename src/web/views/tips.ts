@@ -94,6 +94,7 @@ export const TIPS = {
   statRobber: 'Resources this player stole in raids and attacks.',
   // reports
   bounty: 'Resources the attackers carried home.',
+  reportsKeep: `Reports older than ${config.REPORT_DAYS} days are deleted automatically, and only your newest ${config.REPORT_CAP.toLocaleString('en-US')} are kept.`,
   loyalty: 'Village loyalty. Chiefs lower it; at 0 the village is conquered. It slowly comes back on its own.',
   cranny: `A cranny hides ${pc(CRANNY_PERCENT_PER_LEVEL)} of storage per level (max ${pc(CRANNY_MAX_SHARE)}, Gauls twice as much up to that cap). Raiders cannot take hidden resources.`,
   // map

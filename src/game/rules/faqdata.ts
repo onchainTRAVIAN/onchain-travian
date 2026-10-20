@@ -2505,6 +2505,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
     summary: 'In Reports and Messages, tick rows (or the box at the top to select all), then Delete selected or Mark selected as read. Reports also have Delete all per tab.',
     body: [
       { p: '"Delete all" in Reports deletes only the reports of the open tab, and asks first.' },
+      { p: `Reports older than ${config.REPORT_DAYS} days are deleted automatically, and only your newest ${config.REPORT_CAP.toLocaleString('en-US')} reports are kept.` },
       { p: 'Deleting a message removes it only from your own box.' },
     ],
     related: ['reports', 'messages'],

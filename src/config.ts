@@ -16,6 +16,9 @@ const EnvSchema = z.object({
   ARTIFACT_DAY: z.coerce.number().min(0).max(1000).default(0),
   WONDER_DAY: z.coerce.number().min(0).max(1000).default(0),
   PROTECTION_HOURS: z.coerce.number().min(0).max(24 * 30).default(24),
+  /** Reports are deleted after this many days, and only a player's newest REPORT_CAP are kept. */
+  REPORT_DAYS: z.coerce.number().positive().max(365).default(14),
+  REPORT_CAP: z.coerce.number().int().min(50).max(100_000).default(1000),
 
   // Premium / news ticker
   TICKER_PRICE_PER_HOUR: z.coerce.number().int().min(0).default(20),

@@ -92,7 +92,7 @@ export function reportListView(d: {
     <button type="submit" name="act" value="deleteall" class="gbtn secondary" data-confirm="Delete all ${d.filter === 'all' ? '' : 'these '}reports? This can't be undone.">Delete all${d.filter === 'all' ? '' : ' in this tab'}</button></div>`;
   const selRow = (id: string) => html`<div class="rsel"><label><input type="checkbox" id="${id}" data-checkall> Select all</label>
     <span class="rselact"><button type="submit" name="act" value="read" class="small secondary">Mark as read</button> <button type="submit" name="act" value="delete" class="small secondary">Delete</button></span></div>`;
-  return html`<h1>Reports</h1>
+  return html`<h1>Reports ${help('reportsKeep')}</h1>
     <nav class="woodtabs" aria-label="Report folders">${FILTERS.map(
       (f) => html`<a href="${q({ f: f.key })}" class="${f.key === d.filter ? 'on' : ''}"${f.key === d.filter ? html` aria-current="page"` : ''}>${f.label}</a>`,
     )}</nav>

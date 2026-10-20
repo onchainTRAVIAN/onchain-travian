@@ -10,6 +10,7 @@ import { backfillReportOutcomes, backfillReportPlaces } from './game/engine/repo
 import { processFarmLists, processTradeRoutes } from './game/actions/goldclub.js';
 import { processOasisRaiders } from './game/actions/raider.js';
 import { processAutoTrains } from './game/actions/autotrain.js';
+import { processHousekeeping, diskSpace } from './game/engine/housekeeping.js';
 import { createApp } from './app.js';
 import { startCryptoWorkers } from './crypto/worker.js';
 
@@ -67,12 +68,19 @@ const worker = setInterval(() => {
   } catch (err) {
     console.error('Gold Club automation failed:', err);
   }
+  try {
+    // Every 10 minutes: delete old reports and expired sessions, warn when the disk is nearly full.
+    processHousekeeping(db, clock.now());
+  } catch (err) {
+    console.error('Housekeeping failed:', err);
+  }
 }, 1000);
 
 const stopCrypto = startCryptoWorkers(db);
 
 const server = createApp().listen(config.PORT, () => {
-  console.log(`${config.WORLD_NAME} running on http://localhost:${config.PORT} (speed x${config.WORLD_SPEED})`);
+  const disk = diskSpace();
+  console.log(`${config.WORLD_NAME} running on http://localhost:${config.PORT} (speed x${config.WORLD_SPEED})${disk ? `, disk ${disk.freeMb} MB free of ${disk.totalMb} MB` : ''}`);
 });
 
 function shutdown() {
