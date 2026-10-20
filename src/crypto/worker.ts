@@ -4,6 +4,7 @@ import { clock } from '../clock.js';
 import { getMeta, setMeta } from '../game/engine/world.js';
 import { publicClient } from './chain.js';
 import { indexDeposits } from './indexer.js';
+import { entryFeeOn, feeLabel, indexEntries } from './entry.js';
 import { fetchEthUsd, setEthUsd } from './pricing.js';
 import { applyTiers, takeSnapshot } from './holders.js';
 
@@ -43,6 +44,25 @@ export function startCryptoWorkers(db: DB): () => void {
     timers.push(setInterval(() => void runIndexer(), config.INDEXER_INTERVAL_SECONDS * 1000));
     void runIndexer();
     console.log(`Deposit indexer on: ${config.PAYMENTS_ADDRESS} (chain ${config.CHAIN_ID})`);
+  }
+
+  if (entryFeeOn()) {
+    let reading = false;
+    const runEntries = async () => {
+      if (reading) return;
+      reading = true;
+      try {
+        const r = await indexEntries(db, publicClient(), clock.now());
+        if (r && r.found > 0) console.log(`Entry fees: ${r.found} payment(s) (blocks ${r.from}-${r.to})`);
+      } catch (err) {
+        console.error('Entry fee reader failed:', err instanceof Error ? err.message : err);
+      } finally {
+        reading = false;
+      }
+    };
+    timers.push(setInterval(() => void runEntries(), config.INDEXER_INTERVAL_SECONDS * 1000));
+    void runEntries();
+    console.log(`Entry fee on: ${feeLabel()} in ETH to ${config.ENTRY_ADDRESS} (chain ${config.CHAIN_ID})${config.ENTRY_START_BLOCK ? '' : ' - set ENTRY_START_BLOCK to the deploy block'}`);
   }
 
   if (holderTiersEnabled()) {

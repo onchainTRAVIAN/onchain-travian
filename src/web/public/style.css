@@ -1250,6 +1250,7 @@ a.gbtn { display: inline-flex; text-decoration: none; }
 a.wopt { text-decoration: none; }
 .wpick .secondary { align-self: center; }
 .walletchip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 4px; padding: 6px 10px; background: #f6fbea; border: 1px solid #cfe5a8; border-radius: 6px; }
+.entryamt b { font-size: 18px; }
 .msgbody { white-space: pre-wrap; }
 .stack label { display: block; margin: 8px 0 3px; font-weight: bold; }
 .stack input[type=text], .stack input[type=password] { width: 60%; max-width: 320px; }

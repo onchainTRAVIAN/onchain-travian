@@ -681,6 +681,25 @@ export const deposits = sqliteTable(
   (t) => [index('deposits_user_idx').on(t.userId)],
 );
 
+/** Entry fees paid to the GameEntry contract (one row per log); a new account uses up its wallet's rows. */
+export const entryPayments = sqliteTable(
+  'entry_payments',
+  {
+    id: text('id').primaryKey(), // txHash:logIndex
+    /** Lower-case 0x address that paid (the account's wallet). */
+    payer: text('payer').notNull(),
+    /** Wei, as a decimal string. */
+    amount: text('amount').notNull(),
+    /** Dollar value at the ETH price when the server saw the payment. */
+    usdCents: integer('usd_cents').notNull(),
+    blockNumber: integer('block_number').notNull(),
+    /** The account it paid for; null = not used yet. */
+    userId: integer('user_id'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('entry_payments_payer_idx').on(t.payer)],
+);
+
 /** Town Hall celebrations (one at a time per village). */
 export const celebrations = sqliteTable(
   'celebrations',

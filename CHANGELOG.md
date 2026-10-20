@@ -10,6 +10,7 @@
 - Link previews on X, Telegram and Discord: page description, title and the painted banner (needs `PUBLIC_URL`). `robots.txt` and a small sitemap.
 - Database snapshots every 6 hours (gzipped, newest 8 kept next to the database in `backups/`); `scripts/ops/pull-backup.sh` downloads the newest one. The admin page shows database size, free disk and the snapshots; the log warns when the disk is nearly full.
 - The health check also checks the database. Sign-in and sign-up limits count per real player IP (Railway's X-Real-IP), also behind Cloudflare.
+- Entry fee: a new account pays a one-time $1 in ETH (`ENTRY_FEE_USD`) to the new `GameEntry` contract from the wallet it signs in with, before choosing a name and tribe. It keeps bots and multi-accounts out. The ETH goes straight to the treasury; the server checks the dollar value at the live ETH price (5% leeway, top-ups add up), and a payment is never lost if the page is closed: a background reader finds it. If the wallet doesn't know the network yet, the game offers to add it (`WALLET_RPC_URL`, `EXPLORER_URL`). Admin wallets don't pay. Off until `ENTRY_ADDRESS` is set. The admin page shows the fees received.
 
 ## Unreleased - wallet accounts
 - You join and log in with a crypto wallet only: any EVM wallet (MetaMask, Rabby, Coinbase Wallet, OKX, Trust and others, also inside phone wallet apps). No more player name + password.

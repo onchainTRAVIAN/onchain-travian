@@ -1,5 +1,5 @@
 /**
- * Local blockchain helper: deploys the test token and GamePayments to a running anvil node
+ * Local blockchain helper: deploys the test token, GamePayments and GameEntry to a running anvil node
  * and prints the .env lines to use. Usage: `anvil --block-time 2` in one terminal, then `npm run chain:deploy`.
  * Needs `forge build` in contracts/ first (for the bytecode).
  */
@@ -9,6 +9,7 @@ import { createPublicClient, createWalletClient, http, parseEther, type Address,
 import { mnemonicToAccount } from 'viem/accounts';
 import { foundry } from 'viem/chains';
 import { gamePaymentsAbi } from '../src/crypto/gamePayments.js';
+import { gameEntryAbi } from '../src/crypto/gameEntry.js';
 import { testTokenAbi } from '../src/crypto/testToken.js';
 
 const RPC = process.env.RPC_URL || 'http://127.0.0.1:8545';
@@ -32,6 +33,9 @@ const payments = (
   await pub.waitForTransactionReceipt({ hash: await wallet.deployContract({ abi: gamePaymentsAbi, bytecode: bytecode('GamePayments'), args: [token, treasury] }) })
 ).contractAddress as Address;
 
+const entryReceipt = await pub.waitForTransactionReceipt({ hash: await wallet.deployContract({ abi: gameEntryAbi, bytecode: bytecode('GameEntry'), args: [treasury] }) });
+const entry = entryReceipt.contractAddress as Address;
+
 // Give the first five dev accounts some tokens to play with.
 for (let i = 0; i < 5; i++) {
   const to = mnemonicToAccount(MNEMONIC, { addressIndex: i }).address;
@@ -44,5 +48,7 @@ CHAIN_NAME=Local Anvil
 RPC_URL=${RPC}
 PAYMENTS_ADDRESS=${payments}
 TOKEN_ADDRESS=${token}
+ENTRY_ADDRESS=${entry}
+ENTRY_START_BLOCK=${entryReceipt.blockNumber}
 CONFIRMATIONS=1   # with anvil --block-time 2 this confirms in ~2s
 INDEXER_INTERVAL_SECONDS=3`);

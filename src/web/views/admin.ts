@@ -4,7 +4,7 @@ import { html, type SafeHtml } from '../html.js';
 import { csrfField } from './layout.js';
 
 export function adminView(d: {
-  stats: { players: number; online: number; villages: number; creditsIssued: number; deposits: number; indexerBlock: string };
+  stats: { players: number; online: number; villages: number; creditsIssued: number; deposits: number; indexerBlock: string; entry: { accounts: number; usd: number } | null };
   announcement: string;
   endgame: { artifacts: number | null; wonders: number | null };
   players: { id: number; username: string; role: string; banned: boolean; mutedUntil: number; lastSeenAt: number; credits: number; villages: number }[];
@@ -22,6 +22,7 @@ export function adminView(d: {
       <div><b>${fmtNum(d.stats.creditsIssued)}</b>Gold issued</div>
       <div><b>${fmtNum(d.stats.deposits)}</b>deposits</div>
       <div><b>${d.stats.indexerBlock}</b>indexer block</div>
+      ${d.stats.entry ? html`<div><b>$${d.stats.entry.usd.toFixed(2)}</b>entry fees (${fmtNum(d.stats.entry.accounts)} accounts)</div>` : ''}
     </div>
     ${panel('Server', html`<p class="small">Database ${fmtNum(d.server.dbMb)} MB${d.server.disk
       ? html` · disk <b class="${d.server.disk.freeMb < d.server.disk.totalMb * 0.15 ? 'bad' : ''}">${fmtNum(d.server.disk.freeMb)} MB free</b> of ${fmtNum(d.server.disk.totalMb)} MB`

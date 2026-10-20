@@ -148,6 +148,13 @@
       "when": 1791987188967,
       "tag": "0020_signup_tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1792514073563,
+      "tag": "0021_entry_payments",
+      "breakpoints": true
     }
   ]
 }

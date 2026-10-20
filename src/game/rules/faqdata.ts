@@ -1,4 +1,5 @@
 import { config } from '../../config.js';
+import { entryFeeOn, feeLabel } from '../../crypto/entry.js';
 import type { FaqTopic } from './faq.js';
 
 /*
@@ -2433,11 +2434,14 @@ export const FAQ_TOPICS: FaqTopic[] = [
     id: 'wallet',
     category: 'account',
     title: 'Your wallet is your account',
-    keywords: ['wallet', 'metamask', 'rabby', 'link wallet', 'crypto', 'ethereum', 'siwe', 'wallet login', 'web3', 'login', 'log in', 'register', 'sign up', 'join', 'password'],
+    keywords: ['wallet', 'metamask', 'rabby', 'link wallet', 'crypto', 'ethereum', 'siwe', 'wallet login', 'web3', 'login', 'log in', 'register', 'sign up', 'join', 'password', 'entry fee', 'account fee', 'pay to join', 'bots'],
     summary: 'You join and log in with any EVM wallet (MetaMask, Rabby, Coinbase Wallet, OKX, Trust and others) by signing a message. There is no password.',
     body: [
       { p: 'Press **Connect wallet** on the front page and sign the message. Signing proves you own the wallet. It does not cost gas and does not send anything.' },
       { p: 'The first time, you then pick a player name and a tribe and your village is founded. After that the same wallet logs you straight in.' },
+      ...(entryFeeOn()
+        ? [{ p: `A new account costs a one-time **${feeLabel()} entry fee**, paid in ETH on ${config.CHAIN_NAME} from the wallet you play with. A bot farm would have to pay it for every account, so the map stays full of real players. Logging in is always free.` }]
+        : []),
       { p: 'One wallet holds one account. With several wallets installed the game asks which one to use. On a phone, open the game in your wallet app\'s browser.' },
       { p: 'The wallet is also used for holder tiers and Gold purchases.' },
       { p: 'A wallet cannot be removed, only replaced: **Change wallet** on the Wallet page moves the account to another wallet you sign with.' },

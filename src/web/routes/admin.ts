@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { dbSizeMb, diskSpace, listBackups } from '../../db/backup.js';
 import { config } from '../../config.js';
+import { entryFeeOn, entryTotals } from '../../crypto/entry.js';
 import { creditsLedger, deposits, sessions, users, villages } from '../../db/schema.js';
 import { deleteChatMessage } from '../../game/actions/chat.js';
 import { grantCredits, removeTicker, upcomingTicker } from '../../game/actions/credits.js';
@@ -54,6 +55,7 @@ adminRouter.get('/admin', (req, res) => {
         creditsIssued: db.select({ n: sql<number>`coalesce(sum(${creditsLedger.amount}), 0)` }).from(creditsLedger).where(sql`${creditsLedger.amount} > 0`).get()?.n ?? 0,
         deposits: db.select({ n: sql<number>`count(*)` }).from(deposits).get()?.n ?? 0,
         indexerBlock: getMeta(db, 'indexer_block') ?? '-',
+        entry: entryFeeOn() ? entryTotals(db) : null,
       },
       announcement: getMeta(db, 'announcement') ?? '',
       endgame: { artifacts: Number(getMeta(db, 'artifacts_released_at') ?? 0) || null, wonders: Number(getMeta(db, 'wonders_released_at') ?? 0) || null },

@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
 import { users, villages, wallets } from '../../db/schema.js';
 import { consumeSignupTicket } from '../../crypto/wallet.js';
+import { useEntry } from '../../crypto/entry.js';
 import { config } from '../../config.js';
 import type { PlayableTribeId } from '../rules/units.js';
 import { GameError, assertGame } from '../errors.js';
@@ -76,6 +77,8 @@ export async function registerPlayer(
       now,
     });
     if (address) tx.insert(wallets).values({ userId: user.id, address, linkedAt: now }).run();
+    // The wallet's entry fee pays for this account (when the world charges one).
+    if (address) useEntry(tx, address, user.id);
     ensureHero(tx, user.id, now);
     starterCredits(tx, user.id, now);
     return { userId: user.id, villageId };

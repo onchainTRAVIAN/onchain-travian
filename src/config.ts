@@ -57,6 +57,17 @@ const EnvSchema = z.object({
   CREDITS_PER_TOKEN: z.coerce.number().positive().default(1),
   /** Extra credits when paying with the game token (0.2 = +20%). */
   TOKEN_BONUS: z.coerce.number().min(0).max(5).default(0.2),
+  /**
+   * One-time entry fee for a new account, in US dollars, paid in ETH to the GameEntry contract at ENTRY_ADDRESS
+   * (keeps bots and multi-accounts out). On only when ENTRY_ADDRESS and RPC_URL are set; 0 = free. ADMIN_WALLETS never pay.
+   */
+  ENTRY_FEE_USD: z.coerce.number().min(0).max(1000).default(1),
+  ENTRY_ADDRESS: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional().or(z.literal('').transform(() => undefined)),
+  /** Block GameEntry was deployed in: entry payments are read from here on. */
+  ENTRY_START_BLOCK: z.coerce.number().int().min(0).default(0),
+  /** Public RPC and block explorer handed to players' wallets (to add the network). Never a keyed RPC_URL. */
+  WALLET_RPC_URL: z.url({ protocol: /^https?$/ }).optional().or(z.literal('').transform(() => undefined)),
+  EXPLORER_URL: z.url({ protocol: /^https?$/ }).optional().or(z.literal('').transform(() => undefined)),
   CONFIRMATIONS: z.coerce.number().int().min(0).max(100).default(2),
   INDEXER_START_BLOCK: z.coerce.number().int().min(0).default(0),
   INDEXER_INTERVAL_SECONDS: z.coerce.number().int().min(2).default(15),

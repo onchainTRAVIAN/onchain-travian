@@ -101,6 +101,8 @@ export const TIPS = {
   oasis: `Oases give a production bonus. To take one: Hero's Mansion level 10, your hero in the attack, oasis within ${OASIS_RANGE} fields.`,
   animals: 'Wild animals guard free oases and grow back over time. Beat them to raid the oasis.',
   beginnerProtection: `New players are protected for ${config.PROTECTION_HOURS} hours. They cannot be attacked, and attacking someone ends the protection.`,
+  // account
+  entryFee: 'Paid once per new account, in ETH, straight to the game. A bot farm would have to pay it for every account, so the map stays full of real players. Logging in later is free.',
   // alliance
   allianceCapacity: `Members the alliance can have: ${MEMBERS_PER_EMBASSY_LEVEL} per level of the leader's best Embassy.`,
 } as const;

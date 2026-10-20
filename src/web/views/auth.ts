@@ -5,6 +5,10 @@ import { TRIBES, TRIBE_IDS } from '../../game/rules/units.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
 import { csrfField, icon } from './layout.js';
+import { help } from './tips.js';
+import { entryFeeOn, feeLabel } from '../../crypto/entry.js';
+
+const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 export function landingView(stats: { players: number; online: number; villages: number }, csrf: string): SafeHtml {
   return html`<div class="hero">
@@ -32,7 +36,9 @@ function connectPanel(csrf: string): SafeHtml {
     <h3 class="sp-head">Play with your wallet</h3>
     <div class="pad center">
       <button type="button" class="gbtn green big" data-action="login">${icon('menu/wallet', '', 18)} Connect wallet</button>
-      <p class="small muted">MetaMask, Rabby, Coinbase Wallet, OKX, Trust or any other EVM wallet. You only sign a message: free, no gas, no transaction.</p>
+      <p class="small muted">MetaMask, Rabby, Coinbase Wallet, OKX, Trust or any other EVM wallet. ${entryFeeOn()
+        ? `Logging in is free: you only sign a message. A new account costs a one-time ${feeLabel()} entry fee in ETH.`
+        : 'You only sign a message: free, no gas, no transaction.'}</p>
       <div class="wpick" data-picker hidden></div>
       <p class="small" data-status role="status"></p>
     </div>
@@ -46,12 +52,39 @@ export function loginView(csrf: string): SafeHtml {
   <script src="${assetUrl('wallet.js')}" defer></script>`;
 }
 
-export function registerView(csrf: string, address: string, values: { username?: string; tribe?: string } = {}): SafeHtml {
+/** Step 1 of joining while the world charges an entry fee: pay it from the signed-in wallet (wallet.js, then /register/paid). */
+export function entryView(
+  csrf: string,
+  address: string,
+  fee: { paidCents: number; dueUsd: number },
+  q: { to: string; wei: bigint; eth: string; data: string; ethUsd: number },
+): SafeHtml {
+  return html`<h1>Join ${config.WORLD_NAME}</h1>
+  <section class="spanel connect" data-wallet data-csrf="${csrf}" data-chain="${config.CHAIN_ID}" data-chain-name="${config.CHAIN_NAME}"
+    data-chain-rpc="${config.WALLET_RPC_URL ?? ''}" data-explorer="${config.EXPLORER_URL ?? ''}" data-address="${address}"
+    data-entry-to="${q.to}" data-entry-wei="${q.wei.toString()}" data-entry-data="${q.data}">
+    <h3 class="sp-head">Step 1 of 2: entry fee ${help('entryFee')}</h3>
+    <div class="pad stack">
+      <p class="walletchip">${icon('menu/wallet', '', 16)} Wallet <b title="${address}">${shortAddr(address)}</b> <span class="muted small">signed in</span></p>
+      <p>A new account costs <b>${feeLabel()}</b>, paid once in ETH on <b>${config.CHAIN_NAME}</b>. It keeps bots and multi-accounts off the map, so every village belongs to a real player.</p>
+      ${fee.paidCents > 0 ? html`<p class="warn small">This wallet has paid $${(fee.paidCents / 100).toFixed(2)} so far. Send the rest to finish.</p>` : ''}
+      <p class="center entryamt"><b>${q.eth} ETH</b><br><span class="muted small">about ${feeLabel(fee.dueUsd)} at $${fmtNum(Math.round(q.ethUsd))} per ETH, plus a small network fee</span></p>
+      <div class="center"><button type="button" class="gbtn green big" data-action="entry">${icon('menu/wallet', '', 18)} Pay ${feeLabel(fee.dueUsd)} and continue</button></div>
+      <div class="wpick" data-picker hidden></div>
+      <p class="small center" data-status role="status"></p>
+      <p class="small muted center">Already paid? <a href="/register">Check again</a>. The payment belongs to this wallet, so it is never lost.</p>
+    </div>
+  </section>
+  <p class="center small">Wrong wallet? <a href="/">Start again</a></p>
+  <script src="${assetUrl('wallet.js')}" defer></script>`;
+}
+
+export function registerView(csrf: string, address: string, values: { username?: string; tribe?: string } = {}, feePaid = false): SafeHtml {
   const selected = values.tribe && (TRIBE_IDS as readonly string[]).includes(values.tribe) ? values.tribe : 'romans';
   return html`<h1>Join ${config.WORLD_NAME}</h1>
   <form method="post" action="/register" class="spanel pad stack">
     ${csrfField(csrf)}
-    <p class="walletchip">${icon('menu/wallet', '', 16)} Wallet <b title="${address}">${address.slice(0, 6)}…${address.slice(-4)}</b> <span class="muted small">signed in, choose a name and a tribe</span></p>
+    <p class="walletchip">${icon('menu/wallet', '', 16)} Wallet <b title="${address}">${shortAddr(address)}</b> <span class="muted small">${feePaid ? 'signed in, entry fee paid - step 2 of 2: choose a name and a tribe' : 'signed in, choose a name and a tribe'}</span></p>
     <label for="u">Player name</label>
     <input id="u" type="text" name="username" value="${values.username ?? ''}" autocomplete="nickname" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_ .\\-]{3,20}" aria-describedby="uhelp">
     <p id="uhelp" class="muted small">3 to 20 letters, numbers, spaces, dots, dashes or underscores.</p>

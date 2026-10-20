@@ -1,4 +1,4 @@
-# contracts — GamePayments
+# contracts — GamePayments + GameEntry
 
 Stateless payment router for the game. Players deposit **ETH** or the game **ERC20** against an
 off-chain `accountId`; funds go straight to `treasury` in the same tx and a `Deposit` event is
@@ -11,13 +11,15 @@ No external dependencies (no forge-std, no OpenZeppelin) — builds offline once
 | Path | What |
 |---|---|
 | `src/GamePayments.sol` | Main contract (interface is consumed by the indexer — do not rename) |
+| `src/GameEntry.sol` | One-time ETH entry fee for new accounts (no token needed; interface read by the server) |
 | `src/SafeTransferLib.sol` | Minimal SafeERC20-style `safeTransferFrom` (handles no-return tokens) |
 | `src/TestToken.sol` | **Local/test only** mintable ERC20 "Realm Token" (REALM, 18 dec), public `mint` |
-| `test/GamePayments.t.sol` | Unit + fuzz tests |
+| `test/GamePayments.t.sol`, `test/GameEntry.t.sol` | Unit + fuzz tests |
 | `test/utils/` | Tiny cheatcode / Test / console shims (replaces forge-std) |
 | `script/Deploy.s.sol` | Deploy GamePayments with `TOKEN_ADDRESS` + `TREASURY_ADDRESS` |
-| `script/DeployLocal.s.sol` | Deploy TestToken + GamePayments, mint 1,000,000 REALM to deployer |
-| `abi/*.ts` | Generated `as const` ABIs (`gamePaymentsAbi`, `testTokenAbi`) |
+| `script/DeployEntry.s.sol` | Deploy GameEntry with `TREASURY_ADDRESS` |
+| `script/DeployLocal.s.sol` | Deploy TestToken + GamePayments + GameEntry, mint 1,000,000 REALM to deployer |
+| `abi/*.ts` | Generated `as const` ABIs (`gamePaymentsAbi`, `testTokenAbi`, `gameEntryAbi`) |
 
 ## Interface (indexer contract)
 
@@ -40,6 +42,31 @@ function depositToken(uint256 accountId, uint256 amount) external; // approve Ga
 Reverts (custom errors): `ZeroAddress`, `ZeroAmount`, `ZeroAccountId`, `EthTransferFailed`,
 `DirectEthNotAccepted` (plain ETH sends / unknown calls), `TransferFromFailed(token)`, `TokenHasNoCode(token)`.
 
+## GameEntry (entry fee)
+
+A new game account is created only after its wallet paid the entry fee (`ENTRY_FEE_USD`, $1 by default) in ETH.
+The ETH goes straight to the immutable `treasury`; the server reads `EntryPaid` and checks the dollar value
+(5% leeway for the ETH price, top-ups add up). Plain ETH sends are rejected: they would come from a wallet
+that is not the player's (an exchange withdrawal, for example).
+
+```solidity
+event EntryPaid(address indexed player, uint256 amount); // player = msg.sender
+function treasury() external view returns (address);
+function payEntry() external payable;
+```
+
+| Item | Value |
+|---|---|
+| `EntryPaid` topic0 | `0x30faec9c7402b65eff4997c321904147b5f629550213155069d87002eac24b4c` |
+| `payEntry()` | `0x810df2db` |
+
+Reverts: `ZeroAddress`, `ZeroAmount`, `EthTransferFailed`, `DirectEthNotAccepted`.
+
+```bash
+TREASURY_ADDRESS=0x... forge script script/DeployEntry.s.sol:DeployEntry --rpc-url $RPC --account <keystore> --broadcast
+# server: ENTRY_ADDRESS=<printed address>  ENTRY_START_BLOCK=<deploy block>
+```
+
 ## Setup
 
 ```bash
@@ -53,7 +80,7 @@ cp .env.example .env   # fill in for Sepolia; never commit .env
 ```bash
 forge build
 forge test -vv
-node abi/generate.mjs          # regenerate abi/gamePayments.ts + abi/testToken.ts from out/
+node abi/generate.mjs          # regenerate abi/*.ts from out/ (copy to src/crypto/ afterwards)
 ```
 
 ## Local (anvil)

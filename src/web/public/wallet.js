@@ -1,4 +1,4 @@
-// Wallet features: sign-in with Ethereum (log in / join / link) and paying for credits.
+// Wallet features: sign-in with Ethereum (log in / join / link), the entry fee for new accounts and paying for credits.
 // Works with any EVM browser wallet: finds them through EIP-6963 (a picker when several are installed),
 // falls back to window.ethereum (older extensions, phone wallets' in-app browsers). No libraries needed.
 (function () {
@@ -9,6 +9,9 @@
   var statusEl = root.querySelector('[data-status]');
   var chainId = Number(root.getAttribute('data-chain') || '0');
   var chainName = root.getAttribute('data-chain-name') || 'the right network';
+  // Public RPC + explorer: lets the wallet add the network when it doesn't know it yet.
+  var chainRpc = root.getAttribute('data-chain-rpc');
+  var explorer = root.getAttribute('data-explorer');
 
   // Function selectors (keccak256 of the signature, first 4 bytes).
   var SEL_DEPOSIT_ETH = '5358fbda'; // depositETH(uint256)
@@ -187,21 +190,39 @@
       if (parseInt(current, 16) === chainId) return;
       return wallet()
         .request({ method: 'wallet_switchEthereumChain', params: [{ chainId: hex }] })
-        .catch(function () { throw new Error('Please switch your wallet to ' + chainName + '.'); });
+        .catch(function (err) {
+          if (err && err.code === 4001) throw err;
+          if (!chainRpc) throw new Error('Please switch your wallet to ' + chainName + '.');
+          // Most likely the wallet doesn't have this network yet: offer to add it.
+          var params = { chainId: hex, chainName: chainName, nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: [chainRpc] };
+          if (explorer) params.blockExplorerUrls = [explorer];
+          return wallet()
+            .request({ method: 'wallet_addEthereumChain', params: [params] })
+            .catch(function (err2) {
+              if (err2 && err2.code === 4001) throw err2;
+              throw new Error('Please add ' + chainName + ' to your wallet and switch to it.');
+            });
+        });
     });
   }
 
   function post(url, body) {
     body._csrf = csrf;
+    var status = 0;
     return fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(function (r) {
+      status = r.status;
       return r.json().catch(function () { return { ok: false, error: 'Unexpected response' }; });
     }).then(function (j) {
-      if (!j.ok) throw new Error(j.error || 'Request failed');
+      if (!j.ok) {
+        var err = new Error(j.error || 'Request failed');
+        err.status = status;
+        throw err;
+      }
       return j;
     });
   }
@@ -329,6 +350,60 @@
       .then(function () { busy(btn, false); });
   }
 
+  // ---- Entry fee (a new account pays it once, from the wallet it signed in with) ----
+  function payEntry(btn) {
+    var me = (root.getAttribute('data-address') || '').toLowerCase();
+    var wei = root.getAttribute('data-entry-wei') || '0';
+    busy(btn, true);
+    say('Waiting for your wallet...');
+    var from;
+    account()
+      .then(function (a) {
+        from = a;
+        if (me && a.toLowerCase() !== me) throw new Error('Your wallet is on another account. Switch it to ' + me.slice(0, 6) + '...' + me.slice(-4) + ', the one you signed in with.');
+        return ensureChain();
+      })
+      .then(function () {
+        say('Confirm the payment in your wallet...');
+        return wallet().request({
+          method: 'eth_sendTransaction',
+          params: [{ from: from, to: root.getAttribute('data-entry-to'), value: '0x' + BigInt(wei).toString(16), data: root.getAttribute('data-entry-data') }],
+        });
+      })
+      .then(confirmEntry)
+      .catch(function (err) {
+        fail(err);
+        busy(btn, false);
+      });
+  }
+
+  // Ask the server until the payment has its confirmations, then step 2 (name + tribe) opens.
+  function confirmEntry(hash) {
+    var tries = 0;
+    return new Promise(function (resolve, reject) {
+      (function check() {
+        say('Payment sent (' + hash.slice(0, 10) + '...). Waiting for the network to confirm it...');
+        post('/register/paid', { txHash: hash }).then(function (r) {
+          if (r.state === 'paid' || r.state === 'short') {
+            if (r.state === 'paid') say('Payment confirmed! Now pick a name and a tribe...');
+            location.href = '/register';
+            return resolve();
+          }
+          if (r.state === 'failed') return reject(new Error('The transaction failed, so no fee was taken. Please try again.'));
+          if (r.state === 'missing') return reject(new Error('That transaction holds no entry payment from this wallet.'));
+          again();
+        }, function (err) {
+          if (err.status === 401 || err.status === 400) return reject(err);
+          again();
+        });
+        function again() {
+          if (++tries > 100) return reject(new Error('Still not confirmed. Your payment is safe: reload this page in a few minutes.'));
+          setTimeout(check, 3000);
+        }
+      })();
+    });
+  }
+
   root.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('button') : null;
     if (!t || !root.contains(t)) return;
@@ -336,6 +411,10 @@
     if (action === 'link' || action === 'login') {
       e.preventDefault();
       return signIn(action, t);
+    }
+    if (action === 'entry') {
+      e.preventDefault();
+      return payEntry(t);
     }
     if (t.hasAttribute('data-pay')) {
       e.preventDefault();

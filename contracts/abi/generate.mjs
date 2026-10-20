@@ -7,6 +7,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const targets = [
   { artifact: "out/GamePayments.sol/GamePayments.json", file: "abi/gamePayments.ts", name: "gamePaymentsAbi" },
   { artifact: "out/TestToken.sol/TestToken.json", file: "abi/testToken.ts", name: "testTokenAbi" },
+  { artifact: "out/GameEntry.sol/GameEntry.json", file: "abi/gameEntry.ts", name: "gameEntryAbi" },
 ];
 
 for (const t of targets) {
