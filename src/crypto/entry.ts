@@ -12,8 +12,9 @@ import { ethUsd, formatUnitsShort, weiForUsd } from './pricing.js';
 const TOLERANCE = 0.05;
 /** Payments under this share of the fee are not recorded (dust can't fill the table). */
 const DUST = 0.01;
-const CHUNK = 2000n;
 const META_KEY = 'entry_indexer_block';
+/** Blocks per log request. Shrinks when the RPC refuses a range (provider plans limit it differently) and stays small. */
+let chunk = 2000n;
 
 /** New accounts pay the entry fee (needs the contract and an RPC to check payments). */
 export function entryFeeOn(): boolean {
@@ -140,8 +141,15 @@ export async function indexEntries(db: DB, client: PublicClient, now: number): P
   const start = from;
   let found = 0;
   while (from <= safe) {
-    const to = from + CHUNK - 1n < safe ? from + CHUNK - 1n : safe;
-    const logs = await client.getLogs({ address: getAddress(config.ENTRY_ADDRESS), fromBlock: from, toBlock: to });
+    const to = from + chunk - 1n < safe ? from + chunk - 1n : safe;
+    let logs;
+    try {
+      logs = await client.getLogs({ address: getAddress(config.ENTRY_ADDRESS), fromBlock: from, toBlock: to });
+    } catch (err) {
+      if (chunk <= 10n) throw err;
+      chunk = chunk > 50n ? chunk / 5n : 10n;
+      continue;
+    }
     db.transaction((tx) => {
       found += recordEntries(tx, logs.map(decode).filter((l): l is EntryLog => !!l), now);
       setMeta(tx, META_KEY, to.toString());

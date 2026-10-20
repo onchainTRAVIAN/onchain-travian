@@ -68,6 +68,22 @@ describe('entry fee rules', () => {
     expect(recordEntries(db, [log], clock.now())).toBe(0);
     expect(entryStatus(db, a).paidCents).toBe(100);
   });
+
+  it('the background reader asks for smaller block ranges when the RPC refuses big ones', async () => {
+    const asked: bigint[] = [];
+    const rpc = {
+      getBlockNumber: async () => 5000n,
+      getLogs: async ({ fromBlock, toBlock }: { fromBlock: bigint; toBlock: bigint }) => {
+        asked.push(toBlock - fromBlock + 1n);
+        if (toBlock - fromBlock + 1n > 100n) throw new Error('block range too large');
+        return [];
+      },
+    } as unknown as PublicClient;
+    const r = await indexEntries(db, rpc, clock.now());
+    expect(r?.to).toBe(5000n - BigInt(config.CONFIRMATIONS));
+    expect(asked.slice(0, 4)).toEqual([2000n, 400n, 80n, 80n]);
+    db.delete(meta).where(eq(meta.key, 'entry_indexer_block')).run();
+  });
 });
 
 describe('joining a world with an entry fee', () => {
