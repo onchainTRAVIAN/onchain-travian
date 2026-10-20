@@ -77,7 +77,7 @@ You can drag it with the mouse or a finger, zoom between 35% and 200%, and jump 
 Your attacks, raids and reinforcements are marked on the map and refresh every 15 seconds. If you prefer the old diamond view, it's still there under Classic.
 ```
 
-### 6. Hand-drawn troops - ready
+### 6. Hand-drawn troops - posted
 Media: picture, all 30 troops and the oasis animals lined up on parchment
 File: branding/social/img/06-troops.jpg
 ```
@@ -149,7 +149,7 @@ Free oases collect resources over time. With the raider switched on, it checks t
 The Gold Club also includes farm lists, trade routes and troop evasion.
 ```
 
-### 12. Villages on the map - ready
+### 12. Villages on the map - posted
 Media: picture, the five map village pictures in a row, from a few huts to a walled city
 File: branding/social/img/12-villages.jpg
 ```
@@ -307,7 +307,7 @@ The Artifact of the fool picks a different effect every day.
 Small artifacts work for one village, large and unique ones for the whole account.
 ```
 
-### 27. Gold market - ready
+### 27. Gold market - posted
 Media: screenshot, the Gold market offer list
 File: branding/social/img/27-goldmarket.jpg
 ```
@@ -320,7 +320,7 @@ It can't be used as a vault either. Cancelled or reduced offers walk back to the
 
 ## Day 10
 
-### 28. Conquest - ready
+### 28. Conquest - posted
 Media: painting, a senator on horseback raising a banner over a captured village
 File: branding/social/img/28-conquest.jpg
 ```
