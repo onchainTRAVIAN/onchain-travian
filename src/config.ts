@@ -13,8 +13,6 @@ const EnvSchema = z.object({
     .transform((u) => new URL(u).origin)
     .optional()
     .or(z.literal('').transform(() => undefined)),
-  /** Proxy hops in front of the app, for the real client IP (Railway alone = 1; Cloudflare proxy + Railway = 2). */
-  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(1),
   /** Wallets (comma-separated 0x addresses) that become admins when they join or log in. */
   ADMIN_WALLETS: z
     .string()

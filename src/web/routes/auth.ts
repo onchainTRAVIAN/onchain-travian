@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
@@ -13,29 +12,18 @@ import { GameError } from '../../game/errors.js';
 import { clearSignupCookie, createSession, destroySession, setFlash, signupToken } from '../session.js';
 import { landingView, loginView, registerView } from '../views/auth.js';
 import { sendPage } from './helpers.js';
+import { limiter } from '../limits.js';
 
 export const authRouter = Router();
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60_000,
-  limit: config.NODE_ENV === 'test' ? 10_000 : 30,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  handler: (_req, res) => {
-    setFlash(res, 'error', 'Too many attempts. Please wait a few minutes.');
-    res.redirect(303, '/');
-  },
+const authLimiter = limiter(15 * 60_000, 30, (_req, res) => {
+  setFlash(res, 'error', 'Too many attempts. Please wait a few minutes.');
+  res.redirect(303, '/');
 });
 
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60_000,
-  limit: config.NODE_ENV === 'test' ? 10_000 : 5,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  handler: (_req, res) => {
-    setFlash(res, 'error', 'Too many new accounts from this connection. Please try again later.');
-    res.redirect(303, '/register');
-  },
+const registerLimiter = limiter(60 * 60_000, 5, (_req, res) => {
+  setFlash(res, 'error', 'Too many new accounts from this connection. Please try again later.');
+  res.redirect(303, '/register');
 });
 
 const RegisterSchema = z.object({

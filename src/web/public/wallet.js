@@ -50,10 +50,12 @@
   // Phones have no wallet extensions: the wallet apps open this page in their own browser instead.
   var isPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
   var WALLET_APPS = [
-    ['MetaMask', function (u) { return 'https://metamask.app.link/dapp/' + u.replace(/^https?:\/\//, ''); }],
+    ['MetaMask', function (u) { return 'https://link.metamask.io/dapp/' + u.replace(/^https?:\/\//, ''); }],
     ['Trust Wallet', function (u) { return 'https://link.trustwallet.com/open_url?coin_id=60&url=' + encodeURIComponent(u); }],
     ['Coinbase Wallet', function (u) { return 'https://go.cb-w.com/dapp?cb_url=' + encodeURIComponent(u); }],
-    ['OKX Wallet', function (u) { return 'okx://wallet/dapp/url?dappUrl=' + encodeURIComponent(u); }],
+    // OKX: the https link opens the app (or its download page); the okx:// link inside is encoded twice.
+    ['OKX Wallet', function (u) { return 'https://www.okx.com/download?deeplink=' + encodeURIComponent('okx://wallet/dapp/url?dappUrl=' + encodeURIComponent(u)); }],
+    ['Phantom', function (u) { return 'https://phantom.com/ul/browse/' + encodeURIComponent(u) + '?ref=' + encodeURIComponent(location.origin); }],
   ];
 
   function showOpenInApp() {

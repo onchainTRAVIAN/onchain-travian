@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import type { Request } from 'express';
 import { eq } from 'drizzle-orm';
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
 import { config } from '../src/config.js';
@@ -7,6 +8,7 @@ import { db } from '../src/db/index.js';
 import { users } from '../src/db/schema.js';
 import { ensureWorld } from '../src/game/engine/world.js';
 import { createApp } from '../src/app.js';
+import { clientIp } from '../src/web/limits.js';
 import { csrfFrom } from './walletAuth.js';
 
 // A public world: one canonical address and a listed admin wallet (set before the app is built).
@@ -73,6 +75,17 @@ describe('public launch settings', () => {
     const { v } = await signIn(request.agent(app), later);
     expect(v.body.redirect).toBe('/fields');
     expect(db.select().from(users).where(eq(users.username, 'FirstOne')).get()?.role).toBe('admin');
+  });
+
+  it('rate limits count the IP Railway puts in X-Real-IP (only in production)', () => {
+    const req = { get: (h: string) => (h.toLowerCase() === 'x-real-ip' ? '203.0.113.9' : undefined), ip: '100.64.0.2' } as unknown as Request;
+    expect(clientIp(req)).toBe('100.64.0.2');
+    config.NODE_ENV = 'production';
+    try {
+      expect(clientIp(req)).toBe('203.0.113.9');
+    } finally {
+      config.NODE_ENV = 'test';
+    }
   });
 
   it('serves link previews, robots.txt and a sitemap with absolute URLs', async () => {

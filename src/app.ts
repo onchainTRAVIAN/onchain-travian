@@ -32,7 +32,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
-  if (config.NODE_ENV === 'production') app.set('trust proxy', config.TRUST_PROXY);
+  // Behind Railway's edge: protocol and host come from its X-Forwarded-* headers (rate limits use X-Real-IP, see limits.ts).
+  if (config.NODE_ENV === 'production') app.set('trust proxy', 1);
 
   // Health checks answer on any host (Railway probes with its own); everything else lives on PUBLIC_URL.
   app.get('/healthz', (_req, res) => {

@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { config } from '../../config.js';
@@ -13,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { authed, clearSignupCookie, createSession, requireAuth, setFlash, setSignupCookie } from '../session.js';
 import { walletView } from '../views/wallet.js';
 import { formAction, loadGamePage, sendPage } from './helpers.js';
+import { limiter } from '../limits.js';
 
 export const walletRouter = Router();
 
@@ -27,14 +27,8 @@ function siweReq(req: Request): SiweRequest {
 }
 
 // A sign-in is one challenge + one verify; this leaves room for retries but stops nonce spam and signature floods.
-const walletLimiter = rateLimit({
-  windowMs: 60_000,
-  limit: config.NODE_ENV === 'test' ? 10_000 : 20,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  handler: (_req, res) => {
-    res.status(429).json({ ok: false, error: 'Too many attempts. Please wait a minute and try again.' });
-  },
+const walletLimiter = limiter(60_000, 20, (_req, res) => {
+  res.status(429).json({ ok: false, error: 'Too many attempts. Please wait a minute and try again.' });
 });
 
 function jsonError(res: Response, err: unknown): void {
