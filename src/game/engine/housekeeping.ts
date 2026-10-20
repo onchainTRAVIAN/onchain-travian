@@ -1,7 +1,7 @@
-import { statfsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
+import { diskSpace } from '../../db/backup.js';
 import { reports, sessions, users } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { getMeta, setMeta } from './world.js';
@@ -33,17 +33,6 @@ export function pruneReports(db: DB, now: number): number {
     removed += db.delete(reports).where(inArray(reports.id, extra)).run().changes;
   }
   return removed;
-}
-
-/** Free space on the disk that holds the database, or null (in-memory db, or the platform can't tell). */
-export function diskSpace(): { freeMb: number; totalMb: number } | null {
-  if (config.DATABASE_PATH === ':memory:') return null;
-  try {
-    const s = statfsSync(dirname(resolve(config.DATABASE_PATH)));
-    return { freeMb: Math.round((s.bavail * s.bsize) / 1048576), totalMb: Math.round((s.blocks * s.bsize) / 1048576) };
-  } catch {
-    return null;
-  }
 }
 
 /** Every 10 minutes: prune reports, drop expired sessions, warn loudly when the disk is nearly full. */

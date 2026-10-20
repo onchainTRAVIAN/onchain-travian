@@ -1247,6 +1247,7 @@ a.gbtn { display: inline-flex; text-decoration: none; }
 .wopt { display: flex; align-items: center; gap: 10px; padding: 7px 10px; background: #fff; border: 1px solid #d6cfb8; border-radius: 6px; color: #3b2f16; font-weight: bold; cursor: pointer; }
 .wopt:hover, .wopt:focus-visible { border-color: #71d000; background: #f6fbea; }
 .wopt img { width: 24px; height: 24px; border-radius: 5px; }
+a.wopt { text-decoration: none; }
 .wpick .secondary { align-self: center; }
 .walletchip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 4px; padding: 6px 10px; background: #f6fbea; border: 1px solid #cfe5a8; border-radius: 6px; }
 .msgbody { white-space: pre-wrap; }

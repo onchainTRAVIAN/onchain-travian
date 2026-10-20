@@ -46,7 +46,10 @@ export async function registerPlayer(
       assertGame(!tx.select({ id: wallets.userId }).from(wallets).where(eq(wallets.address, address)).get(), 'This wallet already has an account');
       if (input.signupTicket) consumeSignupTicket(tx, input.signupTicket, now);
     }
-    const isFirst = !tx.select({ id: users.id }).from(users).limit(1).get();
+    // Admins: wallets listed in ADMIN_WALLETS. Without that list, the very first account (local/dev worlds only).
+    const listed = !!address && config.ADMIN_WALLETS.includes(address);
+    const firstOnDev = config.ADMIN_WALLETS.length === 0 && config.NODE_ENV !== 'production' && !tx.select({ id: users.id }).from(users).limit(1).get();
+    const isAdmin = listed || firstOnDev;
     const user = tx
       .insert(users)
       .values({
@@ -54,7 +57,7 @@ export async function registerPlayer(
         usernameLower,
         passwordHash,
         tribe: input.tribe,
-        role: isFirst ? 'admin' : 'player',
+        role: isAdmin ? 'admin' : 'player',
         createdAt: now,
         lastSeenAt: now,
         protectedUntil: now + config.PROTECTION_HOURS * 3_600_000,

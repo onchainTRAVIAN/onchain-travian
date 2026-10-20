@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { config } from '../../config.js';
@@ -15,10 +16,26 @@ import { formAction, loadGamePage, sendPage } from './helpers.js';
 
 export const walletRouter = Router();
 
+/** The site the wallet signs in to: PUBLIC_URL when set (other hosts redirect there), else the host the request came to. */
 function siweReq(req: Request): SiweRequest {
+  if (config.PUBLIC_URL) {
+    const u = new URL(config.PUBLIC_URL);
+    return { domain: u.host, origin: u.origin };
+  }
   const host = req.get('host') ?? 'localhost';
   return { domain: host, origin: `${req.protocol}://${host}` };
 }
+
+// A sign-in is one challenge + one verify; this leaves room for retries but stops nonce spam and signature floods.
+const walletLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: config.NODE_ENV === 'test' ? 10_000 : 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({ ok: false, error: 'Too many attempts. Please wait a minute and try again.' });
+  },
+});
 
 function jsonError(res: Response, err: unknown): void {
   if (err instanceof GameError) {
@@ -48,9 +65,14 @@ walletRouter.get('/wallet', requireAuth, (req, res) => {
   );
 });
 
-const Challenge = z.object({ address: z.string().regex(/^0x[0-9a-fA-F]{40}$/), purpose: z.enum(['link', 'login']) });
+const Challenge = z.object({
+  address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  purpose: z.enum(['link', 'login']),
+  /** The chain the wallet is on (the message names it, so wallets don't ask to switch). */
+  chainId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+});
 
-walletRouter.post('/wallet/challenge', (req, res) => {
+walletRouter.post('/wallet/challenge', walletLimiter, (req, res) => {
   const parsed = Challenge.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ ok: false, error: 'Invalid request' });
@@ -61,7 +83,7 @@ walletRouter.post('/wallet/challenge', (req, res) => {
     return;
   }
   try {
-    const message = prepareSiwe(db, siweReq(req), parsed.data.address, parsed.data.purpose, req.ctx.user?.id ?? null, req.ctx.now);
+    const message = prepareSiwe(db, siweReq(req), parsed.data.address, parsed.data.purpose, req.ctx.user?.id ?? null, req.ctx.now, parsed.data.chainId);
     res.json({ ok: true, message });
   } catch (err) {
     jsonError(res, err);
@@ -70,7 +92,7 @@ walletRouter.post('/wallet/challenge', (req, res) => {
 
 const Verify = z.object({ message: z.string().max(2000), signature: z.string().max(1000), purpose: z.enum(['link', 'login']) });
 
-walletRouter.post('/wallet/verify', async (req, res) => {
+walletRouter.post('/wallet/verify', walletLimiter, async (req, res) => {
   const parsed = Verify.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ ok: false, error: 'Invalid request' });
@@ -96,6 +118,10 @@ walletRouter.post('/wallet/verify', async (req, res) => {
     }
     const user = db.select().from(users).where(eq(users.id, w.userId)).get();
     if (!user || user.banned) throw new GameError('This account cannot log in');
+    if (config.ADMIN_WALLETS.includes(address) && user.role !== 'admin') {
+      db.update(users).set({ role: 'admin' }).where(eq(users.id, user.id)).run();
+      console.log(`Admin role given to ${user.username} (wallet in ADMIN_WALLETS)`);
+    }
     const village = db.select({ id: villages.id }).from(villages).where(eq(villages.userId, user.id)).get();
     clearSignupCookie(res);
     createSession(res, user.id, village?.id ?? null);

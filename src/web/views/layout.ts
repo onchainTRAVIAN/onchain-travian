@@ -201,6 +201,25 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
   </div>`;
 }
 
+const DESCRIPTION = 'Classic Travian-style strategy in your browser: build villages, raise an army, raid and conquer. Play free with any EVM wallet.';
+
+/** Description + link-preview tags (X, Telegram, Discord). Previews need absolute URLs, so the image only with PUBLIC_URL. */
+function shareMeta(title: string): SafeHtml {
+  const base = config.PUBLIC_URL;
+  return html`<meta name="description" content="${DESCRIPTION}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${config.WORLD_NAME}">
+<meta property="og:title" content="${title} · ${config.WORLD_NAME}">
+<meta property="og:description" content="${DESCRIPTION}">
+${base
+  ? html`<meta property="og:url" content="${base}/">
+<meta property="og:image" content="${base}${assetUrl('img/brand/og.jpg')}">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">`
+  : ''}`;
+}
+
 export function layout(o: PageOpts): SafeHtml {
   const c = o.chrome;
   return html`<!doctype html>
@@ -213,6 +232,7 @@ export function layout(o: PageOpts): SafeHtml {
 <link rel="icon" type="image/png" sizes="32x32" href="${assetUrl('img/brand/coin-32.png')}">
 <link rel="icon" type="image/png" sizes="192x192" href="${assetUrl('img/brand/coin-192.png')}">
 <link rel="apple-touch-icon" href="${assetUrl('img/brand/coin-180.png')}">
+${shareMeta(o.title)}
 </head>
 <body data-masks="${assetUrl('masks.json')}" data-now="${o.now}">
 <div id="wrap">

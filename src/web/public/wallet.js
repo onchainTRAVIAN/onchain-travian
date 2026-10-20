@@ -47,8 +47,39 @@
     return err;
   }
 
+  // Phones have no wallet extensions: the wallet apps open this page in their own browser instead.
+  var isPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  var WALLET_APPS = [
+    ['MetaMask', function (u) { return 'https://metamask.app.link/dapp/' + u.replace(/^https?:\/\//, ''); }],
+    ['Trust Wallet', function (u) { return 'https://link.trustwallet.com/open_url?coin_id=60&url=' + encodeURIComponent(u); }],
+    ['Coinbase Wallet', function (u) { return 'https://go.cb-w.com/dapp?cb_url=' + encodeURIComponent(u); }],
+    ['OKX Wallet', function (u) { return 'okx://wallet/dapp/url?dappUrl=' + encodeURIComponent(u); }],
+  ];
+
+  function showOpenInApp() {
+    var box = picker();
+    box.textContent = '';
+    var head = document.createElement('p');
+    head.className = 'small';
+    head.textContent = 'Open the game in your wallet app:';
+    box.appendChild(head);
+    var page = location.origin + location.pathname + location.search;
+    WALLET_APPS.forEach(function (w) {
+      var a = document.createElement('a');
+      a.className = 'wopt';
+      a.href = w[1](page);
+      a.rel = 'noopener';
+      a.textContent = w[0];
+      box.appendChild(a);
+    });
+    box.hidden = false;
+    statusEl.className = 'small';
+    statusEl.textContent = 'This browser has no wallet. Tap your wallet above: the game opens inside it, then press Connect wallet there.';
+  }
+
   function showNoWallet() {
     if (!statusEl) return;
+    if (isPhone) return showOpenInApp();
     statusEl.className = 'small bad';
     statusEl.textContent = 'No wallet found in this browser. Install one, for example ';
     [['MetaMask', 'https://metamask.io/download/'], ['Rabby', 'https://rabby.io/'], ['Coinbase Wallet', 'https://www.coinbase.com/wallet/downloads']].forEach(function (w, i, all) {
@@ -212,7 +243,13 @@
     account()
       .then(function (a) {
         address = a;
-        return post('/wallet/challenge', { address: a, purpose: purpose });
+        // The message names the chain the wallet is on, so no wallet asks to switch networks just to sign in.
+        return wallet().request({ method: 'eth_chainId' }).then(function (hex) { return parseInt(hex, 16); }, function () { return 0; });
+      })
+      .then(function (chain) {
+        var body = { address: address, purpose: purpose };
+        if (chain > 0 && chain <= Number.MAX_SAFE_INTEGER) body.chainId = chain;
+        return post('/wallet/challenge', body);
       })
       .then(function (c) {
         say('Please sign the message in your wallet (free, no gas)…');

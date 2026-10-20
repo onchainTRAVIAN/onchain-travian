@@ -15,8 +15,8 @@ export interface SiweRequest {
   origin: string;
 }
 
-/** Create the exact message the wallet will sign. */
-export function prepareSiwe(db: DB, req: SiweRequest, address: string, purpose: 'link' | 'login', userId: number | null, now: number): string {
+/** Create the exact message the wallet will sign (on the chain the wallet is on; it is a free signature, no transaction). */
+export function prepareSiwe(db: DB, req: SiweRequest, address: string, purpose: 'link' | 'login', userId: number | null, now: number, chainId = config.CHAIN_ID): string {
   assertGame(isAddress(address), 'Invalid wallet address');
   db.delete(walletNonces).where(lt(walletNonces.expiresAt, now)).run();
   const nonce = generateSiweNonce();
@@ -27,7 +27,7 @@ export function prepareSiwe(db: DB, req: SiweRequest, address: string, purpose: 
     statement: purpose === 'link' ? `Link this wallet to my ${config.WORLD_NAME} account.` : `Log in to ${config.WORLD_NAME}.`,
     uri: req.origin,
     version: '1',
-    chainId: config.CHAIN_ID,
+    chainId,
     nonce,
     issuedAt: new Date(now),
     expirationTime: new Date(now + NONCE_TTL_MS),
@@ -42,7 +42,7 @@ export async function verifySiwe(db: DB, req: SiweRequest, message: string, sign
   assertGame(nonceRow && nonceRow.purpose === purpose && nonceRow.expiresAt >= now, 'This sign-in request expired, please try again');
   assertGame(purpose === 'login' || nonceRow.userId === userId, 'This sign-in request belongs to another session');
   const valid = validateSiweMessage({ message: fields, domain: req.domain, nonce: nonceRow.nonce, time: new Date(now) });
-  assertGame(valid && fields.chainId === config.CHAIN_ID, 'The sign-in message does not match this site');
+  assertGame(valid && Number.isSafeInteger(fields.chainId) && (fields.chainId ?? 0) > 0, 'The sign-in message does not match this site');
   assertGame(/^0x[0-9a-fA-F]+$/.test(signature), 'Invalid signature');
   // Consume the nonce now, before awaiting: a second request with the same message must fail.
   const consumed = db.delete(walletNonces).where(eq(walletNonces.nonce, nonceRow.nonce)).run();
@@ -53,7 +53,7 @@ export async function verifySiwe(db: DB, req: SiweRequest, message: string, sign
   } catch {
     ok = false;
   }
-  if (!ok) throw new GameError('The signature does not match the wallet');
+  if (!ok) throw new GameError('The signature does not match the wallet. Smart-contract and passkey wallets are not supported yet - use a regular wallet account.');
   return fields.address.toLowerCase();
 }
 

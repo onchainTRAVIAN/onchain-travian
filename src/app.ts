@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
+import { sqlite } from './db/index.js';
 import { csrfGuard, requireAuth, sessionMiddleware } from './web/session.js';
 import { authRouter } from './web/routes/auth.js';
 import { villageRouter } from './web/routes/village.js';
@@ -31,7 +32,24 @@ const here = dirname(fileURLToPath(import.meta.url));
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
-  if (config.NODE_ENV === 'production') app.set('trust proxy', 1);
+  if (config.NODE_ENV === 'production') app.set('trust proxy', config.TRUST_PROXY);
+
+  // Health checks answer on any host (Railway probes with its own); everything else lives on PUBLIC_URL.
+  app.get('/healthz', (_req, res) => {
+    try {
+      sqlite.prepare('select 1').get();
+      res.json({ ok: true });
+    } catch {
+      res.status(503).json({ ok: false });
+    }
+  });
+  if (config.PUBLIC_URL) {
+    const canonical = new URL(config.PUBLIC_URL);
+    app.use((req, res, next) => {
+      if (req.hostname === canonical.hostname) return next();
+      res.redirect(req.method === 'GET' || req.method === 'HEAD' ? 301 : 308, canonical.origin + req.originalUrl);
+    });
+  }
 
   app.use(
     helmet({
@@ -58,9 +76,15 @@ export function createApp() {
   app.use(sessionMiddleware);
   app.use(csrfGuard);
 
-  app.get('/healthz', (_req, res) => {
-    res.json({ ok: true });
+  app.get('/robots.txt', (_req, res) => {
+    const sitemap = config.PUBLIC_URL ? `\nSitemap: ${config.PUBLIC_URL}/sitemap.txt` : '';
+    res.type('text/plain').send(`User-agent: *\nDisallow: /admin\nDisallow: /wallet\nDisallow: /register\nAllow: /${sitemap}\n`);
   });
+  if (config.PUBLIC_URL) {
+    app.get('/sitemap.txt', (_req, res) => {
+      res.type('text/plain').send(['/', '/help', '/help/buildings'].map((p) => config.PUBLIC_URL + p).join('\n') + '\n');
+    });
+  }
 
   app.use(authRouter);
   app.use(socialRouter);

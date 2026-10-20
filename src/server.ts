@@ -10,7 +10,8 @@ import { backfillReportOutcomes, backfillReportPlaces } from './game/engine/repo
 import { processFarmLists, processTradeRoutes } from './game/actions/goldclub.js';
 import { processOasisRaiders } from './game/actions/raider.js';
 import { processAutoTrains } from './game/actions/autotrain.js';
-import { processHousekeeping, diskSpace } from './game/engine/housekeeping.js';
+import { processHousekeeping } from './game/engine/housekeeping.js';
+import { backupNow, diskSpace, listBackups } from './db/backup.js';
 import { createApp } from './app.js';
 import { startCryptoWorkers } from './crypto/worker.js';
 
@@ -76,6 +77,25 @@ const worker = setInterval(() => {
   }
 }, 1000);
 
+// Database snapshots every BACKUP_HOURS (the first one a minute after start, unless a recent one exists).
+let backingUp = false;
+const backups = setInterval(() => {
+  if (config.BACKUP_HOURS <= 0 || backingUp) return;
+  const now = clock.now();
+  const last = Number(getMeta(db, 'backup_at') ?? '0');
+  if (now - last < config.BACKUP_HOURS * 3_600_000) return;
+  backingUp = true;
+  setMeta(db, 'backup_at', String(now));
+  backupNow(now)
+    .then((name) => {
+      if (name) console.log(`Backup written: ${name} (${listBackups().length} kept)`);
+    })
+    .catch((err: unknown) => console.error('Backup failed:', err))
+    .finally(() => {
+      backingUp = false;
+    });
+}, 60_000);
+
 const stopCrypto = startCryptoWorkers(db);
 
 const server = createApp().listen(config.PORT, () => {
@@ -85,6 +105,7 @@ const server = createApp().listen(config.PORT, () => {
 
 function shutdown() {
   clearInterval(worker);
+  clearInterval(backups);
   stopCrypto();
   server.close(() => process.exit(0));
 }

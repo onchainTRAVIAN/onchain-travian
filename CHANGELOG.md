@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased - ready for a public launch
+- Fixed: the live game was down since 2026-10-15. Auto-raids had written 571,000 reports (376 MB) and filled the server disk. Old reports are now deleted automatically: after 14 days, and each player keeps their newest 1,000 (both adjustable: `REPORT_DAYS`, `REPORT_CAP`). The "?" next to Reports says so.
+- One public address: with `PUBLIC_URL` set, every other address (the railway.app name, www.) forwards there, and wallet sign-in messages name that domain.
+- Wallet sign-in signs on the network the wallet is already on (no "switch network" prompt just to log in), and smart-contract / passkey wallets get a clear message that they are not supported yet.
+- On a phone browser without a wallet, Connect wallet offers to open the game inside MetaMask, Trust Wallet, Coinbase Wallet or OKX Wallet.
+- Admins come from `ADMIN_WALLETS` (also promotes an existing account at its next login). On a live server the first account no longer becomes admin automatically.
+- Too many wallet sign-in attempts from one address get a short wait (20 a minute).
+- Link previews on X, Telegram and Discord: page description, title and the painted banner (needs `PUBLIC_URL`). `robots.txt` and a small sitemap.
+- Database snapshots every 6 hours (gzipped, newest 8 kept next to the database in `backups/`); `scripts/ops/pull-backup.sh` downloads the newest one. The admin page shows database size, free disk and the snapshots; the log warns when the disk is nearly full.
+- The health check also checks the database. `TRUST_PROXY` sets how many proxies sit in front (2 behind Cloudflare's proxy) so IP limits see real players.
+
 ## Unreleased - wallet accounts
 - You join and log in with a crypto wallet only: any EVM wallet (MetaMask, Rabby, Coinbase Wallet, OKX, Trust and others, also inside phone wallet apps). No more player name + password.
 - The front page has one big "Connect wallet" button. With several wallets installed you pick one from a list. You sign a free message (no gas, no transaction).

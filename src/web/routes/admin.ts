@@ -2,6 +2,8 @@ import { Router, type NextFunction, type Request, type Response } from 'express'
 import { desc, eq, like, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
+import { dbSizeMb, diskSpace, listBackups } from '../../db/backup.js';
+import { config } from '../../config.js';
 import { creditsLedger, deposits, sessions, users, villages } from '../../db/schema.js';
 import { deleteChatMessage } from '../../game/actions/chat.js';
 import { grantCredits, removeTicker, upcomingTicker } from '../../game/actions/credits.js';
@@ -58,6 +60,7 @@ adminRouter.get('/admin', (req, res) => {
       players,
       query: q,
       ticker: upcomingTicker(db, ctx.now),
+      server: { dbMb: dbSizeMb(), disk: diskSpace(), backups: listBackups(), backupHours: config.BACKUP_HOURS },
       csrf: ctx.csrf,
       now: ctx.now,
     }),

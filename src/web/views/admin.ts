@@ -10,6 +10,7 @@ export function adminView(d: {
   players: { id: number; username: string; role: string; banned: boolean; mutedUntil: number; lastSeenAt: number; credits: number; villages: number }[];
   query: string;
   ticker: { t: { id: number; body: string; startsAt: number; endsAt: number; price: number }; username: string | null }[];
+  server: { dbMb: number; disk: { freeMb: number; totalMb: number } | null; backups: { name: string; bytes: number }[]; backupHours: number };
   csrf: string;
   now: number;
 }): SafeHtml {
@@ -22,6 +23,12 @@ export function adminView(d: {
       <div><b>${fmtNum(d.stats.deposits)}</b>deposits</div>
       <div><b>${d.stats.indexerBlock}</b>indexer block</div>
     </div>
+    ${panel('Server', html`<p class="small">Database ${fmtNum(d.server.dbMb)} MB${d.server.disk
+      ? html` · disk <b class="${d.server.disk.freeMb < d.server.disk.totalMb * 0.15 ? 'bad' : ''}">${fmtNum(d.server.disk.freeMb)} MB free</b> of ${fmtNum(d.server.disk.totalMb)} MB`
+      : ''} · ${d.server.backupHours > 0 ? `snapshot every ${d.server.backupHours} h` : 'snapshots off'}.</p>
+      ${d.server.backups.length
+        ? html`<p class="small muted">Newest: ${d.server.backups.slice(0, 3).map((b, i) => html`${i ? ', ' : ''}${b.name} (${fmtNum(Math.ceil(b.bytes / 1024))} KB)`)}${d.server.backups.length > 3 ? ` and ${d.server.backups.length - 3} more` : ''}. Download one with scripts/ops/pull-backup.sh.</p>`
+        : html`<p class="small muted">No snapshots yet.</p>`}`)}
     ${panel('Announcement', html`<form method="post" action="/admin/announcement">${csrfField(d.csrf)}
       <label for="ann" class="sr">Announcement</label>
       <input id="ann" type="text" name="text" value="${d.announcement}" maxlength="200" placeholder="Shown on the news ticker for everyone (empty = off)">

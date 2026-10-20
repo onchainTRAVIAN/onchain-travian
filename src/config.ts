@@ -4,6 +4,26 @@ import { z } from 'zod';
 const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  /**
+   * The address players use, e.g. https://onchaintravian.com. When set, other hosts (the *.up.railway.app name, www.)
+   * redirect here, wallet sign-in messages name this domain, and link previews use it.
+   */
+  PUBLIC_URL: z
+    .url({ protocol: /^https?$/ })
+    .transform((u) => new URL(u).origin)
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  /** Proxy hops in front of the app, for the real client IP (Railway alone = 1; Cloudflare proxy + Railway = 2). */
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(1),
+  /** Wallets (comma-separated 0x addresses) that become admins when they join or log in. */
+  ADMIN_WALLETS: z
+    .string()
+    .default('')
+    .transform((s) => s.split(',').map((a) => a.trim().toLowerCase()).filter(Boolean))
+    .pipe(z.array(z.string().regex(/^0x[0-9a-f]{40}$/, 'ADMIN_WALLETS must be comma-separated 0x addresses'))),
+  /** Gzipped database snapshots in <db dir>/backups every this many hours (0 = off), keeping the newest BACKUP_KEEP. */
+  BACKUP_HOURS: z.coerce.number().min(0).max(24 * 7).default(6),
+  BACKUP_KEEP: z.coerce.number().int().min(1).max(100).default(8),
   SESSION_SECRET: z.string().min(16).default('dev-only-insecure-secret-change-me'),
   DATABASE_PATH: z.string().min(1).default('./data/game.db'),
   WORLD_NAME: z.string().min(1).default('onchainTRAVIAN'),
