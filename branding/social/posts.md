@@ -160,7 +160,7 @@ It makes it much easier to read a neighbourhood at a glance.
 
 ## Day 5
 
-### 13. Battle reports - ready
+### 13. Battle reports - posted
 Media: screenshot, a battle report with the result bar, losses and loot
 File: branding/social/img/13-report.jpg
 ```
@@ -223,7 +223,7 @@ Reply under it: `https://github.com/onchainTRAVIAN/onchain-travian`
 
 ## Day 7
 
-### 19. Precise clicks - ready
+### 19. Precise clicks - posted
 Media: video, the cursor moving over the village centre while each building highlights (8 to 10 s)
 File: branding/social/img/19-clicks.mp4
 ```
@@ -269,7 +269,7 @@ Members of the same alliance, or of alliances in a confederacy or a non-aggressi
 So no more accidental farm list hits on an ally.
 ```
 
-### 24. The cranny - ready
+### 24. The cranny - posted
 Media: screenshot, the cranny page showing how much it hides
 File: branding/social/img/24-cranny.jpg
 ```
@@ -289,7 +289,7 @@ Free oases collect resources and are guarded by wild animals, which grow back ev
 Beat the animals and you take the resources. With a Hero's Mansion at level 10 and your hero in the attack, you can take the oasis itself and add its production bonus to your village. If another player already holds it, each hero attack lowers its loyalty until it changes hands.
 ```
 
-### 26. Artifacts - ready
+### 26. Artifacts - posted
 Media: screenshot, the Artifacts and Wonders page
 File: branding/social/img/26-artifacts.jpg
 ```
@@ -369,7 +369,7 @@ One rule we changed on purpose: if your hero dies and you train a new one, even 
 Losing your hero still costs you, but it doesn't wipe out everything it earned.
 ```
 
-### 33. Gaul traps - ready
+### 33. Gaul traps - posted
 Media: painting, Gaul trappers dragging netted soldiers into a palisade
 File: branding/social/img/33-traps.jpg
 ```
@@ -380,7 +380,7 @@ The owner can try to free them with an attack. The Gaul can also let them go at 
 
 ## Day 12
 
-### 34. Battle maths - ready
+### 34. Battle maths - posted
 Media: screenshot, a battle report next to the simulator showing the same result
 File: branding/social/img/34-maths.jpg
 ```
@@ -391,7 +391,7 @@ Morale weakens attacks on much smaller players. Rams hit the wall before the fig
 Our tests pin these formulas to known reference values, so the numbers you remember should still work.
 ```
 
-### 35. A fast world - ready
+### 35. A fast world - posted
 Media: painting, a village growing in fast motion while the sun and moon cross the sky
 File: branding/social/img/35-fast.jpg
 ```
