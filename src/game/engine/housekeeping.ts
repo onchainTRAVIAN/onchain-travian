@@ -2,7 +2,7 @@ import { dirname, resolve } from 'node:path';
 import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import type { DB } from '../../db/index.js';
 import { diskSpace } from '../../db/backup.js';
-import { reports, sessions, users } from '../../db/schema.js';
+import { reports, sessions, signupTickets, users, walletNonces } from '../../db/schema.js';
 import { config } from '../../config.js';
 import { getMeta, setMeta } from './world.js';
 
@@ -43,6 +43,9 @@ export function processHousekeeping(db: DB, now: number): void {
   const removed = pruneReports(db, now);
   if (removed > 0) console.log(`Housekeeping: deleted ${removed} old report(s)`);
   db.delete(sessions).where(lt(sessions.expiresAt, now)).run();
+  // SIWE nonces and signup tickets normally get consumed on sign-in; drop the leftovers from abandoned attempts.
+  db.delete(walletNonces).where(lt(walletNonces.expiresAt, now)).run();
+  db.delete(signupTickets).where(lt(signupTickets.expiresAt, now)).run();
   const disk = diskSpace();
   if (disk && disk.freeMb < Math.max(50, disk.totalMb * 0.15)) {
     console.error(`DISK ALMOST FULL: ${disk.freeMb} MB free of ${disk.totalMb} MB at ${dirname(resolve(config.DATABASE_PATH))} - grow the volume`);

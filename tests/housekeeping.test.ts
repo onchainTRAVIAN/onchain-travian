@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
-import { reports, sessions } from '../src/db/schema.js';
+import { reports, sessions, signupTickets, walletNonces } from '../src/db/schema.js';
 import { clock } from '../src/clock.js';
 import { config } from '../src/config.js';
 import { ensureWorld, setMeta } from '../src/game/engine/world.js';
@@ -46,15 +46,21 @@ describe('report clean-up', () => {
     expect(count(a)).toBe(5);
   });
 
-  it('runs every 10 minutes from the tick and drops expired sessions', () => {
+  it('runs every 10 minutes from the tick and drops expired sessions, SIWE nonces and signup tickets', () => {
     const now = clock.now();
     db.insert(sessions).values({ id: 'old', userId: a, csrf: 'x', villageId: null, createdAt: now - 40 * DAY, expiresAt: now - DAY }).run();
     db.insert(sessions).values({ id: 'live', userId: a, csrf: 'y', villageId: null, createdAt: now, expiresAt: now + DAY }).run();
+    db.insert(walletNonces).values({ nonce: 'n-old', userId: null, purpose: 'login', expiresAt: now - 60_000 }).run();
+    db.insert(walletNonces).values({ nonce: 'n-live', userId: null, purpose: 'login', expiresAt: now + 60_000 }).run();
+    db.insert(signupTickets).values({ tokenHash: 't-old', address: '0x1', expiresAt: now - 60_000 }).run();
+    db.insert(signupTickets).values({ tokenHash: 't-live', address: '0x2', expiresAt: now + 60_000 }).run();
     setMeta(db, 'housekeeping_tick', '0');
     processHousekeeping(db, now);
     const ids = db.select({ id: sessions.id }).from(sessions).all().map((s) => s.id);
     expect(ids).toContain('live');
     expect(ids).not.toContain('old');
+    expect(db.select({ n: walletNonces.nonce }).from(walletNonces).all().map((r) => r.n)).toEqual(['n-live']);
+    expect(db.select({ h: signupTickets.tokenHash }).from(signupTickets).all().map((r) => r.h)).toEqual(['t-live']);
     // Within the 10 minutes nothing runs again.
     db.insert(sessions).values({ id: 'old2', userId: a, csrf: 'z', villageId: null, createdAt: now - 40 * DAY, expiresAt: now - DAY }).run();
     processHousekeeping(db, now + 60_000);
