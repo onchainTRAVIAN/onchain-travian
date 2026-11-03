@@ -5,7 +5,9 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 remote() { npx --yes @railway/cli ssh --service game "$1" 2>/dev/null | tr -d '\r'; }
 
-name="${1:-$(remote 'ls -1 /data/backups | grep -E "\.db\.gz$" | sort | tail -n 1' | tr -d '\n')}"
+# The newest snapshot of the world the server runs now (other worlds' snapshots share the folder).
+base="$(remote 'basename "$DATABASE_PATH" .db' | tr -d '\n')"
+name="${1:-$(remote "ls -1 /data/backups | grep -E '^${base}-[0-9]{8}-[0-9]{4}\.db\.gz\$' | sort | tail -n 1" | tr -d '\n')}"
 [ -n "$name" ] || { echo "No snapshots in /data/backups yet (the server writes one a minute after it starts)"; exit 1; }
 mkdir -p data/backups
 want="$(remote "sha256sum /data/backups/$name" | cut -d' ' -f1)"

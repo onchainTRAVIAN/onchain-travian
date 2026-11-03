@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { GameError } from '../../game/errors.js';
 import { db } from '../../db/index.js';
 import { startResearch } from '../../game/actions/research.js';
 import { acceptOffer, cancelOffer, createOffer, sendResources } from '../../game/actions/market.js';
@@ -37,8 +38,17 @@ economyRouter.post(
     (req, res, d) => {
       const ctx = authed(req);
       const ms = sendResources(db, ctx.user.id, ctx.villageId, d.x, d.y, res_(d), ctx.now);
-      if (d.save) savePlace(db, ctx.user.id, d.x, d.y, d.label ?? '', ctx.now);
-      setFlash(res, 'ok', `Merchants are on their way. They arrive in ${fmtDuration(ms)}.`);
+      // The merchants have left: a full list of saved places must not look like a failed send (and invite a second one).
+      let note = '';
+      if (d.save) {
+        try {
+          savePlace(db, ctx.user.id, d.x, d.y, d.label ?? '', ctx.now);
+        } catch (err) {
+          if (!(err instanceof GameError)) throw err;
+          note = ` (Not saved as a place: ${err.message})`;
+        }
+      }
+      setFlash(res, 'ok', `Merchants are on their way. They arrive in ${fmtDuration(ms)}.${note}`);
       res.redirect(303, backUrl(req, '/village'));
     },
   ),

@@ -15,12 +15,17 @@ function open(path: string) {
   const sqlite = new Database(path);
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('synchronous = NORMAL');
-  sqlite.pragma('foreign_keys = ON');
   sqlite.pragma('busy_timeout = 5000');
   // Truncate the WAL back to 64 MB after checkpoints (it otherwise keeps its largest size on disk).
   sqlite.pragma('journal_size_limit = 67108864');
   const db = drizzle(sqlite, { schema });
+  // Migrations run with foreign keys OFF: drizzle-kit rebuilds a changed table with DROP + RENAME, and with keys ON
+  // that DROP would cascade-delete every row pointing at it (SQLite ignores the pragma inside the migration's transaction).
+  sqlite.pragma('foreign_keys = OFF');
   migrate(db, { migrationsFolder: MIGRATIONS_DIR });
+  const broken = sqlite.pragma('foreign_key_check') as unknown[];
+  if (broken.length > 0) console.error(`Database has ${broken.length} row(s) pointing at missing rows (foreign_key_check)`);
+  sqlite.pragma('foreign_keys = ON');
   return { sqlite, db };
 }
 

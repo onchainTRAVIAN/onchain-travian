@@ -11,7 +11,7 @@ export function clientIp(req: Request): string {
   return ipKeyGenerator(real || req.ip || 'unknown');
 }
 
-/** A per-IP limit of `limit` requests per `windowMs` (effectively off in tests). */
-export function limiter(windowMs: number, limit: number, handler: Options['handler']) {
-  return rateLimit({ windowMs, limit: config.NODE_ENV === 'test' ? 10_000 : limit, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: clientIp, handler });
+/** A per-IP limit of `limit` requests per `windowMs` (effectively off in tests). `extra`: e.g. only count successes. */
+export function limiter(windowMs: number, limit: number, handler: Options['handler'], extra: Partial<Options> = {}) {
+  return rateLimit({ windowMs, limit: config.NODE_ENV === 'test' ? 10_000 : limit, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: clientIp, handler, ...extra });
 }

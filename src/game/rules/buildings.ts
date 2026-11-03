@@ -258,11 +258,12 @@ export const WALL_FOR: Record<PlayableTribeId, BuildingId> = { romans: 'citywall
 export const WALL_IDS: BuildingId[] = ['citywall', 'earthwall', 'palisade'];
 
 export function buildingDef(id: string): BuildingDef | undefined {
-  return (BUILDINGS as Record<string, BuildingDef>)[id];
+  return Object.hasOwn(BUILDINGS, id) ? (BUILDINGS as Record<string, BuildingDef>)[id] : undefined;
 }
 
 export function isBuildingId(id: string): id is BuildingId {
-  return id in BUILDINGS;
+  // hasOwn, not `in`: `in` also accepts inherited names like "constructor" from player input.
+  return Object.hasOwn(BUILDINGS, id);
 }
 
 export function fieldForResource(r: ResourceKey): FieldId {

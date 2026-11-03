@@ -301,7 +301,7 @@ export interface TileViewData {
   kind: 'field' | 'oasis';
   layout: string | null;
   oasis: string | null;
-  village: { id: number; name: string; pop: number; isMine: boolean; owner: string; ownerId: number | null; tribe: string; protectedUntil: number | null } | null;
+  village: { id: number; name: string; pop: number; isMine: boolean; owner: string; ownerId: number | null; tribe: string; tribeId: TribeId | null; protectedUntil: number | null } | null;
   distance: number;
   animals: number[] | null;
   /** Resources lying in an unoccupied oasis (lootable). */
@@ -371,7 +371,7 @@ export function tileView(d: TileViewData): SafeHtml {
     ${v && !v.isMine
       ? panel('Actions', html`<div class="actions">
           ${send('raid', 'Raid')} ${send('attack', 'Attack')} ${send('scout', 'Scout', 'btn secondary')} ${send('reinforce', 'Reinforce', 'btn secondary')}
-          <a class="btn secondary" href="${simLink({ d1_t: v.tribe, dpop: String(v.pop) })}">Simulate</a>
+          <a class="btn secondary" href="${simLink({ ...(v.tribeId ? { d1_t: v.tribeId } : {}), dpop: String(v.pop) })}">Simulate</a>
           ${v.ownerId ? html`<a class="btn secondary" href="/messages/new?to=${encodeURIComponent(v.owner)}">Message</a>` : ''}
         </div>`)
       : ''}

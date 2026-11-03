@@ -84,9 +84,9 @@ goldmarketRouter.post(
 
 goldmarketRouter.post(
   '/goldmarket/buy',
-  formAction(z.object({ id: z.coerce.number().int().positive() }), (req, r, d) => {
+  formAction(z.object({ id: z.coerce.number().int().positive(), sig: z.string().regex(/^[0-9a-f]{16}$/) }), (req, r, d) => {
     const ctx = authed(req);
-    const { arriveAt } = buyListing(db, ctx.user.id, ctx.villageId, d.id, ctx.now);
+    const { arriveAt } = buyListing(db, ctx.user.id, ctx.villageId, d.id, ctx.now, d.sig);
     setFlash(r, 'ok', `Bought! The delivery arrives in ${fmtDuration(arriveAt - ctx.now)}.`);
     r.redirect(303, '/goldmarket?tab=mine');
   }, '/goldmarket'),

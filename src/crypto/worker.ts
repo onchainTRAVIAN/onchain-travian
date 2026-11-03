@@ -2,7 +2,7 @@ import type { DB } from '../db/index.js';
 import { config, cryptoEnabled, holderTiersEnabled } from '../config.js';
 import { clock } from '../clock.js';
 import { getMeta, setMeta } from '../game/engine/world.js';
-import { publicClient } from './chain.js';
+import { publicClient, rpcErrorText } from './chain.js';
 import { indexDeposits } from './indexer.js';
 import { entryFeeOn, feeLabel, indexEntries } from './entry.js';
 import { fetchEthUsd, setEthUsd } from './pricing.js';
@@ -18,12 +18,16 @@ export function startCryptoWorkers(db: DB): () => void {
   const saved = Number(getMeta(db, 'eth_usd') ?? '0');
   if (saved > 0) setEthUsd(saved, Number(getMeta(db, 'eth_usd_at') ?? '0'));
   const runPrice = async () => {
-    const usd = await fetchEthUsd();
-    if (usd === null) return;
-    const now = clock.now();
-    setEthUsd(usd, now);
-    setMeta(db, 'eth_usd', String(usd));
-    setMeta(db, 'eth_usd_at', String(now));
+    try {
+      const usd = await fetchEthUsd();
+      if (usd === null) return;
+      const now = clock.now();
+      setEthUsd(usd, now);
+      setMeta(db, 'eth_usd', String(usd));
+      setMeta(db, 'eth_usd_at', String(now));
+    } catch (err) {
+      console.error('ETH price update failed:', err instanceof Error ? err.message : err);
+    }
   };
   timers.push(setInterval(() => void runPrice(), 5 * 60_000));
   void runPrice();
@@ -36,7 +40,7 @@ export function startCryptoWorkers(db: DB): () => void {
         const r = await indexDeposits(db, publicClient(), clock.now());
         if (r && r.found > 0) console.log(`Indexer: ${r.found} deposit(s), ${r.credited} credited (blocks ${r.from}-${r.to})`);
       } catch (err) {
-        console.error('Deposit indexer failed:', err instanceof Error ? err.message : err);
+        console.error('Deposit indexer failed:', rpcErrorText(err));
       } finally {
         indexing = false;
       }
@@ -55,7 +59,7 @@ export function startCryptoWorkers(db: DB): () => void {
         const r = await indexEntries(db, publicClient(), clock.now());
         if (r && r.found > 0) console.log(`Entry fees: ${r.found} payment(s) (blocks ${r.from}-${r.to})`);
       } catch (err) {
-        console.error('Entry fee reader failed:', err instanceof Error ? err.message : err);
+        console.error('Entry fee reader failed:', rpcErrorText(err));
       } finally {
         reading = false;
       }
@@ -69,17 +73,17 @@ export function startCryptoWorkers(db: DB): () => void {
     const periodMs = config.HOLDER_SNAPSHOT_HOURS * 3_600_000;
     const runSnapshot = async () => {
       if (snapshotting) return;
-      const last = Number(getMeta(db, 'holder_snapshot_at') ?? '0');
-      const now = clock.now();
-      if (now - last < periodMs) return;
       snapshotting = true;
       try {
+        const last = Number(getMeta(db, 'holder_snapshot_at') ?? '0');
+        const now = clock.now();
+        if (now - last < periodMs) return;
         const n = await takeSnapshot(db, publicClient(), now);
         const tiers = applyTiers(db, now);
         setMeta(db, 'holder_snapshot_at', String(now));
         console.log(`Holder snapshot: ${n} wallet(s), ${tiers.size} with a tier`);
       } catch (err) {
-        console.error('Holder snapshot failed:', err instanceof Error ? err.message : err);
+        console.error('Holder snapshot failed:', rpcErrorText(err));
       } finally {
         snapshotting = false;
       }

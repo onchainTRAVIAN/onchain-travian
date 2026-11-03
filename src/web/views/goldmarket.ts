@@ -1,5 +1,5 @@
 import type { ListingView } from '../../game/actions/goldmarket.js';
-import { LISTING_MAX_PRICE, SELLABLE_SLOTS, deliveryTimeMs } from '../../game/actions/goldmarket.js';
+import { LISTING_MAX_PRICE, SELLABLE_SLOTS, deliveryTimeMs, listingSig } from '../../game/actions/goldmarket.js';
 import { parseResources, parseUnits } from '../../game/engine/state.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL, sumRes, type Resources } from '../../game/rules/resources.js';
 import { TRIBES, type TribeId, type UnitCounts } from '../../game/rules/units.js';
@@ -11,7 +11,7 @@ import { goldBtn, panel, unitIcon, unitsInline, woodTabs } from './parts.js';
 export type GoldTab = 'resources' | 'troops' | 'sell' | 'mine';
 
 function goodsCell(l: ListingView): SafeHtml {
-  if (l.kind === 'troops') return unitsInline((l.tribe in TRIBES ? l.tribe : 'romans') as TribeId, parseUnits(l.units));
+  if (l.kind === 'troops') return unitsInline((Object.hasOwn(TRIBES, l.tribe) ? l.tribe : 'romans') as TribeId, parseUnits(l.units));
   const g = parseResources(l.goods);
   return html`${RESOURCE_KEYS.filter((k) => g[k] > 0).map((k) => html`<span class="nowrap">${resIcon(k)} ${fmtNum(g[k])}</span> `)}`;
 }
@@ -46,7 +46,7 @@ export function goldMarketView(d: {
   const time = (l: ListingView) =>
     l.fromX !== null && l.fromY !== null ? fmtDuration(deliveryTimeMs(l, { x: l.fromX, y: l.fromY }, d.here)) : '-';
   const buyBtn = (l: ListingView) =>
-    html`<form method="post" action="/goldmarket/buy">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}">${goldBtn('Buy', l.price, d.balance >= l.price)}</form>`;
+    html`<form method="post" action="/goldmarket/buy">${csrfField(d.csrf)}<input type="hidden" name="id" value="${l.id}"><input type="hidden" name="sig" value="${listingSig(l)}">${goldBtn('Buy', l.price, d.balance >= l.price)}</form>`;
 
   if (d.tab === 'resources' || d.tab === 'troops') {
     const isRes = d.tab === 'resources';
@@ -128,7 +128,7 @@ export function goldEditView(d: {
   csrf: string;
 }): SafeHtml {
   const l = d.listing;
-  const tribe = (l.tribe in TRIBES ? l.tribe : 'romans') as TribeId;
+  const tribe = (Object.hasOwn(TRIBES, l.tribe) ? l.tribe : 'romans') as TribeId;
   const canChange = d.villageName !== null;
   let rows: SafeHtml;
   if (l.kind === 'resources') {

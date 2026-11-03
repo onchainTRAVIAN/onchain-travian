@@ -292,7 +292,7 @@ export function transferableBalance(q: Q, userId: number): number {
     q
       .select({ n: sql<number>`coalesce(sum(${creditsLedger.amount}), 0)` })
       .from(creditsLedger)
-      .where(and(eq(creditsLedger.userId, userId), sql`(${creditsLedger.idemKey} like 'task:%' or ${creditsLedger.idemKey} like 'medal:%' or ${creditsLedger.idemKey} like 'starter:%')`))
+      .where(and(eq(creditsLedger.userId, userId), sql`(${creditsLedger.idemKey} like 'task:%' or ${creditsLedger.idemKey} like 'medal:%' or ${creditsLedger.idemKey} like 'starter:%' or ${creditsLedger.idemKey} like 'marketfree:%')`))
       .get()?.n ?? 0;
   return creditBalance(q, userId) - given;
 }

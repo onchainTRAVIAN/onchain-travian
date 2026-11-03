@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
 import { sqlite } from './db/index.js';
+import { worldStalledMs } from './game/engine/events.js';
 import { csrfGuard, requireAuth, sessionMiddleware } from './web/session.js';
 import { authRouter } from './web/routes/auth.js';
 import { villageRouter } from './web/routes/village.js';
@@ -39,6 +40,11 @@ export function createApp() {
   app.get('/healthz', (_req, res) => {
     try {
       sqlite.prepare('select 1').get();
+      // The world advances every second; failing for over a minute means it is stuck (locked, full or broken database).
+      if (worldStalledMs() > 60_000) {
+        res.status(503).json({ ok: false, error: 'world tick stalled' });
+        return;
+      }
       res.json({ ok: true });
     } catch {
       res.status(503).json({ ok: false });
@@ -113,6 +119,12 @@ export function createApp() {
 
   // Error handler: registered last.
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+    // Bad requests the body parsers reject (broken JSON, too large, too many fields) keep their 4xx status.
+    const status = typeof err === 'object' && err && 'status' in err && typeof err.status === 'number' ? err.status : 500;
+    if (status >= 400 && status < 500) {
+      if (!res.headersSent) res.status(status).type('text').send(status === 413 ? 'Request too large' : 'Bad request');
+      return;
+    }
     console.error(err);
     if (res.headersSent) return;
     try {

@@ -1,8 +1,9 @@
-import { and, asc, eq, gt, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, lte, notInArray, sql } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { buildOrders, celebrations, heroes, movements, researchOrders, slots, tiles, troops, users, villages } from '../../db/schema.js';
 import { finishCelebration } from '../actions/celebration.js';
 import { config } from '../../config.js';
+import { clock } from '../../clock.js';
 import { BUILDINGS, RALLY_SLOT, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
 import { WALL_DURABILITY, trapCatch, canAimTwice, cataMorale, catapultResult, catapultTargetAllowed, computeLoot, moraleMalus, resolveBattle, resolveScouting, scoutPoints, type ArmyGroup } from '../rules/battle.js';
 import { distance, travelTimeMs } from '../rules/map.js';
@@ -259,8 +260,11 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
     const wallMult = target.userId !== null ? Math.pow(1 + TRIBES[target.tribe].wallPerLevel, wallLevel) : 1;
     const defPts = defenders.reduce((s, d) => s + scoutPoints(d.group, 'defense'), 0) * wallMult * artifactValue(q, targetId, 'eyes', t);
     const defScouts = defenders.reduce((s, d) => s + countType(d.group.tribe, d.group.units, 'scout'), 0);
-    const outcome = resolveScouting(offPts, defPts);
-    const losses = attackerUnits.map((n, i) => (unitDef(home.tribe, i).type === 'scout' ? Math.min(n, Math.round(n * outcome.lossRatio)) : 0));
+    const scouting = resolveScouting(offPts, defPts);
+    const losses = attackerUnits.map((n, i) => (unitDef(home.tribe, i).type === 'scout' ? Math.min(n, Math.round(n * scouting.lossRatio)) : 0));
+    // Decided after rounding: the mission fails only when every scout died (a 0.67 loss ratio kills a lone scout).
+    const sent = attackerUnits.reduce((s, n, i) => s + (unitDef(home.tribe, i).type === 'scout' ? n : 0), 0);
+    const outcome = { ...scouting, success: scouting.success && losses.reduce((s, n) => s + n, 0) < sent };
     const data: BattleReportData = {
       type: 'battle',
       mode: 'scout',
@@ -342,8 +346,9 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
   });
 
   let survivors = subUnits(fighting, result.attackerLosses);
-  // A victorious attack frees soldiers of this village (and of allies) held in the enemy's traps:
-  // a quarter of them die in the escape, and a third of the broken traps are rebuilt.
+  // A victorious attack frees the attacker's soldiers held in the enemy's traps (from any of their villages):
+  // a quarter of them die in the escape, and a third of the broken traps are rebuilt. This village's soldiers join
+  // the army on its way back; those of the player's other villages walk to their own village.
   if (result.attackerWon && mode === 'attack') {
     const freed = releasePrisoners(q, targetId, home.id);
     if (totalUnits(freed) > 0) {
@@ -351,6 +356,19 @@ function handleCombat(q: Q, mv: MovementRow, t: number): void {
       survivors = addUnits(survivors, alive);
       repairTraps(q, targetId, totalUnits(freed));
       notes.push(`${totalUnits(alive)} of your trapped soldiers were freed (${totalUnits(freed) - totalUnits(alive)} died escaping).`);
+    }
+    if (home.userId !== null) {
+      const held = q.select({ prisoners: villages.prisoners }).from(villages).where(eq(villages.id, targetId)).get();
+      const keys = held ? Object.keys(readPrisoners(held)).map(Number).filter((id) => id !== home.id) : [];
+      for (const other of keys.length ? q.select({ id: villages.id }).from(villages).where(and(inArray(villages.id, keys), eq(villages.userId, home.userId))).all() : []) {
+        const theirs = releasePrisoners(q, targetId, other.id);
+        const otherHome = villageInfo(q, other.id);
+        if (totalUnits(theirs) === 0 || !otherHome) continue;
+        const alive = theirs.map((n) => n - Math.floor(n / 4));
+        repairTraps(q, targetId, totalUnits(theirs));
+        scheduleReturn(q, otherHome, targetInfo.x, targetInfo.y, alive, null, t);
+        notes.push(`${totalUnits(alive)} trapped soldiers of ${otherHome.name} were freed and walk home (${totalUnits(theirs) - totalUnits(alive)} died escaping).`);
+      }
     }
   }
   defenders.forEach((d, idx) => {
@@ -651,6 +669,10 @@ function handleOasisCombat(q: Q, mv: MovementRow, home: VillageInfo, attackerUni
         // The owner's hold on the oasis is weakened but not yet broken.
       } else {
         const previous = tile.villageId;
+        // The bonus changes hands now: both villages are brought up to this moment first (else the old holder loses it,
+        // and the new one gains it, for all the time since they were last updated).
+        if (previous !== null) catchUp(q, previous, t);
+        catchUp(q, home.id, t);
         q.update(tiles).set({ villageId: home.id, oasisLoyalty: 100, oasisLoyaltyAt: t }).where(and(eq(tiles.x, tile.x), eq(tiles.y, tile.y))).run();
         clearOasisGarrison(q, tile.x, tile.y, t);
         captured = true;
@@ -703,6 +725,11 @@ function handleReinforce(q: Q, mv: MovementRow, t: number): void {
       return;
     }
     scheduleReturn(q, home, mv.toX, mv.toY, units, null, t, !!hero);
+    return;
+  }
+  // Natar villages never pay upkeep: an army parked there would eat nothing, so it turns back.
+  if (target.tribe === 'natars') {
+    scheduleReturn(q, home, target.x, target.y, units, null, t, !!hero);
     return;
   }
   catchUp(q, target.id, t);
@@ -799,6 +826,9 @@ function handleTrade(q: Q, mv: MovementRow, t: number): void {
 
 function handleMovement(q: Q, mv: MovementRow): void {
   const t = mv.arriveAt;
+  // The sending village feeds its troops while they march: bring it up to the arrival while this movement still
+  // counts, before it is removed (merchants eat nothing).
+  if (mv.kind !== 'trade' && mv.kind !== 'merchant_return') catchUp(q, mv.fromVillageId, t);
   q.delete(movements).where(eq(movements.id, mv.id)).run();
   switch (mv.kind) {
     case 'attack':
@@ -875,22 +905,50 @@ function handleResearchDone(q: Q, order: typeof researchOrders.$inferSelect): vo
  * Process every construction, research and troop arrival due by `now`, strictly in time order,
  * one transaction per event. Returns the number of events processed.
  */
+/**
+ * Events whose handler threw, by table: skipped from then on (until a restart), so one broken row can't freeze the
+ * world behind it. Each failure is logged once with the row id.
+ */
+const failedEvents = { revive: new Set<number>(), build: new Set<number>(), move: new Set<number>(), research: new Set<number>(), party: new Set<number>() };
+let lastProcessedOk = clock.now();
+let lastFailedAt = 0;
+
+/** How long the world has been failing to advance (database busy, full or broken), in ms; 0 while it runs. */
+export function worldStalledMs(): number {
+  return lastFailedAt > lastProcessedOk ? lastFailedAt - lastProcessedOk : 0;
+}
+
+const skip = (col: Parameters<typeof notInArray>[0], ids: Set<number>) => (ids.size ? notInArray(col, [...ids]) : undefined);
+
 export function processDue(db: DB, now: number, limit = 1000): number {
+  try {
+    const n = processDueEvents(db, now, limit);
+    lastProcessedOk = now;
+    return n;
+  } catch (err) {
+    lastFailedAt = now;
+    throw err;
+  }
+}
+
+function processDueEvents(db: DB, now: number, limit: number): number {
   let processed = 0;
   while (processed < limit) {
-    const nextRevive = db.select().from(heroes).where(and(eq(heroes.status, 'reviving'), lte(heroes.reviveAt, now))).orderBy(asc(heroes.reviveAt)).limit(1).get();
-    const nextBuild = db.select().from(buildOrders).where(lte(buildOrders.finishAt, now)).orderBy(asc(buildOrders.finishAt), asc(buildOrders.id)).limit(1).get();
-    const nextMove = db.select().from(movements).where(lte(movements.arriveAt, now)).orderBy(asc(movements.arriveAt), asc(movements.id)).limit(1).get();
-    const nextResearch = db.select().from(researchOrders).where(lte(researchOrders.finishAt, now)).orderBy(asc(researchOrders.finishAt), asc(researchOrders.id)).limit(1).get();
-    const nextParty = db.select().from(celebrations).where(lte(celebrations.finishAt, now)).orderBy(asc(celebrations.finishAt)).limit(1).get();
-    const candidates: { at: number; run: () => void }[] = [];
-    if (nextRevive) candidates.push({ at: nextRevive.reviveAt ?? now, run: () => db.transaction((tx) => processHeroRevivals(tx, nextRevive.reviveAt ?? now)) });
-    if (nextBuild) candidates.push({ at: nextBuild.finishAt, run: () => db.transaction((tx) => handleBuildDone(tx, nextBuild)) });
-    if (nextMove) candidates.push({ at: nextMove.arriveAt, run: () => db.transaction((tx) => handleMovement(tx, nextMove)) });
-    if (nextResearch) candidates.push({ at: nextResearch.finishAt, run: () => db.transaction((tx) => handleResearchDone(tx, nextResearch)) });
+    const nextRevive = db.select().from(heroes).where(and(eq(heroes.status, 'reviving'), lte(heroes.reviveAt, now), skip(heroes.id, failedEvents.revive))).orderBy(asc(heroes.reviveAt)).limit(1).get();
+    const nextBuild = db.select().from(buildOrders).where(and(lte(buildOrders.finishAt, now), skip(buildOrders.id, failedEvents.build))).orderBy(asc(buildOrders.finishAt), asc(buildOrders.id)).limit(1).get();
+    const nextMove = db.select().from(movements).where(and(lte(movements.arriveAt, now), skip(movements.id, failedEvents.move))).orderBy(asc(movements.arriveAt), asc(movements.id)).limit(1).get();
+    const nextResearch = db.select().from(researchOrders).where(and(lte(researchOrders.finishAt, now), skip(researchOrders.id, failedEvents.research))).orderBy(asc(researchOrders.finishAt), asc(researchOrders.id)).limit(1).get();
+    const nextParty = db.select().from(celebrations).where(and(lte(celebrations.finishAt, now), skip(celebrations.id, failedEvents.party))).orderBy(asc(celebrations.finishAt)).limit(1).get();
+    const candidates: { at: number; kind: keyof typeof failedEvents; id: number; run: () => void }[] = [];
+    if (nextRevive) candidates.push({ at: nextRevive.reviveAt ?? now, kind: 'revive', id: nextRevive.id, run: () => db.transaction((tx) => processHeroRevivals(tx, nextRevive.reviveAt ?? now)) });
+    if (nextBuild) candidates.push({ at: nextBuild.finishAt, kind: 'build', id: nextBuild.id, run: () => db.transaction((tx) => handleBuildDone(tx, nextBuild)) });
+    if (nextMove) candidates.push({ at: nextMove.arriveAt, kind: 'move', id: nextMove.id, run: () => db.transaction((tx) => handleMovement(tx, nextMove)) });
+    if (nextResearch) candidates.push({ at: nextResearch.finishAt, kind: 'research', id: nextResearch.id, run: () => db.transaction((tx) => handleResearchDone(tx, nextResearch)) });
     if (nextParty) {
       candidates.push({
         at: nextParty.finishAt,
+        kind: 'party',
+        id: nextParty.id,
         run: () =>
           db.transaction((tx) => {
             const owner = tx.select({ u: villages.userId }).from(villages).where(eq(villages.id, nextParty.villageId)).get();
@@ -900,7 +958,16 @@ export function processDue(db: DB, now: number, limit = 1000): number {
     }
     if (candidates.length === 0) break;
     candidates.sort((a, b) => a.at - b.at);
-    candidates[0]?.run();
+    const next = candidates[0]!;
+    try {
+      next.run();
+    } catch (err) {
+      // The transaction rolled back. A busy or full database is not this event's fault: stop and retry next tick.
+      const code = typeof err === 'object' && err && 'code' in err ? String(err.code) : '';
+      if (/^SQLITE_(BUSY|LOCKED|FULL|IOERR)/.test(code)) throw err;
+      failedEvents[next.kind].add(next.id);
+      console.error(`Event ${next.kind} #${next.id} failed and is skipped until the next restart:`, err);
+    }
     processed++;
   }
   return processed;

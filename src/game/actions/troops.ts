@@ -99,7 +99,7 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
     const wanted = input.catapultTarget.split(',').filter(Boolean);
     assertGame(wanted.length <= 2, 'At most two catapult targets');
     for (const w of wanted) {
-      assertGame(w in BUILDINGS, 'Unknown catapult target');
+      assertGame(Object.hasOwn(BUILDINGS, w), 'Unknown catapult target');
       assertGame(catapultTargetAllowed(w, rally), `Your Rally Point (level ${rally}) cannot aim at ${BUILDINGS[w as BuildingId].name}`);
     }
     const cataSlot = TRIBES[me.tribe].units.findIndex((u) => u.type === 'catapult');
@@ -139,12 +139,13 @@ export function previewSend(q: Q, userId: number, villageId: number, input: Send
   } else {
     assertGame(input.kind !== 'settle', 'That land is already taken');
     const target = q
-      .select({ id: villages.id, name: villages.name, userId: villages.userId, username: users.username, protectedUntil: users.protectedUntil })
+      .select({ id: villages.id, name: villages.name, userId: villages.userId, username: users.username, protectedUntil: users.protectedUntil, tribe: users.tribe })
       .from(villages)
       .leftJoin(users, eq(users.id, villages.userId))
       .where(eq(villages.id, tile.villageId))
       .get();
     assertGame(target, 'There is no village at that location');
+    assertGame(!(input.kind === 'reinforce' && target.tribe === 'natars'), 'The Natars accept no reinforcements');
     if (input.kind !== 'reinforce') {
       assertGame(target.userId !== userId, 'You cannot attack your own village');
       assertGame(target.protectedUntil === null || target.protectedUntil <= now, `${target.username ?? 'This player'} is under beginner protection`);

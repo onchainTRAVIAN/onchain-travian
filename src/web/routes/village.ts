@@ -285,7 +285,7 @@ villageRouter.get('/troops/train', (req, res) => {
   const rows = autoUnitRows(db, state, ctx.now);
   const { income, stock } = planInputs(db, state, ctx.now);
   const plan = autoTrainOf(db, state.village.id);
-  const goal = typeof req.query.auto === 'string' && req.query.auto in AUTO_GOALS ? (req.query.auto as AutoGoal) : null;
+  const goal = typeof req.query.auto === 'string' && Object.hasOwn(AUTO_GOALS, req.query.auto) ? (req.query.auto as AutoGoal) : null;
   const hoursQ = Number(req.query.hours);
   const hours = Number.isInteger(hoursQ) && hoursQ >= AUTO_TRAIN_MIN_HOURS && hoursQ <= AUTO_TRAIN_MAX_HOURS ? hoursQ : (plan?.hours ?? 4);
   const values: Record<string, number> = goal
@@ -384,14 +384,26 @@ villageRouter.post(
     (req, res, data) => {
       const ctx = authed(req);
       const counts = [data.t0, data.t1, data.t2, data.t3, data.t4, data.t5, data.t6, data.t7, data.t8, data.t9];
+      // Each row is its own order: report what was queued AND what wasn't (a later row may run out of resources).
       const trained: string[] = [];
+      const failed: string[] = [];
       counts.forEach((n, slot) => {
         if (n <= 0) return;
-        const order = startTraining(db, ctx.user.id, ctx.villageId, data.building as BuildingId, slot, n, ctx.now);
-        trained.push(`${order.total} ${TRIBES[ctx.user.tribe].units[slot]?.name ?? ''}`);
+        const name = TRIBES[ctx.user.tribe].units[slot]?.name ?? '';
+        try {
+          const order = startTraining(db, ctx.user.id, ctx.villageId, data.building as BuildingId, slot, n, ctx.now);
+          trained.push(`${order.total} ${name}`);
+        } catch (err) {
+          if (!(err instanceof GameError) || counts.filter((c) => c > 0).length === 1) throw err;
+          failed.push(`${name}: ${err.message}`);
+        }
       });
-      if (trained.length === 0) throw new GameError('Enter how many units to train');
-      setFlash(res, 'ok', `Training: ${trained.join(', ')}.`);
+      if (trained.length === 0 && failed.length === 0) throw new GameError('Enter how many units to train');
+      setFlash(
+        res,
+        trained.length ? 'ok' : 'error',
+        [trained.length ? `Training: ${trained.join(', ')}.` : '', failed.length ? `Not trained - ${failed.join('; ')}.` : ''].filter(Boolean).join(' '),
+      );
       const slot = db
         .select({ slot: slots.slot })
         .from(slots)

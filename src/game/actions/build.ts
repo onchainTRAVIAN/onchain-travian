@@ -143,12 +143,20 @@ export function buildOption(q: Q, state: VillageState, slot: number, buildingId:
   return { ...base, canBuild: true };
 }
 
+/** Built, or still being built (a running order), in another village of this player (one-per-account buildings). */
 function ownsElsewhere(q: Q, userId: number, villageId: number, id: BuildingId): boolean {
-  return !!q
+  const built = q
     .select({ v: villages.id })
     .from(slots)
     .innerJoin(villages, eq(villages.id, slots.villageId))
     .where(and(eq(villages.userId, userId), eq(slots.building, id), ne(villages.id, villageId)))
+    .get();
+  if (built) return true;
+  return !!q
+    .select({ v: villages.id })
+    .from(buildOrders)
+    .innerJoin(villages, eq(villages.id, buildOrders.villageId))
+    .where(and(eq(villages.userId, userId), eq(buildOrders.building, id), eq(buildOrders.demolish, false), ne(villages.id, villageId)))
     .get();
 }
 
@@ -159,7 +167,10 @@ function hiddenReason(reason: string | undefined): boolean {
 
 /** Buildings that could go on an empty town plot, best options first. */
 export function buildableOnEmptyPlot(q: Q, state: VillageState, slot: number, now: number): BuildOption[] {
-  return TOWN_BUILDING_IDS.filter((id) => BUILDINGS[id].fixedSlot === undefined)
+  // A fixed plot (Rally Point, wall, Wonder) takes only its own building - also after catapults or a demolition
+  // brought it to level 0 and emptied the plot (otherwise it could never be rebuilt).
+  const own = TOWN_BUILDING_IDS.filter((id) => BUILDINGS[id].fixedSlot === slot);
+  return (own.length ? own : TOWN_BUILDING_IDS.filter((id) => BUILDINGS[id].fixedSlot === undefined))
     .map((id) => buildOption(q, state, slot, id, now))
     .filter((o) => !hiddenReason(o.reason))
     .sort((a, b) => rank(a) - rank(b));

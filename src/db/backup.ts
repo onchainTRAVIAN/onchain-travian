@@ -31,17 +31,33 @@ export function dbSizeMb(): number {
 
 export const backupDir = () => join(dirname(resolve(config.DATABASE_PATH)), 'backups');
 
+/** This world's snapshot names exactly ("world1-20261103-1200.db.gz"), so worlds sharing the folder never mix. */
+function snapshotPattern(): RegExp {
+  const base = basename(config.DATABASE_PATH, '.db').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${base}-\\d{8}-\\d{4}\\.db\\.gz$`);
+}
+
 /** Snapshot files of this world, newest first. */
 export function listBackups(): { name: string; bytes: number }[] {
-  const prefix = `${basename(config.DATABASE_PATH, '.db')}-`;
+  const mine = snapshotPattern();
   try {
     return readdirSync(backupDir())
-      .filter((f) => f.startsWith(prefix) && f.endsWith('.db.gz'))
+      .filter((f) => mine.test(f))
       .sort()
       .reverse()
       .map((name) => ({ name, bytes: statSync(join(backupDir(), name)).size }));
   } catch {
     return [];
+  }
+}
+
+/** Half-written snapshots left by a restart in the middle of a backup (they would never be rotated away). */
+export function removePartialBackups(): void {
+  if (config.DATABASE_PATH === ':memory:') return;
+  try {
+    for (const f of readdirSync(backupDir())) if (f.endsWith('.db.gz.part')) rmSync(join(backupDir(), f), { force: true });
+  } catch {
+    // no backups folder yet
   }
 }
 

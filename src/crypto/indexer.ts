@@ -6,10 +6,11 @@ import { config } from '../config.js';
 import { getMeta, setMeta } from '../game/engine/world.js';
 import { grantCredits } from '../game/actions/credits.js';
 import { gamePaymentsAbi } from './gamePayments.js';
+import { LogRange } from './chain.js';
 import { ETH_ASSET, creditsForDeposit, formatUnitsShort } from './pricing.js';
 
-const CHUNK = 2000n;
 const META_KEY = 'indexer_block';
+const range = new LogRange();
 
 export interface IndexResult {
   from: bigint;
@@ -27,20 +28,28 @@ export async function indexDeposits(db: DB, client: PublicClient, now: number, p
   const latest = await client.getBlockNumber({ cacheTime: 0 });
   const safe = latest - BigInt(config.CONFIRMATIONS);
   const stored = getMeta(db, META_KEY);
-  let from = stored !== undefined ? BigInt(stored) + 1n : BigInt(config.INDEXER_START_BLOCK);
+  // Without INDEXER_START_BLOCK start near the head, not at block 0 (millions of blocks back on a fast chain).
+  let from = stored !== undefined ? BigInt(stored) + 1n : config.INDEXER_START_BLOCK > 0 ? BigInt(config.INDEXER_START_BLOCK) : safe > 10_000n ? safe - 10_000n : 0n;
   if (safe < from) return { from, to: safe, found: 0, credited: 0 };
   const start = from;
   let found = 0;
   let credited = 0;
   while (from <= safe) {
-    const to = from + CHUNK - 1n < safe ? from + CHUNK - 1n : safe;
-    const logs = await client.getContractEvents({
-      address: getAddress(paymentsAddress),
-      abi: gamePaymentsAbi,
-      eventName: 'Deposit',
-      fromBlock: from,
-      toBlock: to,
-    });
+    const to = from + range.size - 1n < safe ? from + range.size - 1n : safe;
+    let logs;
+    try {
+      logs = await client.getContractEvents({
+        address: getAddress(paymentsAddress),
+        abi: gamePaymentsAbi,
+        eventName: 'Deposit',
+        fromBlock: from,
+        toBlock: to,
+      });
+    } catch (err) {
+      if (range.shrink(err)) continue;
+      throw err;
+    }
+    range.succeeded();
     db.transaction((tx) => {
       for (const log of logs) {
         const args = log.args as { accountId?: bigint; payer?: string; asset?: string; amount?: bigint };

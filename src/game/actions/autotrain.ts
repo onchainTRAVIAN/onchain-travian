@@ -1,7 +1,7 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { DB, Q } from '../../db/index.js';
-import { autoTrains, villages } from '../../db/schema.js';
+import { autoTrains, users, villages } from '../../db/schema.js';
 import { type BuildingId } from '../rules/buildings.js';
 import { RESOURCE_KEYS, res, type Resources } from '../rules/resources.js';
 import type { UnitDef } from '../rules/units.js';
@@ -298,7 +298,7 @@ export function runAutoTrain(db: DB, row: AutoTrainRow, now: number): void {
 /** World tick: run every active plan once a minute (and one last time when it ends). */
 export function processAutoTrains(db: DB, now: number): number {
   let runs = 0;
-  for (const row of db.select().from(autoTrains).where(eq(autoTrains.active, true)).all()) {
+  for (const row of db.select().from(autoTrains).where(and(eq(autoTrains.active, true), notInArray(autoTrains.userId, db.select({ id: users.id }).from(users).where(eq(users.banned, true))))).all()) {
     if (now - row.lastRunAt < AUTO_TRAIN_STEP_MS && now < row.endsAt) continue;
     const owner = db.select({ userId: villages.userId }).from(villages).where(eq(villages.id, row.villageId)).get();
     const lost = !owner || owner.userId !== row.userId;

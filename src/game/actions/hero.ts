@@ -19,6 +19,7 @@ import { catchUp, levelOf, setResources, setTroopsAt, stockOf, troopsAt } from '
 import { isResearched } from './research.js';
 import { ownedVillage } from './build.js';
 import { clearOasisGarrison } from '../engine/oasisTroops.js';
+import { sendTroopsHome } from '../engine/movement.js';
 
 export interface SkillInput {
   strength: number;
@@ -136,6 +137,15 @@ export function reviveHero(db: DB, userId: number, now: number): HeroRow {
     const patch = { status: 'reviving' as const, reviveAt: now + heroReviveTimeMs(unit, h.level, config.WORLD_SPEED), health: 0, healthAt: now };
     tx.update(heroes).set(patch).where(eq(heroes.id, h.id)).run();
     return { ...h, ...patch };
+  });
+}
+
+/** Call a hero stationed in another village home (with the rest of its home village's troops there). */
+export function recallHero(db: DB, userId: number, now: number): void {
+  db.transaction((tx) => {
+    const h = tx.select().from(heroes).where(eq(heroes.userId, userId)).get();
+    assertGame(h && h.status === 'away' && h.locationId !== null, 'Your hero is not stationed in another village');
+    assertGame(sendTroopsHome(tx, h.locationId, h.homeVillageId, now), 'Your hero cannot come home right now');
   });
 }
 

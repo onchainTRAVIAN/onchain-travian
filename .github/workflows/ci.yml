@@ -25,6 +25,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The entry-fee and payment tests pay through the real contracts on a local anvil chain (they fail on CI without it).
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge build
+        working-directory: contracts
       - run: npm run typecheck
       - run: npx vitest run --no-file-parallelism
       - run: npm run build
@@ -42,3 +46,8 @@ jobs:
       - run: forge --version
       - run: forge build --sizes
       - run: forge test -vvv
+      - name: ABIs used by the server match the contracts
+        run: |
+          node abi/generate.mjs
+          git diff --exit-code -- abi
+          for f in gamePayments gameEntry testToken; do diff <(tail -n +2 "abi/$f.ts") <(tail -n +2 "../src/crypto/$f.ts"); done

@@ -7,7 +7,7 @@ import { config } from '../../config.js';
 import { registerPlayer } from '../../game/actions/account.js';
 import { peekSignupTicket } from '../../crypto/wallet.js';
 import { checkEntryTx, entryFeeOn, entryQuote, entryStatus } from '../../crypto/entry.js';
-import { publicClient } from '../../crypto/chain.js';
+import { publicClient, rpcErrorText } from '../../crypto/chain.js';
 import { onlineCount, playerCount } from '../../game/queries.js';
 import { TRIBE_IDS } from '../../game/rules/units.js';
 import { GameError } from '../../game/errors.js';
@@ -23,10 +23,16 @@ const authLimiter = limiter(15 * 60_000, 30, (_req, res) => {
   res.redirect(303, '/');
 });
 
-const registerLimiter = limiter(60 * 60_000, 5, (_req, res) => {
-  setFlash(res, 'error', 'Too many new accounts from this connection. Please try again later.');
-  res.redirect(303, '/register');
-});
+// Counts accounts made, not tries: a taken name (409) or a form mistake (422) does not use up the limit.
+const registerLimiter = limiter(
+  60 * 60_000,
+  5,
+  (_req, res) => {
+    setFlash(res, 'error', 'Too many new accounts from this connection. Please try again later.');
+    res.redirect(303, '/register');
+  },
+  { skipFailedRequests: true },
+);
 
 const RegisterSchema = z.object({
   username: z
@@ -122,7 +128,7 @@ authRouter.post('/register/paid', entryLimiter, async (req, res) => {
     const r = await checkEntryTx(db, publicClient(), parsed.data.txHash as `0x${string}`, w.address, req.ctx.now);
     res.json({ ok: true, state: r.state, paidUsd: r.status.paidCents / 100, dueUsd: r.status.dueUsd });
   } catch (err) {
-    console.error('Entry fee check failed:', err instanceof Error ? err.message : err);
+    console.error('Entry fee check failed:', rpcErrorText(err));
     res.status(503).json({ ok: false, error: "Can't reach the network right now. Your payment is safe - this page keeps checking." });
   }
 });

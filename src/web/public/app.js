@@ -60,10 +60,14 @@
   var log = document.getElementById('chatlog');
   if (log && window.fetch) {
     var feed = log.getAttribute('data-feed');
-    setInterval(function () {
+    var chatPoll = setInterval(function () {
       if (document.hidden) return;
       fetch(feed, { credentials: 'same-origin' })
-        .then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (r) {
+          // Logged out elsewhere: the server redirects to the login page - stop instead of pasting it into the chat.
+          if (r.redirected) { clearInterval(chatPoll); return null; }
+          return r.ok ? r.text() : null;
+        })
         .then(function (htmlText) { if (htmlText !== null) log.innerHTML = htmlText; })
         .catch(function () {});
     }, 6000);
@@ -513,7 +517,7 @@
       var mine = ++simSeq;
       simOut.classList.add('busy');
       fetch(url + '&partial=1', { credentials: 'same-origin' })
-        .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+        .then(function (r) { return r.ok && !r.redirected ? r.text() : Promise.reject(r.status); })
         .then(function (htmlText) {
           if (mine !== simSeq) return;
           simOut.innerHTML = htmlText;

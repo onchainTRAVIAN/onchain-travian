@@ -1,11 +1,12 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { sessions, users, villages } from '../db/schema.js';
 import { config } from '../config.js';
 import { clock } from '../clock.js';
 import { processDue } from '../game/engine/events.js';
+import { adminAllowed } from '../crypto/wallet.js';
 import type { UserRow } from '../game/actions/account.js';
 
 export const SESSION_COOKIE = 'sid';
@@ -108,8 +109,12 @@ export function sessionMiddleware(req: Request, res: Response, next: NextFunctio
   const now = clock.now();
   req.ctx = { user: null, sessionId: null, csrf: '', villageId: null, flash: readFlash(req, res), now };
 
-  // Advance the world before anything reads it.
-  processDue(db, now);
+  // Advance the world before anything reads it (if that fails, e.g. the database is busy, still serve the page).
+  try {
+    processDue(db, now);
+  } catch (err) {
+    console.error('World tick failed during a request:', err);
+  }
 
   const token: unknown = req.cookies?.[SESSION_COOKIE];
   if (typeof token === 'string' && token.length > 0 && token.length < 200) {
@@ -117,6 +122,11 @@ export function sessionMiddleware(req: Request, res: Response, next: NextFunctio
     const row = db.select({ s: sessions, u: users }).from(sessions).innerJoin(users, eq(users.id, sessions.userId)).where(eq(sessions.id, id)).get();
     if (row && row.s.expiresAt > now && !row.u.banned) {
       req.ctx.user = row.u;
+      if (row.u.role === 'admin' && !adminAllowed(db, row.u)) {
+        db.update(users).set({ role: 'player' }).where(eq(users.id, row.u.id)).run();
+        req.ctx.user = { ...row.u, role: 'player' };
+        console.log(`Admin role removed from ${row.u.username} (wallet not in ADMIN_WALLETS)`);
+      }
       req.ctx.sessionId = id;
       req.ctx.csrf = row.s.csrf;
       req.ctx.villageId = row.s.villageId;
@@ -157,6 +167,19 @@ export function sessionMiddleware(req: Request, res: Response, next: NextFunctio
   next();
 }
 
+/** How long ago this browser logged in (sessions slide their expiry, never their start). */
+export function sessionAgeMs(req: Request): number {
+  if (!req.ctx.sessionId) return Infinity;
+  const row = db.select({ at: sessions.createdAt }).from(sessions).where(eq(sessions.id, req.ctx.sessionId)).get();
+  return row ? req.ctx.now - row.at : Infinity;
+}
+
+/** Log the player out everywhere except this browser (after a wallet change). */
+export function endOtherSessions(req: Request): void {
+  if (!req.ctx.user || !req.ctx.sessionId) return;
+  db.delete(sessions).where(and(eq(sessions.userId, req.ctx.user.id), ne(sessions.id, req.ctx.sessionId))).run();
+}
+
 export function setActiveVillage(req: Request, villageId: number): void {
   if (!req.ctx.sessionId) return;
   db.update(sessions).set({ villageId }).where(eq(sessions.id, req.ctx.sessionId)).run();
@@ -173,8 +196,9 @@ export function csrfGuard(req: Request, res: Response, next: NextFunction): void
   const expected = req.ctx.csrf;
   if (
     typeof sent !== 'string' ||
-    sent.length !== expected.length ||
     expected.length === 0 ||
+    // Byte lengths: timingSafeEqual throws on buffers of different sizes (e.g. a token with non-ASCII letters).
+    Buffer.byteLength(sent) !== Buffer.byteLength(expected) ||
     !timingSafeEqual(Buffer.from(sent), Buffer.from(expected))
   ) {
     if (req.is('application/json')) {

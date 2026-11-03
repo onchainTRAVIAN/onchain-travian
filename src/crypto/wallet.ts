@@ -96,3 +96,15 @@ export function consumeSignupTicket(db: DB | Tx, token: string, now: number): vo
   const res = db.delete(signupTickets).where(and(eq(signupTickets.tokenHash, tokenHash(token)), gte(signupTickets.expiresAt, now))).run();
   assertGame(res.changes === 1, 'Your wallet sign-in expired. Connect your wallet again.');
 }
+
+/**
+ * Who may be an admin. With ADMIN_WALLETS set, exactly the wallets on that list (removing one revokes it at its next
+ * request). Without it: nobody on a live server, the stored role on dev worlds.
+ */
+export function adminAllowed(db: DB, user: { id: number; role: string }): boolean {
+  if (config.ADMIN_WALLETS.length > 0) {
+    const w = walletOf(db, user.id);
+    return !!w && config.ADMIN_WALLETS.includes(w.address);
+  }
+  return config.NODE_ENV !== 'production' && user.role === 'admin';
+}

@@ -98,6 +98,7 @@ export function heroView(d: {
         <div class="hname"><b>${h.name}</b> <span class="muted">level ${h.level}</span></div>
         <div class="hsub">${unitIcon(d.tribe, h.unitSlot, 16, false)} trained from ${unit.name} · ${TRIBES[d.tribe].name}</div>
         <div class="hstatus st-${h.status}"><span class="dot"></span>${STATUS[h.status]} ${where}</div>
+        ${h.status === 'away' ? html`<form method="post" action="/hero/recall" class="inline">${csrfField(d.csrf)}<button type="submit" class="small secondary">Call home</button></form>` : ''}
         <div class="hrow"><span class="k">Health</span>${meter(h.health, 'hp ' + healthCls)}<span class="v">${Math.round(h.health)}%</span>${help('heroHealth')}</div>
         <div class="hrow"><span class="k">Experience</span>${meter(xpPct, 'xp')}<span class="v">${fmtNum(h.xp)} / ${fmtNum(nextXp)}</span>${help('heroXp')}</div>
         <div class="hfoot small muted">Home: ${d.homeName} · speed ${unit.speed} fields/hour${help('heroSpeed')} · regenerates ${heroRegenPerDay(h.regen)}% a day${config.WORLD_SPEED !== 1 ? ` (×${config.WORLD_SPEED})` : ''}${help('heroRegen')}</div>

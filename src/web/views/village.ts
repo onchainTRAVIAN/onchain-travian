@@ -9,6 +9,7 @@ import {
   type BuildingId,
 } from '../../game/rules/buildings.js';
 import { RESOURCE_KEYS, RESOURCE_LABEL } from '../../game/rules/resources.js';
+import { buildingDef } from '../../game/rules/buildings.js';
 import { TRIBES, type TribeId, type UnitCounts } from '../../game/rules/units.js';
 import type { BuildOrderRow } from '../../game/actions/build.js';
 import type { TrainOrderRow } from '../../game/actions/train.js';
@@ -204,5 +205,12 @@ export function townView(d: VillageViewData): SafeHtml {
     </svg>
   </div>
   ${buildQueue(d.orders, d.now, d.csrf)}
-  ${d.training.length > 0 ? trainingQueue(d.training, tribe, d.now, d.csrf) : ''}`;
+  ${trainingByBuilding(d.training).map((g) => html`<p class="small"><b>${buildingDef(g.building)?.name ?? g.building}</b></p>${trainingQueue(g.queue, tribe, d.now, d.csrf)}`)}`;
+}
+
+/** One queue per training building: "Finish all" finishes one building's queue, so they can't share a button. */
+function trainingByBuilding(orders: TrainOrderRow[]): { building: string; queue: TrainOrderRow[] }[] {
+  const groups = new Map<string, TrainOrderRow[]>();
+  for (const o of orders) groups.set(o.building, [...(groups.get(o.building) ?? []), o]);
+  return [...groups].map(([building, queue]) => ({ building, queue }));
 }

@@ -149,7 +149,8 @@ export function formAction<S extends z.ZodType>(
 
 export function intParam(v: unknown, fallback: number): number {
   const n = typeof v === 'string' ? Number.parseInt(v, 10) : NaN;
-  return Number.isFinite(n) ? n : fallback;
+  // Safe integers only: a huge number (1e20) would reach SQLite as a float and break LIMIT/OFFSET.
+  return Number.isSafeInteger(n) ? n : fallback;
 }
 
 export function pageParam(v: unknown): number {

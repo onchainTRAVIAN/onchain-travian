@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNotNull, isNull, like } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, like, notInArray } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { farmEntries, farmLists, movements, reports, tiles, tradeRoutes, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
@@ -96,7 +96,8 @@ export function addNearbyOases(db: DB, userId: number, listId: number, radius: n
     assertGame(Number.isInteger(radius) && radius >= 1 && radius <= FARM_RADIUS_MAX, `Choose a distance from 1 to ${FARM_RADIUS_MAX} fields`);
     const clean = units.map((n) => Math.max(0, Math.floor(Number.isFinite(n) ? n : 0)));
     assertGame(totalUnits(clean) > 0, 'Choose the troops for each oasis');
-    const have = new Set(tx.select({ x: farmEntries.x, y: farmEntries.y }).from(farmEntries).where(eq(farmEntries.listId, listId)).all().map((e) => `${e.x}|${e.y}`));
+    const entries = tx.select({ x: farmEntries.x, y: farmEntries.y }).from(farmEntries).where(eq(farmEntries.listId, listId)).all();
+    const have = new Set(entries.map((e) => `${e.x}|${e.y}`));
     const R = config.MAP_RADIUS;
     const free = tx
       .select()
@@ -107,7 +108,7 @@ export function addNearbyOases(db: DB, userId: number, listId: number, radius: n
       .filter((o) => o.d <= radius && !have.has(`${o.x}|${o.y}`))
       .filter((o) => minRes <= 0 || sumRes(oasisStock(tx, o, now)) >= minRes)
       .sort((a, b) => a.d - b.d)
-      .slice(0, FARM_ENTRIES_MAX - have.size);
+      .slice(0, Math.max(0, FARM_ENTRIES_MAX - entries.length));
     for (const o of free) tx.insert(farmEntries).values({ listId, x: o.x, y: o.y, units: JSON.stringify(clean) }).run();
     return free.length;
   });
@@ -188,7 +189,8 @@ export function lastRaidResult(q: Q, userId: number, e: FarmEntry): { result: 'w
 /** Server tick: lists with auto-repeat whose interval has passed raid again. */
 export function processFarmLists(db: DB, now: number): number {
   let runs = 0;
-  const lists = db.select().from(farmLists).where(isNotNull(farmLists.autoMinutes)).all();
+  // Banned players' automation stops with them.
+  const lists = db.select().from(farmLists).where(and(isNotNull(farmLists.autoMinutes), notInArray(farmLists.userId, db.select({ id: users.id }).from(users).where(eq(users.banned, true))))).all();
   for (const l of lists) {
     if (!l.autoMinutes || (l.lastRunAt !== null && now - l.lastRunAt < l.autoMinutes * 60_000)) continue;
     if (!hasGoldClub(db, l.userId)) continue;
@@ -267,7 +269,7 @@ export function lastDueAt(r: Pick<TradeRoute, 'hour' | 'perDay'>, now: number): 
 /** Server tick: dispatch trade routes whose time has come. */
 export function processTradeRoutes(db: DB, now: number): number {
   let runs = 0;
-  for (const r of db.select().from(tradeRoutes).where(eq(tradeRoutes.active, true)).all()) {
+  for (const r of db.select().from(tradeRoutes).where(and(eq(tradeRoutes.active, true), notInArray(tradeRoutes.userId, db.select({ id: users.id }).from(users).where(eq(users.banned, true))))).all()) {
     const due = lastDueAt(r, now);
     if (r.lastRunAt !== null && r.lastRunAt >= due) continue;
     let note: string | null = null;

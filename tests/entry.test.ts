@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
@@ -19,6 +18,7 @@ import { setPublicClient } from '../src/crypto/chain.js';
 import { entryStatus, indexEntries, recordEntries } from '../src/crypto/entry.js';
 import { gameEntryAbi } from '../src/crypto/gameEntry.js';
 import { csrfFrom, walletSignIn } from './walletAuth.js';
+import { anvilPath, chainReady } from './anvil.js';
 
 const saved = { ...config };
 const app = createApp();
@@ -149,9 +149,9 @@ describe('joining a world with an entry fee', () => {
 /* The real thing against a local anvil node (skipped if missing).    */
 /* ------------------------------------------------------------------ */
 
-const ANVIL = join(homedir(), '.foundry/bin/anvil');
+const ANVIL = anvilPath() ?? 'anvil';
 const OUT = join(import.meta.dirname, '../contracts/out');
-const hasChain = existsSync(ANVIL) && existsSync(join(OUT, 'GameEntry.sol/GameEntry.json'));
+const hasChain = chainReady(join(OUT, 'GameEntry.sol/GameEntry.json'));
 const PORT = 19545 + Math.floor(Math.random() * 1000);
 // Anvil's well-known development mnemonic (funded accounts on a local node only).
 const MNEMONIC = 'test test test test test test test test test test test junk';

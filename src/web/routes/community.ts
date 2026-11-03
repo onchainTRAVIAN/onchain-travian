@@ -107,7 +107,8 @@ communityRouter.get('/alliance/:id', (req, res) => {
       members: allianceMembersList(db, a.id),
       myRole,
       capacity: allianceCapacity(db, a.id),
-      diplomacy: diplomacyOf(db, a.id),
+      // Outsiders see treaties in force, not proposals still being negotiated.
+      diplomacy: diplomacyOf(db, a.id).filter((t) => myRole !== null || t.status === 'active'),
       csrf: req.ctx.csrf,
       now: req.ctx.now,
     }),

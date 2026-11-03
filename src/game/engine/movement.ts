@@ -99,6 +99,8 @@ export function scheduleReturn(
 /** Withdraw troops (and a hero) stationed in `locationId` back to their home village. */
 export function sendTroopsHome(q: Q, locationId: number, ownerVillageId: number, now: number): boolean {
   if (locationId === ownerVillageId) return false;
+  // Bring the host village up to now first: troops that starved there must not walk home.
+  catchUp(q, locationId, now);
   const units = troopsAt(q, locationId, ownerVillageId);
   const home = villageInfo(q, ownerVillageId);
   const loc = villageInfo(q, locationId);
@@ -112,7 +114,6 @@ export function sendTroopsHome(q: Q, locationId: number, ownerVillageId: number,
           .get()
       : undefined;
   if (totalUnits(units) === 0 && !hero) return false;
-  catchUp(q, locationId, now);
   setTroopsAt(q, locationId, ownerVillageId, emptyUnits());
   scheduleReturn(q, home, loc.x, loc.y, units, null, now, !!hero);
   return true;

@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import {
@@ -31,6 +30,7 @@ import { indexDeposits } from '../src/crypto/indexer.js';
 import { applyTiers, takeSnapshot } from '../src/crypto/holders.js';
 import { gamePaymentsAbi } from '../src/crypto/gamePayments.js';
 import { testTokenAbi } from '../src/crypto/testToken.js';
+import { anvilPath, chainReady } from './anvil.js';
 
 const TOKEN = '0x00000000000000000000000000000000000000aa';
 const site = { domain: 'game.test', origin: 'https://game.test' };
@@ -135,9 +135,9 @@ describe('sign in with Ethereum', () => {
 /* Full on-chain flow against a local anvil node (skipped if missing). */
 /* ------------------------------------------------------------------ */
 
-const ANVIL = join(homedir(), '.foundry/bin/anvil');
+const ANVIL = anvilPath() ?? 'anvil';
 const OUT = join(import.meta.dirname, '../contracts/out');
-const hasChain = existsSync(ANVIL) && existsSync(join(OUT, 'GamePayments.sol/GamePayments.json'));
+const hasChain = chainReady(join(OUT, 'GamePayments.sol/GamePayments.json'));
 const PORT = 18545 + Math.floor(Math.random() * 1000);
 // Anvil's well-known development mnemonic (funded accounts on a local node only).
 const MNEMONIC = 'test test test test test test test test test test test junk';

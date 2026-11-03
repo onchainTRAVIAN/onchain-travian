@@ -9,7 +9,7 @@ import { latestSnapshots } from '../../crypto/holders.js';
 import { tierById } from '../../crypto/tiers.js';
 import { users, villages } from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { authed, clearSignupCookie, createSession, requireAuth, setFlash, setSignupCookie } from '../session.js';
+import { authed, clearSignupCookie, createSession, endOtherSessions, requireAuth, sessionAgeMs, setFlash, setSignupCookie } from '../session.js';
 import { walletView } from '../views/wallet.js';
 import { formAction, loadGamePage, sendPage } from './helpers.js';
 import { limiter } from '../limits.js';
@@ -66,6 +66,16 @@ const Challenge = z.object({
   chainId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
 });
 
+/**
+ * Moving an account to another wallet needs a fresh login with the current one: someone who only has the browser
+ * session (a shared PC) must not be able to take the account.
+ */
+const RELOGIN_MS = 10 * 60_000;
+function changeNeedsRelogin(req: Request): boolean {
+  return !!req.ctx.user && !!walletOf(db, req.ctx.user.id) && sessionAgeMs(req) > RELOGIN_MS;
+}
+const RELOGIN_TEXT = 'For safety, log out and log in again with your current wallet, then change it within 10 minutes.';
+
 walletRouter.post('/wallet/challenge', walletLimiter, (req, res) => {
   const parsed = Challenge.safeParse(req.body);
   if (!parsed.success) {
@@ -74,6 +84,10 @@ walletRouter.post('/wallet/challenge', walletLimiter, (req, res) => {
   }
   if (parsed.data.purpose === 'link' && !req.ctx.user) {
     res.status(401).json({ ok: false, error: 'Log in first' });
+    return;
+  }
+  if (parsed.data.purpose === 'link' && changeNeedsRelogin(req)) {
+    res.status(403).json({ ok: false, error: RELOGIN_TEXT });
     return;
   }
   try {
@@ -96,8 +110,11 @@ walletRouter.post('/wallet/verify', walletLimiter, async (req, res) => {
   try {
     if (purpose === 'link') {
       if (!req.ctx.user) throw new GameError('Log in first');
+      if (changeNeedsRelogin(req)) throw new GameError(RELOGIN_TEXT);
       const address = await verifySiwe(db, siweReq(req), message, signature, 'link', req.ctx.user.id, req.ctx.now);
       linkWallet(db, req.ctx.user.id, address, req.ctx.now);
+      // Any other browser still logged in to this account is logged out.
+      endOtherSessions(req);
       setFlash(res, 'ok', 'Wallet linked! Holder perks are checked regularly.');
       res.json({ ok: true, redirect: '/wallet' });
       return;

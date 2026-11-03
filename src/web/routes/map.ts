@@ -189,6 +189,7 @@ mapRouter.get('/map/tile', (req, res) => {
               owner: t.owner ?? 'Nature',
               ownerId: t.ownerId,
               tribe: t.tribe ? TRIBES[t.tribe].name : '',
+              tribeId: t.tribe ?? null,
               protectedUntil: t.protectedUntil,
             }
           : null,

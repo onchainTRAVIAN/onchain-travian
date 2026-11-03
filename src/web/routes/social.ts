@@ -28,6 +28,7 @@ import { heroRankings, playerProfile, playerRank, rankOf, rankings, reportList,
   reportCount,
   rankingTotals, villageRankings, REPORT_FILTERS, type RankKind, type ReportFilter } from '../../game/queries.js';
 import { authed, setFlash } from '../session.js';
+import { limiter } from '../limits.js';
 import { reportListView, reportView } from '../views/reports.js';
 import { FAQ, FAQ_CATEGORIES, faqTopic, searchFaq } from '../../game/rules/faq.js';
 import { helpHome, helpTopic } from '../views/help.js';
@@ -43,7 +44,7 @@ const PAGE = 20;
 socialRouter.get('/reports', requireAuth, (req, res) => {
   const ctx = authed(req);
   const page = loadGamePage(req);
-  const f = typeof req.query.f === 'string' && req.query.f in REPORT_FILTERS ? (req.query.f as ReportFilter) : 'all';
+  const f = typeof req.query.f === 'string' && Object.hasOwn(REPORT_FILTERS, req.query.f) ? (req.query.f as ReportFilter) : 'all';
   const p = pageParam(req.query.page);
   const o = (['none', 'some', 'all'] as const).find((x) => x === req.query.o) ?? null;
   const oldest = req.query.sort === 'old';
@@ -111,7 +112,7 @@ socialRouter.post(
     z.object({ act: z.enum(['delete', 'read', 'readall', 'deleteall']), ids: idList, f: z.string().optional() }),
     (req, res, d) => {
       const ctx = authed(req);
-      const f = d.f && d.f in REPORT_FILTERS ? (d.f as ReportFilter) : 'all';
+      const f = d.f && Object.hasOwn(REPORT_FILTERS, d.f) ? (d.f as ReportFilter) : 'all';
       const back = `/reports?f=${f}`;
       const mine = eq(reports.userId, ctx.user.id);
       const kinds = REPORT_FILTERS[f];
@@ -260,10 +261,11 @@ socialRouter.get('/stats', (req, res) => {
     if (u) {
       findId = u.id;
       p = Math.ceil(rankOf(db, kind, u.id).rank / PAGE);
-    } else setFlash(res, 'error', `No player called "${String(req.query.name)}".`);
+    } else req.ctx.flash = { type: 'error', text: `No player called "${String(req.query.name)}".` };
   } else if (rankQ > 0) {
-    p = Math.ceil(rankQ / PAGE);
-    findId = rankings(db, kind, 1, rankQ - 1)[0]?.id ?? null;
+    const rank = Math.min(rankQ, Math.max(1, rankingTotals(db).players));
+    p = Math.ceil(rank / PAGE);
+    findId = rankings(db, kind, 1, rank - 1)[0]?.id ?? null;
   } else if (req.query.page === undefined && me !== null) {
     p = Math.ceil(rankOf(db, kind, me).rank / PAGE);
   }
@@ -382,9 +384,17 @@ socialRouter.post(
 
 /* ---------- Avatars & about text ---------- */
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: AVATAR_MAX_UPLOAD, files: 1 } }).single('avatar');
+// One small file and nothing else: multer's defaults would keep any number of 1 MB text fields in memory.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: AVATAR_MAX_UPLOAD, files: 1, fields: 2, fieldSize: 1024, parts: 3, headerPairs: 50 },
+}).single('avatar');
+const avatarLimiter = limiter(10 * 60_000, 10, (_req, res) => {
+  setFlash(res, 'error', 'Too many uploads. Please wait a few minutes.');
+  res.redirect(303, '/account');
+});
 
-socialRouter.post('/account/avatar', requireAuth, (req, res, next) => {
+socialRouter.post('/account/avatar', requireAuth, avatarLimiter, (req, res, next) => {
   upload(req, res, (err: unknown) => {
     const ctx = authed(req);
     if (err) {
@@ -490,7 +500,7 @@ socialRouter.get('/units', (req, res) => {
 socialRouter.get(['/help/buildings', '/help/buildings/:id'], (req, res) => {
   const chrome = req.ctx.user ? loadGamePage(req).chrome : null;
   const raw = typeof req.params.id === 'string' ? req.params.id : null;
-  const id = raw && raw in BUILDINGS ? (raw as BuildingId) : null;
+  const id = raw && Object.hasOwn(BUILDINGS, raw) ? (raw as BuildingId) : null;
   if (raw && !id) {
     sendPage(req, res, 'Not found', html`<h1>Unknown building</h1><p><a href="/help/buildings">» All buildings</a></p>`, { status: 404, chrome });
     return;

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { and, desc, eq, ne, or } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { creditsLedger, marketListings, messages, movements, users, villages } from '../../db/schema.js';
@@ -9,7 +10,7 @@ import { catchUp, capacityFor, parseResources, parseUnits, setResources, setTroo
 import { addReport } from '../engine/reports.js';
 import { assertGame } from '../errors.js';
 import { ownedVillage } from './build.js';
-import { creditBalance } from './credits.js';
+import { creditBalance, transferableBalance } from './credits.js';
 
 export const LISTING_MAX_OPEN = 20;
 /** Goods of a cancelled listing need this long (real time) to get back home. */
@@ -224,7 +225,7 @@ export function editListing(
         assertGame(villageOk && l.villageId !== null, 'The village of this offer is no longer yours: only the price can change');
         catchUp(tx, l.villageId, now);
         const home = troopsAt(tx, l.villageId, l.villageId);
-        const tribe = (l.tribe in TRIBES ? l.tribe : 'romans') as TribeId;
+        const tribe = (Object.hasOwn(TRIBES, l.tribe) ? l.tribe : 'romans') as TribeId;
         const back = emptyUnits();
         const after = home.map((h, i) => {
           const delta = (next[i] ?? 0) - (old[i] ?? 0);
@@ -248,22 +249,28 @@ export function ownListing(q: Q, userId: number, listingId: number): ListingRow 
 
 /** Travel time for a lot from the seller's village to (x, y). */
 export function deliveryTimeMs(l: { kind: 'resources' | 'troops'; tribe: string; units: string }, from: { x: number; y: number }, to: { x: number; y: number }): number {
-  const tribe = (l.tribe in TRIBES ? l.tribe : 'romans') as TribeId;
+  const tribe = (Object.hasOwn(TRIBES, l.tribe) ? l.tribe : 'romans') as TribeId;
   const speed = l.kind === 'troops' ? slowestSpeed(tribe, parseUnits(l.units)) : TRIBES[tribe].merchantSpeed;
   return travelTimeMs(distance(from.x, from.y, to.x, to.y, config.MAP_RADIUS), speed, config.TROOP_SPEED);
+}
+
+/** What the buyer saw (price + goods): the Buy form carries it, so an offer edited in the meantime is not bought blind. */
+export function listingSig(l: { price: number; goods: string; units: string }): string {
+  return createHash('sha256').update(`${l.price}|${l.goods}|${l.units}`).digest('hex').slice(0, 16);
 }
 
 /**
  * Buy a whole lot for the active village. Gold moves buyer → seller now; the goods travel
  * from the seller's village and arrive like returning troops / merchants.
  */
-export function buyListing(db: DB, buyerId: number, villageId: number, listingId: number, now: number): { arriveAt: number } {
+export function buyListing(db: DB, buyerId: number, villageId: number, listingId: number, now: number, seen?: string): { arriveAt: number } {
   return db.transaction((tx) => {
     const dest = ownedVillage(tx, buyerId, villageId);
     const l = tx.select().from(marketListings).where(eq(marketListings.id, listingId)).get();
     assertGame(l, 'Offer not found');
     assertGame(l.status === 'open', 'Someone else was faster: this offer is gone');
     assertGame(l.sellerId !== buyerId, 'This is your own offer');
+    assertGame(seen === undefined || seen === listingSig(l), 'This offer just changed. Check the new price and goods, then buy again.');
     const buyer = tx.select({ username: users.username, tribe: users.tribe }).from(users).where(eq(users.id, buyerId)).get();
     assertGame(buyer, 'Player not found');
     if (l.kind === 'troops') {
@@ -276,8 +283,16 @@ export function buyListing(db: DB, buyerId: number, villageId: number, listingId
     const origin = fromV ?? { x: dest.x, y: dest.y, name: 'the market' };
     const arriveAt = now + deliveryTimeMs(l, origin, dest);
     const key = `market:${l.id}`;
+    // Gold the buyer got for free (tasks, medals, gifts) may be spent here, but it must not become Gold the seller can
+    // send on: that share reaches the seller as non-transferable (`marketfree:`), so the market can't launder alt-account Gold.
+    const freeShare = Math.min(l.price, Math.max(0, bal - transferableBalance(tx, buyerId)));
     tx.insert(creditsLedger).values({ userId: buyerId, amount: -l.price, reason: `Gold market: bought from ${seller?.username ?? '?'}`, idemKey: `${key}:buy`, createdAt: now }).run();
-    tx.insert(creditsLedger).values({ userId: l.sellerId, amount: l.price, reason: `Gold market: sold to ${buyer.username}`, idemKey: `${key}:sell`, createdAt: now }).run();
+    if (l.price - freeShare > 0) {
+      tx.insert(creditsLedger).values({ userId: l.sellerId, amount: l.price - freeShare, reason: `Gold market: sold to ${buyer.username}`, idemKey: `${key}:sell`, createdAt: now }).run();
+    }
+    if (freeShare > 0) {
+      tx.insert(creditsLedger).values({ userId: l.sellerId, amount: freeShare, reason: `Gold market: sold to ${buyer.username} (free Gold, stays on your account)`, idemKey: `marketfree:${l.id}:sell`, createdAt: now }).run();
+    }
     tx.insert(movements)
       .values({
         kind: 'delivery', fromVillageId: villageId, toVillageId: villageId, originX: origin.x, originY: origin.y, toX: dest.x, toY: dest.y,

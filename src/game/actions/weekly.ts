@@ -31,6 +31,7 @@ interface Totals {
   username: string;
   tribe: TribeId;
   avatarAt: number;
+  createdAt: number;
   off: number;
   def: number;
   loot: number;
@@ -38,13 +39,15 @@ interface Totals {
   villages: number;
 }
 
-function totals(q: Q): Totals[] {
+/** Everyone's running totals. Banned players are left out of the standings but still snapshotted (see takeSnapshot). */
+function totals(q: Q, withBanned = false): Totals[] {
   return q
     .select({
       userId: users.id,
       username: users.username,
       tribe: users.tribe,
       avatarAt: users.avatarAt,
+      createdAt: users.createdAt,
       off: users.offPoints,
       def: users.defPoints,
       loot: users.lootTotal,
@@ -52,7 +55,7 @@ function totals(q: Q): Totals[] {
       villages: sql<number>`(select count(*) from villages v where v.user_id = "users"."id")`,
     })
     .from(users)
-    .where(and(eq(users.banned, false), ne(users.tribe, 'natars')))
+    .where(and(withBanned ? undefined : eq(users.banned, false), ne(users.tribe, 'natars')))
     .all();
 }
 
@@ -67,9 +70,11 @@ export interface WeeklyRow {
 /** This week's gains in one category, best first (only players who gained something). */
 export function weeklyStandings(q: Q, category: WeeklyCategory, ws: number, limit = 50): WeeklyRow[] {
   const base = new Map(q.select().from(weekSnapshots).where(eq(weekSnapshots.weekStart, ws)).all().map((s) => [s.userId, s]));
-  const rows = totals(q).map((t) => {
-    // Players who joined during the week count from a fresh start (one village, nothing else).
-    const b = base.get(t.userId) ?? { off: 0, def: 0, loot: 0, pop: 0, villages: 1 };
+  const rows = totals(q).flatMap((t) => {
+    // Players who joined during the week count from a fresh start (one village, nothing else). Anyone older without a
+    // snapshot (e.g. banned on Monday, unbanned later) sits this week out: their all-time totals are not a week's gain.
+    const b = base.get(t.userId) ?? (t.createdAt >= ws ? { off: 0, def: 0, loot: 0, pop: 0, villages: 1 } : null);
+    if (!b) return [];
     const gained = {
       attack: t.off - b.off,
       defense: t.def - b.def,
@@ -77,7 +82,7 @@ export function weeklyStandings(q: Q, category: WeeklyCategory, ws: number, limi
       expansion: t.villages - b.villages,
       raid: t.loot - b.loot,
     };
-    return { userId: t.userId, username: t.username, tribe: t.tribe, avatarAt: t.avatarAt, value: Math.floor(gained[category]), tie: gained.population };
+    return [{ userId: t.userId, username: t.username, tribe: t.tribe, avatarAt: t.avatarAt, value: Math.floor(gained[category]), tie: gained.population }];
   });
   return rows
     .filter((r) => r.value > 0)
@@ -87,7 +92,7 @@ export function weeklyStandings(q: Q, category: WeeklyCategory, ws: number, limi
 }
 
 function takeSnapshot(q: Q, ws: number): void {
-  for (const t of totals(q)) {
+  for (const t of totals(q, true)) {
     q.insert(weekSnapshots)
       .values({ userId: t.userId, weekStart: ws, off: t.off, def: t.def, loot: Math.floor(t.loot), pop: t.pop, villages: t.villages })
       .onConflictDoNothing()

@@ -1,10 +1,10 @@
-import { and, eq, gt, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { Q } from '../../db/index.js';
-import { artifacts, buildOrders, celebrations, heroes, marketOffers, movements, oasisTroops, researchOrders, slots, tiles, trainOrders, troops, users, villages } from '../../db/schema.js';
+import { artifacts, autoTrains, buildOrders, celebrations, farmLists, heroes, marketListings, marketOffers, movements, oasisRaiders, oasisTroops, researchOrders, slots, tiles, tradeRoutes, trainOrders, troops, users, villages } from '../../db/schema.js';
 import { culturePointsRequired, expansionSlots } from '../rules/expansion.js';
-import { catchUpCulture, levelOf, loadVillage, parseUnits, refreshPopulation } from './state.js';
+import { catchUp, catchUpCulture, depositCapped, levelOf, loadVillage, parseUnits, refreshPopulation } from './state.js';
 import { config } from '../../config.js';
-import { BUILDINGS, FIELD_MAX_NON_CAPITAL, WALL_FOR, WALL_SLOT, type BuildingId } from '../rules/buildings.js';
+import { BUILDINGS, FIELD_MAX_NON_CAPITAL, WALL_FOR, WALL_SLOT, buildCost, type BuildingId } from '../rules/buildings.js';
 import { scheduleReturn, sendTroopsHome, villageInfo } from './movement.js';
 import { emptyUnits } from '../rules/units.js';
 import { clearOasisGarrison } from './oasisTroops.js';
@@ -43,6 +43,45 @@ export function canExpand(q: Q, userId: number, homeId: number, now: number, exc
   return { ...base, ok: true };
 }
 
+/** Gold-market escrow walks back like a cancelled offer (goldmarket.ts CANCEL_RETURN_MS; not imported to avoid a cycle). */
+const LISTING_RETURN_MS = Math.max(10 * 60_000, Math.round((2 * 3_600_000) / config.WORLD_SPEED));
+
+/**
+ * A village that changes hands or is razed: the old owner's open Gold-market offers from it close. Listed resources
+ * walk to the seller's capital; listed troops are lost with the village's own army. Otherwise the new owner would feed
+ * troops that aren't theirs, and the seller could sell or recall goods from a village they no longer own.
+ */
+function closeListingsOf(q: Q, villageId: number, now: number): void {
+  for (const l of q.select().from(marketListings).where(and(eq(marketListings.villageId, villageId), eq(marketListings.status, 'open'))).all()) {
+    if (l.kind === 'resources') {
+      const back = q
+        .select({ id: villages.id, x: villages.x, y: villages.y })
+        .from(villages)
+        .where(and(eq(villages.userId, l.sellerId), ne(villages.id, villageId)))
+        .orderBy(sql`${villages.isCapital} desc`, villages.id)
+        .limit(1)
+        .get();
+      if (back) {
+        q.insert(movements)
+          .values({
+            kind: 'delivery', fromVillageId: back.id, toVillageId: back.id, originX: back.x, originY: back.y, toX: back.x, toY: back.y,
+            units: JSON.stringify(emptyUnits()), loot: l.goods, departAt: now, arriveAt: now + LISTING_RETURN_MS,
+          })
+          .run();
+      }
+    }
+    q.update(marketListings).set({ status: 'cancelled', closedAt: now }).where(eq(marketListings.id, l.id)).run();
+  }
+}
+
+/** The old owner's automation for a village ends with it (the rows would act for the wrong player). */
+function endAutomationOf(q: Q, villageId: number): void {
+  q.delete(farmLists).where(eq(farmLists.villageId, villageId)).run();
+  q.delete(oasisRaiders).where(eq(oasisRaiders.villageId, villageId)).run();
+  q.delete(autoTrains).where(eq(autoTrains.villageId, villageId)).run();
+  q.delete(tradeRoutes).where(or(eq(tradeRoutes.fromVillageId, villageId), eq(tradeRoutes.toVillageId, villageId))).run();
+}
+
 /** Hand a village to a new owner after its loyalty dropped to zero. */
 export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromVillageId: number, now: number): void {
   const target = q.select().from(villages).where(eq(villages.id, targetId)).get();
@@ -53,6 +92,8 @@ export function conquerVillage(q: Q, targetId: number, newOwnerId: number, fromV
   q.delete(trainOrders).where(eq(trainOrders.villageId, targetId)).run();
   q.delete(researchOrders).where(eq(researchOrders.villageId, targetId)).run();
   q.delete(marketOffers).where(eq(marketOffers.villageId, targetId)).run();
+  closeListingsOf(q, targetId, now);
+  endAutomationOf(q, targetId);
 
   // Foreign reinforcements go home; the village's own army scatters.
   for (const row of q.select().from(troops).where(and(eq(troops.villageId, targetId), ne(troops.ownerVillageId, targetId))).all()) {
@@ -218,7 +259,10 @@ export function destroyVillage(q: Q, villageId: number, now: number): void {
         .run();
     }
   }
+  closeListingsOf(q, villageId, now);
   q.update(tiles).set({ villageId: null }).where(and(eq(tiles.kind, 'field'), eq(tiles.villageId, villageId))).run();
+  // Its oases go wild; troops garrisoned there walk home (as when a village is conquered).
+  for (const o of q.select({ x: tiles.x, y: tiles.y }).from(tiles).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, villageId))).all()) clearOasisGarrison(q, o.x, o.y, now);
   q.update(tiles).set({ villageId: null, animalsAt: now }).where(and(eq(tiles.kind, 'oasis'), eq(tiles.villageId, villageId))).run();
   q.delete(villages).where(eq(villages.id, villageId)).run();
 }
@@ -227,11 +271,13 @@ export function destroyVillage(q: Q, villageId: number, now: number): void {
  * Make `villageId` its owner's capital. The old capital loses capital-only buildings (Stonemason,
  * Brewery) and its resource fields above level 10 drop to 10.
  */
-export function moveCapital(q: Q, villageId: number, _now: number): void {
+export function moveCapital(q: Q, villageId: number, now: number): void {
   const v = q.select().from(villages).where(eq(villages.id, villageId)).get();
   if (!v || v.userId === null || v.isCapital) return;
   const old = q.select().from(villages).where(and(eq(villages.userId, v.userId), eq(villages.isCapital, true))).get();
   if (old) {
+    // Production up to now still counts the old capital's fields; then its fields drop to 10.
+    const oldState = catchUp(q, old.id, now);
     q.update(villages).set({ isCapital: false }).where(eq(villages.id, old.id)).run();
     for (const sl of q.select().from(slots).where(eq(slots.villageId, old.id)).all()) {
       const def = sl.building ? BUILDINGS[sl.building as BuildingId] : undefined;
@@ -240,8 +286,22 @@ export function moveCapital(q: Q, villageId: number, _now: number): void {
         q.update(slots).set({ level: FIELD_MAX_NON_CAPITAL }).where(and(eq(slots.villageId, old.id), eq(slots.slot, sl.slot))).run();
       }
     }
-    q.delete(buildOrders).where(and(eq(buildOrders.villageId, old.id), inArray(buildOrders.building, ['stonemason', 'brewery']))).run();
-    q.delete(buildOrders).where(and(eq(buildOrders.villageId, old.id), lte(buildOrders.slot, 18), gt(buildOrders.toLevel, FIELD_MAX_NON_CAPITAL))).run();
+    // Upgrades the old capital can no longer have (capital-only buildings, fields above 10) are cancelled and refunded.
+    const gone = q
+      .select()
+      .from(buildOrders)
+      .where(
+        and(
+          eq(buildOrders.villageId, old.id),
+          or(inArray(buildOrders.building, ['stonemason', 'brewery']), and(lte(buildOrders.slot, 18), gt(buildOrders.toLevel, FIELD_MAX_NON_CAPITAL))),
+        ),
+      )
+      .all();
+    for (const o of gone) {
+      const def = BUILDINGS[o.building as BuildingId];
+      if (oldState && def && !o.demolish) depositCapped(q, oldState, buildCost(def, o.toLevel));
+      q.delete(buildOrders).where(eq(buildOrders.id, o.id)).run();
+    }
     refreshPopulation(q, old.id);
   }
   q.update(villages).set({ isCapital: true }).where(eq(villages.id, villageId)).run();

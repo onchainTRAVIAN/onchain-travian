@@ -1,5 +1,5 @@
 import { config } from './config.js';
-import { db } from './db/index.js';
+import { db, sqlite } from './db/index.js';
 import { clock } from './clock.js';
 import { ensureWorld, getMeta, setMeta } from './game/engine/world.js';
 import { processDue } from './game/engine/events.js';
@@ -11,7 +11,7 @@ import { processFarmLists, processTradeRoutes } from './game/actions/goldclub.js
 import { processOasisRaiders } from './game/actions/raider.js';
 import { processAutoTrains } from './game/actions/autotrain.js';
 import { processHousekeeping } from './game/engine/housekeeping.js';
-import { backupNow, diskSpace, listBackups } from './db/backup.js';
+import { backupNow, diskSpace, listBackups, removePartialBackups } from './db/backup.js';
 import { createApp } from './app.js';
 import { startCryptoWorkers } from './crypto/worker.js';
 
@@ -78,23 +78,31 @@ const worker = setInterval(() => {
 }, 1000);
 
 // Database snapshots every BACKUP_HOURS (the first one a minute after start, unless a recent one exists).
-let backingUp = false;
+removePartialBackups();
+let backup: Promise<void> | null = null;
 const backups = setInterval(() => {
-  if (config.BACKUP_HOURS <= 0 || backingUp) return;
-  const now = clock.now();
-  const last = Number(getMeta(db, 'backup_at') ?? '0');
-  if (now - last < config.BACKUP_HOURS * 3_600_000) return;
-  backingUp = true;
-  setMeta(db, 'backup_at', String(now));
-  backupNow(now)
-    .then((name) => {
-      if (name) console.log(`Backup written: ${name} (${listBackups().length} kept)`);
-    })
-    .catch((err: unknown) => console.error('Backup failed:', err))
-    .finally(() => {
-      backingUp = false;
-    });
+  if (config.BACKUP_HOURS <= 0 || backup) return;
+  try {
+    const now = clock.now();
+    const last = Number(getMeta(db, 'backup_at') ?? '0');
+    if (now - last < config.BACKUP_HOURS * 3_600_000) return;
+    setMeta(db, 'backup_at', String(now));
+    backup = backupNow(now)
+      .then((name) => {
+        if (name) console.log(`Backup written: ${name} (${listBackups().length} kept)`);
+      })
+      .catch((err: unknown) => console.error('Backup failed:', err))
+      .finally(() => {
+        backup = null;
+      });
+  } catch (err) {
+    console.error('Backup check failed:', err);
+  }
 }, 60_000);
+
+// A failed background promise is logged, not fatal: crashing would take the world down (and Railway stops
+// restarting after a few crashes in a row).
+process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', err));
 
 const stopCrypto = startCryptoWorkers(db);
 
@@ -107,7 +115,18 @@ function shutdown() {
   clearInterval(worker);
   clearInterval(backups);
   stopCrypto();
-  server.close(() => process.exit(0));
+  // Let a running snapshot finish (at most 20 s), then close the database so the WAL is checkpointed into the file.
+  const finish = () => {
+    try {
+      sqlite.close();
+    } finally {
+      process.exit(0);
+    }
+  };
+  server.close(() => {
+    if (!backup) return finish();
+    void Promise.race([backup, new Promise((r) => setTimeout(r, 20_000))]).then(finish);
+  });
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

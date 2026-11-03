@@ -30,7 +30,7 @@ export const TRAINING_SITES: Partial<Record<BuildingId, { units: TrainingBuildin
 };
 
 export function isTrainingSite(id: string): id is BuildingId {
-  return id in TRAINING_SITES;
+  return Object.hasOwn(TRAINING_SITES, id);
 }
 
 export interface TrainOption {

@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, or } from 'drizzle-orm';
+import { and, eq, gt, isNull, lte, or } from 'drizzle-orm';
 import type { Q } from '../db/index.js';
 import { perks } from '../db/schema.js';
 import { RESOURCE_KEYS, type ResourceKey } from './rules/resources.js';
@@ -118,11 +118,12 @@ export function foldPerks(rows: PerkRow[]): Modifiers {
   return m;
 }
 
+/** Perks in force at `now`: already bought/granted (catch-up also asks about moments in the past) and not yet expired. */
 export function activePerks(q: Q, userId: number, now: number) {
   return q
     .select()
     .from(perks)
-    .where(and(eq(perks.userId, userId), or(isNull(perks.expiresAt), gt(perks.expiresAt, now))))
+    .where(and(eq(perks.userId, userId), lte(perks.createdAt, now), or(isNull(perks.expiresAt), gt(perks.expiresAt, now))))
     .all();
 }
 

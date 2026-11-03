@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db/index.js';
 import { villages } from '../../db/schema.js';
-import { getHero, heroCandidates, releaseOasis, renameHero, reviveHero, setSkills, trainHero } from '../../game/actions/hero.js';
+import { getHero, heroCandidates, recallHero, releaseOasis, renameHero, reviveHero, setSkills, trainHero } from '../../game/actions/hero.js';
 import { isResearched } from '../../game/actions/research.js';
 import { levelOf, stockOf, troopsAt } from '../../game/engine/state.js';
 import { authed, setFlash } from '../session.js';
@@ -77,6 +77,16 @@ heroRouter.post(
     const ctx = authed(req);
     const h = reviveHero(db, ctx.user.id, ctx.now);
     setFlash(res, 'ok', `Your hero will be back in ${fmtDuration((h.reviveAt ?? ctx.now) - ctx.now)}.`);
+    res.redirect(303, '/hero');
+  }, '/hero'),
+);
+
+heroRouter.post(
+  '/hero/recall',
+  formAction(z.object({}), (req, res) => {
+    const ctx = authed(req);
+    recallHero(db, ctx.user.id, ctx.now);
+    setFlash(res, 'ok', 'Your hero is heading home.');
     res.redirect(303, '/hero');
   }, '/hero'),
 );

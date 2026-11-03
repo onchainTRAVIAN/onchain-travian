@@ -6,6 +6,7 @@ import { config } from '../config.js';
 import { getMeta, setMeta } from '../game/engine/world.js';
 import { GameError } from '../game/errors.js';
 import { gameEntryAbi } from './gameEntry.js';
+import { LogRange } from './chain.js';
 import { ethUsd, formatUnitsShort, weiForUsd } from './pricing.js';
 
 /** A payment may fall this far short of the fee: the ETH price moves while the player pays. */
@@ -13,8 +14,7 @@ const TOLERANCE = 0.05;
 /** Payments under this share of the fee are not recorded (dust can't fill the table). */
 const DUST = 0.01;
 const META_KEY = 'entry_indexer_block';
-/** Blocks per log request. Shrinks when the RPC refuses a range (provider plans limit it differently) and stays small. */
-let chunk = 2000n;
+const range = new LogRange();
 
 /** New accounts pay the entry fee (needs the contract and an RPC to check payments). */
 export function entryFeeOn(): boolean {
@@ -141,15 +141,15 @@ export async function indexEntries(db: DB, client: PublicClient, now: number): P
   const start = from;
   let found = 0;
   while (from <= safe) {
-    const to = from + chunk - 1n < safe ? from + chunk - 1n : safe;
+    const to = from + range.size - 1n < safe ? from + range.size - 1n : safe;
     let logs;
     try {
       logs = await client.getLogs({ address: getAddress(config.ENTRY_ADDRESS), fromBlock: from, toBlock: to });
     } catch (err) {
-      if (chunk <= 10n) throw err;
-      chunk = chunk > 50n ? chunk / 5n : 10n;
-      continue;
+      if (range.shrink(err)) continue;
+      throw err;
     }
+    range.succeeded();
     db.transaction((tx) => {
       found += recordEntries(tx, logs.map(decode).filter((l): l is EntryLog => !!l), now);
       setMeta(tx, META_KEY, to.toString());

@@ -102,8 +102,10 @@ export function searchFaq(query: string, limit = 30): { topic: FaqTopic; score: 
     let score = 0;
     let hits = 0;
     for (const w of words) {
-      const re = new RegExp(`(^| )${w.replace(/[^a-z0-9%+]/g, '')}`);
-      const exact = new RegExp(`(^| )${w.replace(/[^a-z0-9%+]/g, '')}( |$)`);
+      // Keep letters, digits, % and + ("+25%"), with + escaped: "c++" must not become a broken regex.
+      const term = w.replace(/[^a-z0-9%+]/g, '').replace(/\+/g, '\\+');
+      const re = new RegExp(`(^| )${term}`);
+      const exact = new RegExp(`(^| )${term}( |$)`);
       let s = 0;
       if (exact.test(title)) s += 12;
       else if (re.test(title)) s += 8;

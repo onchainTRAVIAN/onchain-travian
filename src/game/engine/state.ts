@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, lt, sql } from 'drizzle-orm';
 import { artifactValue } from './artifacts.js';
 import { clock } from '../../clock.js';
 import type { Q } from '../../db/index.js';
@@ -20,7 +20,7 @@ import { getModifiers, type Modifiers } from '../modifiers.js';
 import { loyaltyRegenPerHour } from '../rules/expansion.js';
 import { HERO_UPKEEP } from '../rules/hero.js';
 import { heroProductionBonus } from './hero.js';
-import { heroes, reports } from '../../db/schema.js';
+import { artifacts, heroes, perks, reports } from '../../db/schema.js';
 
 export type VillageRow = typeof villages.$inferSelect;
 export type SlotRow = typeof slots.$inferSelect;
@@ -357,24 +357,73 @@ function catchUpTraining(q: Q, villageId: number, t: number): void {
   }
 }
 
+/** Training batches that finish inside (from, to), sampled (at most `perOrder` per order): from then on they eat. */
+function trainingSteps(q: Q, villageId: number, from: number, to: number, perOrder = 6): number[] {
+  const out: number[] = [];
+  for (const o of q.select().from(trainOrders).where(eq(trainOrders.villageId, villageId)).all()) {
+    const doneBy = (x: number) => (x <= o.startAt ? 0 : Math.min(o.total, Math.floor((x - o.startAt) / o.perUnitMs)));
+    const k0 = Math.max(o.done, doneBy(from));
+    const k1 = doneBy(to);
+    const n = Math.min(perOrder, k1 - k0);
+    for (let i = 1; i <= n; i++) out.push(o.startAt + (k0 + Math.ceil((i * (k1 - k0)) / n)) * o.perUnitMs);
+  }
+  return out;
+}
+
+/**
+ * Moments inside (from, to) where a village's economy changes by itself, without anyone touching it: a perk (Gold
+ * boost, holder tier) starts or runs out, an artifact becomes active, trained troops join and start eating.
+ */
+function economyCuts(q: Q, state: VillageState, from: number, to: number): number[] {
+  const cuts = trainingSteps(q, state.village.id, from, to);
+  if (state.userId !== null) {
+    for (const p of q.select({ c: perks.createdAt, e: perks.expiresAt }).from(perks).where(eq(perks.userId, state.userId)).all()) {
+      cuts.push(p.c);
+      if (p.e !== null) cuts.push(p.e);
+    }
+    for (const a of q
+      .select({ at: artifacts.activeAt })
+      .from(artifacts)
+      .innerJoin(villages, eq(villages.id, artifacts.villageId))
+      .where(and(eq(villages.userId, state.userId), gt(artifacts.activeAt, from), lt(artifacts.activeAt, to)))
+      .all()) {
+      cuts.push(a.at);
+    }
+  }
+  const inside = [...new Set(cuts.filter((c) => c > from && c < to))].sort((a, b) => a - b);
+  // Keep the work bounded: at most 48 stretches (evenly picked) for a village nobody looked at for a long time.
+  return inside.length <= 47 ? inside : Array.from({ length: 47 }, (_, i) => inside[Math.floor(((i + 1) * inside.length) / 48)] as number);
+}
+
 /**
  * Bring a village up to time `t`: accrue resources, finish trained troops.
  * Must run inside a transaction together with whatever changes the village next.
+ *
+ * The time since the last update is split where the economy changed by itself (see economyCuts), and each stretch
+ * runs at the rate of its start: troops trained in between eat from when they joined, and a Gold boost counts only
+ * while it ran, also when nobody opened the village when it started or ended.
  */
 export function catchUp(q: Q, villageId: number, t: number): VillageState | undefined {
   const state = loadVillage(q, villageId);
   if (!state) return undefined;
   if (t > state.village.resAt) {
-    const eco = economyOf(q, state, t);
-    const hours = (t - state.village.resAt) / 3_600_000;
-    const next = accrue(stockOf(state.village), eco.net, eco.capacity, hours);
+    const start = state.village.resAt;
+    let stock = stockOf(state.village);
+    let at = start;
+    for (const end of [...economyCuts(q, state, start, t), t]) {
+      if (at > start) catchUpTraining(q, villageId, at);
+      const eco = economyOf(q, state, at);
+      stock = accrue(stock, eco.net, eco.capacity, (end - at) / 3_600_000);
+      if (stock.crop <= 0 && eco.net.crop < 0) starve(q, state, -eco.net.crop, end);
+      at = end;
+    }
+    const hours = (t - start) / 3_600_000;
     const loyalty = Math.min(
       100,
       state.village.loyalty + hours * loyaltyRegenPerHour(Math.max(levelOf(state, 'residence'), levelOf(state, 'palace'))) * config.WORLD_SPEED,
     );
-    q.update(villages).set({ ...next, loyalty, resAt: t }).where(eq(villages.id, villageId)).run();
-    state.village = { ...state.village, ...next, loyalty, resAt: t };
-    if (next.crop <= 0 && eco.net.crop < 0) starve(q, state, -eco.net.crop, t);
+    q.update(villages).set({ ...stock, loyalty, resAt: t }).where(eq(villages.id, villageId)).run();
+    state.village = { ...state.village, ...stock, loyalty, resAt: t };
   }
   catchUpTraining(q, villageId, t);
   return state;

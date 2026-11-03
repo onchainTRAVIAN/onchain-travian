@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, notInArray } from 'drizzle-orm';
 import type { DB, Q } from '../../db/index.js';
 import { farmBlocks, movements, oasisRaiders, reports, tiles, users, villages } from '../../db/schema.js';
 import { config } from '../../config.js';
@@ -310,7 +310,7 @@ export function runRaiderNow(db: DB, userId: number, villageId: number, tribe: T
 /** Server tick: enabled raiders whose interval has passed check again. */
 export function processOasisRaiders(db: DB, now: number): number {
   let runs = 0;
-  for (const r of db.select().from(oasisRaiders).where(eq(oasisRaiders.enabled, true)).all()) {
+  for (const r of db.select().from(oasisRaiders).where(and(eq(oasisRaiders.enabled, true), notInArray(oasisRaiders.userId, db.select({ id: users.id }).from(users).where(eq(users.banned, true))))).all()) {
     if (r.lastRunAt !== null && now - r.lastRunAt < r.intervalMin * 60_000) continue;
     const v = db.select({ userId: villages.userId }).from(villages).where(eq(villages.id, r.villageId)).get();
     if (!v || v.userId !== r.userId || !hasGoldClub(db, r.userId)) {
