@@ -13,6 +13,11 @@ const EnvSchema = z.object({
     .transform((u) => new URL(u).origin)
     .optional()
     .or(z.literal('').transform(() => undefined)),
+  /** Where players report bugs and ideas (e.g. a Telegram group link); shown as "Report a bug" in the footer when set. */
+  FEEDBACK_URL: z
+    .url({ protocol: /^https?$/ })
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
   /** Wallets (comma-separated 0x addresses) that become admins when they join or log in. */
   ADMIN_WALLETS: z
     .string()

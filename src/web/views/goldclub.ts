@@ -109,12 +109,12 @@ function customLists(d: ListsData): SafeHtml {
         ${l.entries.map((e) => html`<form id="del${e.id}" method="post" action="/goldclub/entry/delete" hidden>${csrfField(d.csrf)}<input type="hidden" name="id" value="${e.id}"></form>`)}`}
 
       <h4 class="fl-step"><span>2</span> Add targets</h4>
-      <form method="post" action="/goldclub/entry" class="block">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
+      <form id="fladd${l.id}" method="post" action="/goldclub/entry" class="block">${csrfField(d.csrf)}<input type="hidden" name="listId" value="${l.id}">
         ${troopPicker}
         <div class="fl-ways">
           <div class="fl-way"><b>One target</b><p class="small muted">A village or an oasis by its coordinates.</p>
             <p>x <input type="number" name="x" class="w30" inputmode="numeric"> y <input type="number" name="y" class="w30" inputmode="numeric"> <button type="submit" class="small">Add target</button></p>
-            ${d.places.length ? html`<p class="small places">Saved: ${d.places.map((p) => html`<a href="#" class="place" data-x="${p.x}" data-y="${p.y}">${p.label}</a> `)}</p>` : ''}</div>
+            ${d.places.length ? html`<p class="small places">Saved: ${d.places.map((p) => html`<a href="#fladd${l.id}" class="place" data-x="${p.x}" data-y="${p.y}">${p.label}</a> `)}</p>` : ''}</div>
           <div class="fl-way"><b>Free oases nearby</b><p class="small muted">Every free oasis around ${l.villageName} that isn't on the list yet.</p>
             <p>within <input type="number" name="radius" min="1" max="${FARM_RADIUS_MAX}" value="10" class="w30" inputmode="numeric"> fields, at least <input type="number" name="minRes" min="0" class="w60" inputmode="numeric" placeholder="0"> loot
             <button type="submit" formaction="/goldclub/oases" class="small">Add oases</button></p></div>

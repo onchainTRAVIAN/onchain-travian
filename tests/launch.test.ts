@@ -99,4 +99,22 @@ describe('public launch settings', () => {
     const map = await request(app).get('/sitemap.txt').set('Host', HOST);
     expect(map.text.split('\n')).toContain(`https://${HOST}/help`);
   });
+
+  it('a beta world says so under the logo and links to the bug reports', async () => {
+    const plain = await request(app).get('/help').set('Host', HOST);
+    expect(plain.text).not.toContain('Report a bug');
+    expect(plain.text).toMatch(/<small>speed x1<\/small>|<small>classic world<\/small>/);
+    const saved = { name: config.WORLD_NAME, feedback: config.FEEDBACK_URL };
+    config.WORLD_NAME = 'onchainTRAVIAN Beta';
+    config.FEEDBACK_URL = 'https://t.me/example_beta';
+    try {
+      const beta = await request(app).get('/help').set('Host', HOST);
+      expect(beta.text).toMatch(/<small>Beta · (speed x\d+|classic world)<\/small>/);
+      expect(beta.text).toContain('<a href="https://t.me/example_beta" target="_blank" rel="noopener">Report a bug</a>');
+      expect(beta.text).toContain('<title>Game guide · onchainTRAVIAN Beta</title>');
+    } finally {
+      config.WORLD_NAME = saved.name;
+      config.FEEDBACK_URL = saved.feedback;
+    }
+  });
 });

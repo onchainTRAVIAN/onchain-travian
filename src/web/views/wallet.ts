@@ -32,7 +32,7 @@ export function walletView(d: {
       ? html`<p class="cardrow"><span>Your wallet <b class="nowrap" title="${d.address}">${short(d.address)}</b></span>
           <button type="button" class="small secondary" data-action="link">Change wallet</button></p>
           <p class="small muted">You log in with this wallet. To move the account to another wallet, press Change wallet and sign with the new one.</p>`
-      : html`<p class="small">Link your crypto wallet to unlock <b>${config.TOKEN_SYMBOL} holder perks</b> and to log in. Signing is free - no transaction, no gas.</p>
+      : html`<p class="small">Link your crypto wallet to get <b>${config.TOKEN_SYMBOL} holder perks</b> and to log in. Signing is free - no transaction, no gas.</p>
           <button type="button" class="gbtn" data-action="link">${icon('menu/wallet', '', 16)} Connect &amp; link wallet</button>`}
     <p class="small" data-status role="status"></p>
     </div></section>

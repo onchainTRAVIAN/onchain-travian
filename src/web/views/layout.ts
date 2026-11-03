@@ -201,6 +201,11 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
   </div>`;
 }
 
+/** What the world name adds to the brand ("onchainTRAVIAN Beta" -> "Beta"), shown under the header logo. */
+function worldTag(): string {
+  return config.WORLD_NAME.replace(/^onchainTRAVIAN\s*/i, '').trim();
+}
+
 const DESCRIPTION = 'Classic Travian-style strategy in your browser: build villages, raise an army, raid and conquer. Play free with any EVM wallet.';
 
 /** Description + link-preview tags (X, Telegram, Discord). Previews need absolute URLs, so the image only with PUBLIC_URL. */
@@ -237,7 +242,7 @@ ${shareMeta(o.title)}
 <body data-masks="${assetUrl('masks.json')}" data-now="${o.now}">
 <div id="wrap">
   <div id="header">
-    <a id="logo" href="${c ? '/fields' : '/'}"><img class="coin" src="${assetUrl('img/brand/coin-128.png')}" width="60" height="60" alt=""><span><img src="${assetUrl('img/brand/wordmark-2line.svg')}" width="148" height="47" alt="${config.WORLD_NAME}"><small>${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic world'}</small></span></a>
+    <a id="logo" href="${c ? '/fields' : '/'}"><img class="coin" src="${assetUrl('img/brand/coin-128.png')}" width="60" height="60" alt=""><span><img src="${assetUrl('img/brand/wordmark-2line.svg')}" width="148" height="47" alt="${config.WORLD_NAME}"><small>${worldTag() ? `${worldTag()} · ` : ''}${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic world'}</small></span></a>
     ${topNav(o.nav, c)}
     <div id="ltime">Server time: <b>${fmtClock(o.now)}</b> UTC</div>
   </div>
@@ -259,7 +264,7 @@ ${shareMeta(o.title)}
     </div>
     <nav class="flinks" aria-label="Footer"><a href="/help">Game guide</a><a href="/units">Troop guide</a><a href="/stats">Statistics</a>${c
       ? html`<a href="/simulator">Simulator</a><a href="/shop">Plus &amp; Gold</a><a href="/wallet">Wallet</a>`
-      : html`<a href="/login">Connect wallet</a>`}</nav>
+      : html`<a href="/login">Connect wallet</a>`}${config.FEEDBACK_URL ? html`<a href="${config.FEEDBACK_URL}" target="_blank" rel="noopener">Report a bug</a>` : ''}</nav>
     <div class="fbar">© ${new Date(o.now).getUTCFullYear()} ${config.WORLD_NAME} · ${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic speed'} · server time ${fmtClock(o.now)} UTC</div>
   </footer>
 </div>

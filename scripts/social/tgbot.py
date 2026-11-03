@@ -127,6 +127,12 @@ def api(method: str, data: dict | None = None, files: dict[str, pathlib.Path] | 
     for attempt in range(tries):
         try:
             res = CONN.request(f'/bot{TOKEN}/{method}', body, ctype, timeout)
+            # Flood control: Telegram says how long to wait; wait that long and send again.
+            retry_after = (res.get('parameters') or {}).get('retry_after') if res.get('error_code') == 429 else None
+            if retry_after and attempt < tries - 1:
+                log('flood control', method, f'waiting {retry_after}s')
+                time.sleep(min(int(retry_after), 60) + 1)
+                continue
             if not res.get('ok'):
                 log('api error', method, res.get('description'))
             return res
@@ -161,7 +167,14 @@ def send_post(chat: int, p: dict) -> None:
                   'On X tap the poll icon, paste the text, then add these options.')
     else:
         say(chat, f'<b>{html.escape(head)}</b>\n{html.escape(p["media"])}')
-    say(chat, f'<pre>{html.escape(p["text"])}</pre>')
+    # Telegram caps a message at 4096 characters: long posts go out in several <pre> pieces.
+    piece = ''
+    for line in html.escape(p['text']).split('\n'):
+        if piece and len(piece) + len(line) > 3800:
+            say(chat, f'<pre>{piece}</pre>')
+            piece = ''
+        piece = f'{piece}\n{line}' if piece else line
+    say(chat, f'<pre>{piece}</pre>')
     if p['poll']:
         say(chat, 'Poll options: <b>' + html.escape(p['poll']).replace(' / ', '</b> | <b>') + '</b>')
     if p['reply']:
