@@ -258,7 +258,7 @@ Every building has five pictures, for levels 1, 5, 10, 15 and 20. Timber and tha
 After a couple of weeks your village centre looks noticeably different from the one you started with.
 ```
 
-### 23. Alliance treaties - ready
+### 23. Alliance treaties - posted
 Media: painting, a Roman and a Teuton chieftain clasping hands over a war table
 File: branding/social/img/23-treaties.jpg
 ```
