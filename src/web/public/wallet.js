@@ -27,6 +27,7 @@
   // ---- Wallet discovery (EIP-6963) ----
   var found = [];
   var chosen = null;
+  var chosenRdns = ''; // the chosen wallet's EIP-6963 id (e.g. io.metamask), '' for window.ethereum
   window.addEventListener('eip6963:announceProvider', function (e) {
     var d = e.detail;
     if (!d || !d.provider || !d.info) return;
@@ -121,6 +122,7 @@
     }
     if (list.length === 1) {
       lastUsed(list[0].info.rdns);
+      chosenRdns = list[0].info.rdns || '';
       return Promise.resolve((chosen = list[0].provider));
     }
     var last = lastUsed();
@@ -150,6 +152,7 @@
           e.stopPropagation();
           box.hidden = true;
           lastUsed(d.info.rdns);
+          chosenRdns = d.info.rdns || '';
           resolve((chosen = d.provider));
         });
         box.appendChild(b);
@@ -175,10 +178,43 @@
     return chosen;
   }
 
+  function isMetaMask(p) {
+    if (chosenRdns) return /^io\.metamask/.test(chosenRdns);
+    return !!(p && p.isMetaMask) && !p.isRabby && !p.isBraveWallet && !p.isCoinbaseWallet && !p.isOkxWallet &&
+      !p.isOKExWallet && !p.isPhantom && !p.isTrust && !p.isTrustWallet;
+  }
+
+  // MetaMask is asked with the network named. A bare eth_requestAccounts makes current MetaMask pre-select every
+  // network it knows, Bitcoin included, and when its Bitcoin part is not running it refuses its own grant
+  // ("endowment:caip25 error: Received scopeString value(s): bip122:... not supported by the wallet", 2026-11-06).
+  // Naming the wallet's current chain keeps the grant to that chain; ensureChain() adds others when needed.
+  // A wallet that does not know this permission gets the plain request; a refusal is never asked again.
+  function requestAccounts(p) {
+    if (!isMetaMask(p)) return p.request({ method: 'eth_requestAccounts' });
+    return p.request({ method: 'eth_accounts' })
+      .then(function (accs) {
+        if (accs && accs[0]) return accs;
+        return p.request({ method: 'eth_chainId' })
+          .then(function (chain) {
+            return p.request({
+              method: 'wallet_requestPermissions',
+              params: [{ eth_accounts: {}, 'endowment:permitted-chains': { caveats: [{ type: 'restrictNetworkSwitching', value: [chain] }] } }],
+            });
+          })
+          .then(function () { return p.request({ method: 'eth_accounts' }); });
+      })
+      .then(null, function (err) {
+        // 4001 = the player said no, -32002 = a request is already open in the wallet, caip25 = asking again fails too.
+        if (err && (err.code === 4001 || err.code === -32002 || /endowment:caip25/.test(err.message || ''))) throw err;
+        return null;
+      })
+      .then(function (accs) {
+        return accs && accs[0] ? accs : p.request({ method: 'eth_requestAccounts' });
+      });
+  }
+
   function account() {
-    return choose().then(function (p) {
-      return p.request({ method: 'eth_requestAccounts' });
-    }).then(function (accs) {
+    return choose().then(requestAccounts).then(function (accs) {
       if (!accs || !accs[0]) throw new Error('No account selected');
       return accs[0];
     });
@@ -255,6 +291,9 @@
     if (err && err.noWallet) return showNoWallet();
     var msg = (err && (err.message || err.reason)) || String(err);
     if (err && err.code === 4001) msg = 'You cancelled the request in your wallet.';
+    else if (/endowment:caip25/.test(msg)) {
+      msg = 'MetaMask could not finish the connection (a MetaMask problem with its Bitcoin accounts). Update MetaMask, restart your browser and try again.';
+    }
     say(msg, true);
   }
 

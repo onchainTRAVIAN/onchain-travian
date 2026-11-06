@@ -3,6 +3,7 @@
 ## Unreleased - ready for a public launch
 - Fixed: the live game was down since 2026-10-15. Auto-raids had written 571,000 reports (376 MB) and filled the server disk. Old reports are now deleted automatically: after 14 days, and each player keeps their newest 1,000 (both adjustable: `REPORT_DAYS`, `REPORT_CAP`). The "?" next to Reports says so.
 - One public address: with `PUBLIC_URL` set, every other address (the railway.app name, www.) forwards there, and wallet sign-in messages name that domain.
+- Fixed: MetaMask sign-in failed for players whose MetaMask has Bitcoin accounts ("endowment:caip25 error: Received scopeString value(s): bip122:... not supported by the wallet"). The game now asks MetaMask for the network it is on, so MetaMask no longer adds Bitcoin to the connection. The game lives at https://travian.forum (MetaMask warns on every railway.app address).
 - Wallet sign-in signs on the network the wallet is already on (no "switch network" prompt just to log in), and smart-contract / passkey wallets get a clear message that they are not supported yet.
 - On a phone browser without a wallet, Connect wallet offers to open the game inside MetaMask, Trust Wallet, Coinbase Wallet, OKX Wallet or Phantom.
 - Admins come from `ADMIN_WALLETS` (also promotes an existing account at its next login). On a live server the first account no longer becomes admin automatically.
