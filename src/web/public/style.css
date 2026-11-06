@@ -32,6 +32,9 @@ p { margin: 0 0 8px; }
 #logo img { display: block; }
 #logo .coin { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55)); }
 #logo small { display: block; font: 10px Verdana, sans-serif; color: #f6e7c0; margin: 1px 0 0 3px; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.7); }
+/* the world tag ("Beta") in red: brighter on the dark header and footer, deeper on the light page */
+.wtag { color: #c3261b; font-weight: bold; }
+#logo small .wtag, #footer .wtag { color: #ff5a45; }
 #logo:hover .coin { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3)) brightness(1.08); }
 #mtop { position: absolute; left: 231px; top: 6px; height: 67px; z-index: 2; }
 #header::before { content: ''; position: absolute; left: 220px; right: 0; top: 24px; height: 30px; z-index: 1;

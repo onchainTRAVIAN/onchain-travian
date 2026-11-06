@@ -4,7 +4,7 @@ import { config } from '../../config.js';
 import { TRIBES, TRIBE_IDS } from '../../game/rules/units.js';
 import { fmtNum } from '../format.js';
 import { html, type SafeHtml } from '../html.js';
-import { csrfField, icon } from './layout.js';
+import { csrfField, icon, worldNameHtml } from './layout.js';
 import { help } from './tips.js';
 import { entryFeeOn, feeLabel } from '../../crypto/entry.js';
 
@@ -59,7 +59,7 @@ export function entryView(
   fee: { paidCents: number; dueUsd: number },
   q: { to: string; wei: bigint; eth: string; data: string; ethUsd: number },
 ): SafeHtml {
-  return html`<h1>Join ${config.WORLD_NAME}</h1>
+  return html`<h1>Join ${worldNameHtml()}</h1>
   <section class="spanel connect" data-wallet data-csrf="${csrf}" data-chain="${config.CHAIN_ID}" data-chain-name="${config.CHAIN_NAME}"
     data-chain-rpc="${config.WALLET_RPC_URL ?? ''}" data-explorer="${config.EXPLORER_URL ?? ''}" data-address="${address}"
     data-entry-to="${q.to}" data-entry-wei="${q.wei.toString()}" data-entry-data="${q.data}">
@@ -81,7 +81,7 @@ export function entryView(
 
 export function registerView(csrf: string, address: string, values: { username?: string; tribe?: string } = {}, feePaid = false): SafeHtml {
   const selected = values.tribe && (TRIBE_IDS as readonly string[]).includes(values.tribe) ? values.tribe : 'romans';
-  return html`<h1>Join ${config.WORLD_NAME}</h1>
+  return html`<h1>Join ${worldNameHtml()}</h1>
   <form method="post" action="/register" class="spanel pad stack">
     ${csrfField(csrf)}
     <p class="walletchip">${icon('menu/wallet', '', 16)} Wallet <b title="${address}">${shortAddr(address)}</b> <span class="muted small">${feePaid ? 'signed in, entry fee paid - step 2 of 2: choose a name and a tribe' : 'signed in, choose a name and a tribe'}</span></p>

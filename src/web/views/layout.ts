@@ -201,9 +201,15 @@ function sideInfo(c: Chrome | null | undefined, csrf: string): SafeHtml {
   </div>`;
 }
 
-/** What the world name adds to the brand ("onchainTRAVIAN Beta" -> "Beta"), shown under the header logo. */
+/** What the world name adds to the brand ("onchainTRAVIAN Beta" -> "Beta"), shown in red under the header logo. */
 function worldTag(): string {
   return config.WORLD_NAME.replace(/^onchainTRAVIAN\s*/i, '').trim();
+}
+
+/** The world name with its tag in red: "onchainTRAVIAN <b class="wtag">Beta</b>" (plain name without a tag). */
+export function worldNameHtml(): SafeHtml {
+  const m = /^(onchainTRAVIAN)\s+(\S.*)$/i.exec(config.WORLD_NAME);
+  return m ? html`${m[1]} <b class="wtag">${m[2]}</b>` : html`${config.WORLD_NAME}`;
 }
 
 const DESCRIPTION = 'Classic Travian-style strategy in your browser: build villages, raise an army, raid and conquer. Play free with any EVM wallet.';
@@ -242,7 +248,7 @@ ${shareMeta(o.title)}
 <body data-masks="${assetUrl('masks.json')}" data-now="${o.now}">
 <div id="wrap">
   <div id="header">
-    <a id="logo" href="${c ? '/fields' : '/'}"><img class="coin" src="${assetUrl('img/brand/coin-128.png')}" width="60" height="60" alt=""><span><img src="${assetUrl('img/brand/wordmark-2line.svg')}" width="148" height="47" alt="${config.WORLD_NAME}"><small>${worldTag() ? `${worldTag()} · ` : ''}${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic world'}</small></span></a>
+    <a id="logo" href="${c ? '/fields' : '/'}"><img class="coin" src="${assetUrl('img/brand/coin-128.png')}" width="60" height="60" alt=""><span><img src="${assetUrl('img/brand/wordmark-2line.svg')}" width="148" height="47" alt="${config.WORLD_NAME}"><small>${worldTag() ? html`<b class="wtag">${worldTag()}</b> · ` : ''}${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic world'}</small></span></a>
     ${topNav(o.nav, c)}
     <div id="ltime">Server time: <b>${fmtClock(o.now)}</b> UTC</div>
   </div>
@@ -265,7 +271,7 @@ ${shareMeta(o.title)}
     <nav class="flinks" aria-label="Footer"><a href="/help">Game guide</a><a href="/units">Troop guide</a><a href="/stats">Statistics</a>${c
       ? html`<a href="/simulator">Simulator</a><a href="/shop">Plus &amp; Gold</a><a href="/wallet">Wallet</a>`
       : html`<a href="/login">Connect wallet</a>`}${config.FEEDBACK_URL ? html`<a href="${config.FEEDBACK_URL}" target="_blank" rel="noopener">Report a bug</a>` : ''}</nav>
-    <div class="fbar">© ${new Date(o.now).getUTCFullYear()} ${config.WORLD_NAME} · ${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic speed'} · server time ${fmtClock(o.now)} UTC</div>
+    <div class="fbar">© ${new Date(o.now).getUTCFullYear()} ${worldNameHtml()} · ${config.WORLD_SPEED !== 1 ? `speed x${config.WORLD_SPEED}` : 'classic speed'} · server time ${fmtClock(o.now)} UTC</div>
   </footer>
 </div>
 <script src="${assetUrl('app.js')}" defer></script>

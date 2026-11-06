@@ -100,16 +100,18 @@ describe('public launch settings', () => {
     expect(map.text.split('\n')).toContain(`https://${HOST}/help`);
   });
 
-  it('a beta world says so under the logo and links to the bug reports', async () => {
+  it('a beta world says so in red under the logo and in the footer, and links to the bug reports', async () => {
     const plain = await request(app).get('/help').set('Host', HOST);
     expect(plain.text).not.toContain('Report a bug');
     expect(plain.text).toMatch(/<small>speed x1<\/small>|<small>classic world<\/small>/);
+    expect(plain.text).not.toContain('class="wtag"');
     const saved = { name: config.WORLD_NAME, feedback: config.FEEDBACK_URL };
     config.WORLD_NAME = 'onchainTRAVIAN Beta';
     config.FEEDBACK_URL = 'https://t.me/example_beta';
     try {
       const beta = await request(app).get('/help').set('Host', HOST);
-      expect(beta.text).toMatch(/<small>Beta · (speed x\d+|classic world)<\/small>/);
+      expect(beta.text).toMatch(/<small><b class="wtag">Beta<\/b> · (speed x\d+|classic world)<\/small>/);
+      expect(beta.text).toMatch(/<div class="fbar">© \d{4} onchainTRAVIAN <b class="wtag">Beta<\/b> · /);
       expect(beta.text).toContain('<a href="https://t.me/example_beta" target="_blank" rel="noopener">Report a bug</a>');
       expect(beta.text).toContain('<title>Game guide · onchainTRAVIAN Beta</title>');
     } finally {
