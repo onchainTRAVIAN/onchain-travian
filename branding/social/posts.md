@@ -5,7 +5,7 @@ Voice: a real indie developer writing about their game. Plain sentences, "we", c
 No emojis, no dash punctuation (ranges as "1 to 8"), no hashtags, no slogan endings, no token talk.
 The game link goes in a reply (X shows link posts to fewer people).
 Each post: heading `### n. Title - status`, then `Media: ...` (what the picture/video shows) or `Poll: a / b / c (24 h)`,
-`File: <path>` once the media exists, the post in the first code block, optional `Reply under it: `...``.
+`File: <path>` once the media exists (several files comma-separated = one X post with several media), the post in the first code block, optional `Reply under it: `...``.
 Status (last word of each heading): draft → ready (text approved + media made, `File:` set) → posted / skipped.
 Delivered by the Telegram bot @onchainTRAVIAN_bot (`scripts/social/tgbot.py`): Next sends the first ready post; Posted updates the heading here.
 
@@ -408,3 +408,17 @@ We redrew the troops three times. The first version was painted, the second was 
 
 The final set is drawn by hand in the old comic style.
 ```
+
+## Day 13
+
+### 37. Open beta - ready
+Media: video, an attack at x100 from Send troops to the battle report (9 s), and a picture of the village centre with "Beta · speed x100" in the header. Both in one post, video first.
+File: branding/social/img/37-beta.mp4, branding/social/img/37-beta.jpg
+```
+The onchainTRAVIAN open beta is live. The world runs at x100 speed.
+
+Production, building, training and marching are all 100 times faster than on a classic server. In the clip, 600 cavalry and a hero attack the village next door. At normal speed that march takes about 4 minutes. Here it takes 3 seconds.
+
+Joining is free during the beta: you sign in with a wallet like MetaMask, pick a name and a tribe, and start with one village. The world will start over for the full launch, so now is a good time to learn it and find bugs. If something looks wrong, reply here and we'll fix it.
+```
+Reply under it: `You can play here: https://travian.forum`

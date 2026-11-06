@@ -1,12 +1,14 @@
 """Short screen recordings for the X posts, from the staged local world (scripts/social/stage.ts).
 
-source ~/scraping-env/bin/activate && DEMO_SESSION=<scratch>/demo-session.txt python scripts/social/videos.py <out_dir> [03-simulator 05-livemap 19-clicks]
+source ~/scraping-env/bin/activate && DEMO_SESSION=<scratch>/demo-session.txt python scripts/social/videos.py <out_dir> [03-simulator 05-livemap 19-clicks 37-beta]
 
 Records a 960x540 page at 2x (1920x1080) through the CDP screencast (a drawn cursor is injected, headless Chromium has none), then
 converts to H.264 MP4 for X with the ffmpeg from imageio-ffmpeg in ~/art-env.
 """
 import asyncio
+import json
 import os
+import re
 import base64
 import pathlib
 import shutil
@@ -146,7 +148,74 @@ async def clicks(pg: Page) -> None:
     await pg.wait_for_timeout(1800)
 
 
-SCENES = {'03-simulator': simulator, '05-livemap': livemap, '19-clicks': clicks}
+async def beta_prep(pg: Page) -> None:
+    """Before recording 37-beta: wait until the demo's oasis raider has no troops out (it sends a wave every 15 min and
+    they are back within ~2 min), so the Rally Point shows only this attack, then open the filled-in Send troops form."""
+    for _ in range(150):
+        rally = await (await pg.context.request.get(B + '/troops')).text()
+        if 'data-dir="out"' not in rally and 'data-dir="back"' not in rally:
+            break
+        await pg.wait_for_timeout(2000)
+    else:
+        raise RuntimeError('the oasis raider never went quiet')
+    t = json.loads(pathlib.Path(os.environ['DEMO_SESSION']).with_name('demo-target.json').read_text())
+    await pg.goto(f"{B}/troops/send?x={t['x']}&y={t['y']}&kind=attack&u4=600&hero=1")
+    await pg.wait_for_load_state('networkidle')
+
+
+async def beta(pg: Page) -> None:
+    """The open beta at x100: 600 Equites Imperatoris and the hero attack the Northmen village next door (stage.ts puts it
+    1 field away), the countdown runs out in about 3 seconds, then the battle report. About 8 s after the trim."""
+    await pg.wait_for_timeout(1900)  # 1.5 s are trimmed; the header shows "Beta · speed x100" for a moment
+    ok = 'form[action="/troops/send/preview"] button[type=submit]'
+    for _ in range(10):  # scroll the form into view while the cursor heads for OK
+        await pg.mouse.wheel(0, 13)
+        await pg.wait_for_timeout(20)
+    x, y = await center(pg, ok)
+    await glide(pg, 860, 300, x, y, 14)
+    await pg.wait_for_timeout(120)
+    await pg.click(ok)
+    await pg.wait_for_load_state('networkidle')
+    await pg.evaluate('scrollTo(0, 60)')
+    await pg.wait_for_timeout(450)  # the confirmation: 1.0 fields, arrives in 0:00:03
+    send = 'form[action="/troops/send"] button[type=submit]'
+    sx, sy = await center(pg, send)
+    await glide(pg, x, y - 60, sx, sy, 12)
+    await pg.wait_for_timeout(100)
+    await pg.click(send)
+    await pg.wait_for_load_state('networkidle')
+    await pg.evaluate('scrollTo(0, 130)')
+    await pg.mouse.move(sx + 260, sy - 120)
+    # watch the countdown run out (0:00:00 shows), then open the report (looked up off screen)
+    timer = pg.locator('tr[data-dir="out"] [data-ends]').first
+    for _ in range(300):  # (wait_for_function needs eval, which the game's CSP blocks)
+        if (await timer.text_content() or '').strip() == '0:00:00':
+            break
+        await pg.wait_for_timeout(50)
+    await pg.wait_for_timeout(350)
+    href = None
+    for _ in range(40):
+        reports = await (await pg.context.request.get(B + '/reports')).text()
+        m = re.search(r'href="(/reports/\d+)"[^>]*>[^<]* attacks ', reports)
+        if m:
+            href = m[1]
+            break
+        await pg.wait_for_timeout(100)
+    if not href:
+        raise RuntimeError('no attack report')
+    # a link-style navigation, so Chrome keeps the old frame until the report paints (no blank frame)
+    async with pg.expect_navigation(wait_until='networkidle'):
+        await pg.evaluate(f"location.href = '{href}'")
+    await pg.mouse.move(900, 470)
+    await pg.wait_for_timeout(700)
+    for _ in range(14):  # down to the defender's losses
+        await pg.mouse.wheel(0, 9)
+        await pg.wait_for_timeout(40)
+    await pg.wait_for_timeout(1300)
+
+
+SCENES = {'03-simulator': simulator, '05-livemap': livemap, '19-clicks': clicks, '37-beta': beta}
+PREP = {'37-beta': beta_prep}
 
 
 async def main() -> None:
@@ -162,6 +231,8 @@ async def main() -> None:
             await ctx.add_init_script(CURSOR)
             pg = await ctx.new_page()
             await login(pg)
+            if name in PREP:
+                await PREP[name](pg)
             # CDP screencast keeps device pixels (Playwright's own video records CSS pixels only)
             cdp = await ctx.new_cdp_session(pg)
             frames: list[tuple[float, pathlib.Path]] = []

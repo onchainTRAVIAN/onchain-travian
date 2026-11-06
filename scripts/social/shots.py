@@ -118,6 +118,10 @@ async def main() -> None:
                          '&d1_t=teutons&d10=73&d11=36&d13=6&d15=6&wall=10&tl=5&apop=973&dpop=116')
             await content(pg, '34-sim')
 
+        if want('37-beta'):  # header (red Beta, speed x100) and the village centre
+            await go(pg, '/village')
+            await pg.screenshot(path=f'{OUT}/37-beta.png', clip={'x': 60, 'y': 0, 'width': 980, 'height': 646})
+
         if want('18-tests'):
             gh = await b.new_page(viewport={'width': 1280, 'height': 900}, device_scale_factor=2, color_scheme='light')
             await gh.goto('https://github.com/onchainTRAVIAN/onchain-travian/actions')

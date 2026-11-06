@@ -6,7 +6,8 @@ python3 scripts/social/tgbot.py check      parse posts.md and print the queue
 
 Stdlib only. Needs TELEGRAM_BOT_TOKEN (and after pairing TELEGRAM_CHAT_ID) in the repo's .env.
 posts.md is the source of truth: headings `### <n>. <Title> - <status>` (draft|ready|posted|skipped),
-optional `File: <path>` line, the first ``` block is the post, `Reply under it: `...`` the reply.
+optional `File: <path>[, <path>]` line (several files = one X post with several media), the first ``` block is the post,
+`Reply under it: `...`` the reply.
 """
 import html
 import http.client
@@ -64,7 +65,7 @@ def posts() -> list[dict]:
         out.append({
             'n': int(h[1]), 'title': h[2], 'status': h[3],
             'media': lines[0] if lines else '',
-            'file': (REPO / file[1]) if file else None,
+            'files': [REPO / f.strip() for f in file[1].split(',')] if file else [],
             'text': code[1].strip() if code else '',
             'reply': reply[1] if reply else '',
             'poll': poll[1] if poll else '',
@@ -158,10 +159,13 @@ def buttons(n: int) -> dict:
 
 def send_post(chat: int, p: dict) -> None:
     head = f"#{p['n']} {p['title']} ({p['status']})"
-    if p['file'] and p['file'].exists():
-        api('sendDocument', {'chat_id': chat, 'caption': head}, {'document': p['file']}, timeout=120)
-    elif p['file']:
-        say(chat, f'<b>{html.escape(head)}</b>\n⚠️ media not made yet: {html.escape(p["file"].name)}')
+    missing = [f.name for f in p['files'] if not f.exists()]
+    if p['files'] and not missing:
+        for i, f in enumerate(p['files']):
+            cap = head if len(p['files']) == 1 else f'{head} - media {i + 1} of {len(p["files"])}'
+            api('sendDocument', {'chat_id': chat, 'caption': cap}, {'document': f}, timeout=120)
+    elif p['files']:
+        say(chat, f'<b>{html.escape(head)}</b>\n⚠️ media not made yet: {html.escape(", ".join(missing))}')
     elif p['poll']:
         say(chat, f'<b>{html.escape(head)}</b>\nPoll post: no picture (X does not allow media on a poll).\n'
                   'On X tap the poll icon, paste the text, then add these options.')
@@ -189,7 +193,7 @@ def next_ready() -> dict | None:
 def queue_text() -> str:
     rows = []
     for p in posts():
-        media = '' if not p['file'] else (' 🖼' if p['file'].exists() else ' ⚠️no file')
+        media = '' if not p['files'] else (' 🖼' if all(f.exists() for f in p['files']) else ' ⚠️no file')
         rows.append(f"{ICON[p['status']]} {p['n']}. {html.escape(p['title'])}{media}")
     return '<b>Post queue</b>\n' + '\n'.join(rows) + '\n\n📝 draft · 🟢 ready · ✅ posted · ⏭ skipped'
 
@@ -277,7 +281,7 @@ if __name__ == '__main__':
     arg = sys.argv[1:]
     if arg[:1] == ['check']:
         for p in posts():
-            f = '' if not p['file'] else f" file={'ok' if p['file'].exists() else 'MISSING'}"
+            f = '' if not p['files'] else f" files={'ok' if all(x.exists() for x in p['files']) else 'MISSING'}"
             print(f"{p['n']:>3} {p['status']:<8} {len(p['text']):>4} ch  reply={'y' if p['reply'] else 'n'}{f}  {p['title']}")
     elif arg[:1] == ['send'] and len(arg) == 2:
         owner, p = owner_id(), find(int(arg[1]))

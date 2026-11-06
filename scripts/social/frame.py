@@ -42,6 +42,7 @@ POSTS: dict[str, dict] = {
     '32-hero': {'title': 'Hero progress', 'bg': 'what-hero', 'shots': ['32-hero.png']},
     '34-maths': {'title': 'Same fight, same numbers', 'bg': 'p10-natars', 'shots': ['13-report.png', '34-sim.png'], 'crop2': (0.535, 1.0)},
     '36-versions': {'title': 'Three tries at the troops', 'bg': 'what-council', 'shots': ['36-versions.png']},
+    '37-beta': {'title': 'Open beta, speed x100', 'bg': 'p35-fast', 'shots': ['37-beta.png']},
 }
 
 
