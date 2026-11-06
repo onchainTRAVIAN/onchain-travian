@@ -19,7 +19,7 @@ fi
 # that is NOT linked, and an unlinked `railway up` quietly creates a brand-new empty project (2026-11-05),
 # so the target is always passed explicitly.
 SERVICE=game
-HEALTH=https://ancient-realms.up.railway.app/healthz
+HEALTH=https://onchaintravian.up.railway.app/healthz
 target="$(npx --yes @railway/cli status --json 2>/dev/null | node -e '
   let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
     try {

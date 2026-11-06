@@ -25,7 +25,7 @@ You start with one village and 18 resource fields. From there it's 38 buildings,
 
 All the art is drawn from scratch. It runs in the browser on desktop and phone, and it's free to play.
 ```
-Reply under it: `You can play here: https://ancient-realms.up.railway.app`
+Reply under it: `You can play here: https://onchaintravian.up.railway.app`
 
 ### 2. Pick your tribe - posted
 Media: picture, the three tribes with three of their troops each

@@ -13,6 +13,6 @@ Include what you found, how to reproduce it, and the impact you expect. We aim t
 - The game server and web app (`src/`), including login, sessions, CSRF, Gold ledger and market logic.
 - Wallet sign-in, holder tiers and the deposit indexer (`src/crypto/`).
 - The smart contracts (`contracts/src/`).
-- The live world at https://ancient-realms.up.railway.app - test only with your own accounts, no denial-of-service, no access to other players' data.
+- The live world at https://onchaintravian.up.railway.app - test only with your own accounts, no denial-of-service, no access to other players' data.
 
 Out of scope: game-balance opinions, missing best-practice headers without a real impact, and issues in third-party services.
