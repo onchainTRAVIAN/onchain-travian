@@ -411,13 +411,13 @@ The final set is drawn by hand in the old comic style.
 
 ## Day 13
 
-### 37. Open beta - ready
-Media: video, an attack at x100 from Send troops to the battle report (9 s), and a picture of the village centre with "Beta · speed x100" in the header. Both in one post, video first.
-File: branding/social/img/37-beta.mp4, branding/social/img/37-beta.jpg
+### 37. Open beta - posted
+Media: 12 s trailer (our paintings animated with Veo 3.1: BUILD, RAID, CONQUER, SPEED x100, real game screens, logo end card; music made with Suno) and a picture of the village centre with "Beta · speed x100" in the header. Both in one post, trailer first. The 9 s gameplay clip (37-beta.mp4: an attack from Send troops to the report) is spare for a later post.
+File: branding/social/img/37-trailer.mp4, branding/social/img/37-beta.jpg
 ```
 The onchainTRAVIAN open beta is live. The world runs at x100 speed.
 
-Production, building, training and marching are all 100 times faster than on a classic server. In the clip, 600 cavalry and a hero attack the village next door. At normal speed that march takes about 4 minutes. Here it takes 3 seconds.
+Production, building, training and marching are all 100 times faster than on a classic server. Cavalry reaches the village next door in 3 seconds, a march that takes about 4 minutes at normal speed.
 
 Joining is free during the beta: you sign in with a wallet like MetaMask, pick a name and a tribe, and start with one village. The world will start over for the full launch, so now is a good time to learn it and find bugs. If something looks wrong, reply here and we'll fix it.
 ```
