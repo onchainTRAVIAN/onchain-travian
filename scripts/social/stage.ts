@@ -24,7 +24,7 @@ if (!config.DATABASE_PATH.includes('/tmp/') && !config.DATABASE_PATH.includes('s
 clock.freeze(REAL - 10 * DAY);
 
 const { db } = await import('../../src/db/index.js');
-const { slots, users, villages, heroes, alliances, allianceDiplomacy, movements } = await import('../../src/db/schema.js');
+const { slots, users, villages, heroes, alliances, allianceDiplomacy, movements, tiles } = await import('../../src/db/schema.js');
 const { ensureWorld } = await import('../../src/game/engine/world.js');
 const { registerPlayer } = await import('../../src/game/actions/account.js');
 const { issueSession } = await import('../../src/web/session.js');
@@ -221,7 +221,8 @@ clock.reset();
 rich(V);
 setTroopsAt(db, V, V, units([1400, 700, 1600, 140, 900, 320, 60, 40, 3, 0]));
 saveRaider(db, demo.userId, V, {
-  radius: 12, minRes: 300, maxAnimals: 40, allowed: defaultAllowed('romans'), reserve: units([400, 700, 0, 0, 0, 0]),
+  // 650 Equites Imperatoris stay home for the attack video (videos.py 37-beta)
+  radius: 12, minRes: 300, maxAnimals: 40, allowed: defaultAllowed('romans'), reserve: units([400, 700, 0, 0, 650, 0]),
   sizeMode: 'auto', fixed: emptyUnits(), maxPerRaid: 0, intervalMin: 15, maxRaids: 8,
 }, Date.now());
 setRaiderEnabled(db, demo.userId, V, true, 'romans', Date.now());
@@ -240,6 +241,21 @@ setTroopsAt(db, ragnar.villageId, ragnar.villageId, units([900, 200, 0, 20, 0, 1
 const home = db.select({ x: villages.x, y: villages.y }).from(villages).where(eq(villages.id, V)).get()!;
 const inc = sendTroops(db, ragnar.userId, ragnar.villageId, { x: home.x, y: home.y, kind: 'attack', units: units([900, 200, 0, 0, 0, 150, 30, 10]), catapultTarget: 'warehouse' }, Date.now());
 db.update(movements).set({ arriveAt: Date.now() + 3 * HOUR + 17 * 60_000 }).where(eq(movements.id, inc.id)).run();
+// a Northmen village right next door for the attack video (videos.py 37-beta): one field away, cavalry at x100
+// gets there in about 3 seconds. Its spot goes to demo-target.json next to the DB.
+const ulfr = byName('Ulfr');
+const spot = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]
+  .map(([dx, dy]) => db.select().from(tiles).where(and(eq(tiles.x, home.x + dx!), eq(tiles.y, home.y + dy!))).get())
+  .find((t) => t?.kind === 'field' && t.villageId === null);
+if (!spot) throw new Error('No free field next to the demo village - stage again');
+const was = db.select({ x: villages.x, y: villages.y }).from(villages).where(eq(villages.id, ulfr.villageId)).get()!;
+const wasTile = db.select({ layout: tiles.layout }).from(tiles).where(and(eq(tiles.x, was.x), eq(tiles.y, was.y))).get()!;
+db.update(tiles).set({ villageId: null, layout: spot.layout }).where(and(eq(tiles.x, was.x), eq(tiles.y, was.y))).run();
+db.update(tiles).set({ villageId: ulfr.villageId, layout: wasTile.layout }).where(and(eq(tiles.x, spot.x), eq(tiles.y, spot.y))).run();
+db.update(villages).set({ x: spot.x, y: spot.y }).where(eq(villages.id, ulfr.villageId)).run();
+setTroopsAt(db, ulfr.villageId, ulfr.villageId, units([200, 300, 0, 0, 60, 100]));
+refreshPopulation(db, ulfr.villageId);
+writeFileSync(join(dirname(config.DATABASE_PATH), 'demo-target.json'), JSON.stringify({ x: spot.x, y: spot.y }));
 const sessionFile = join(dirname(config.DATABASE_PATH), 'demo-session.txt');
 writeFileSync(sessionFile, issueSession(demo.userId, V));
 console.log(`Staged. demo's session token is in ${sessionFile} (cookie "sid").`);
