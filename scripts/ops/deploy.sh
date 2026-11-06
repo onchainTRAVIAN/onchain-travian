@@ -31,7 +31,7 @@ target="$(npx --yes @railway/cli status --json 2>/dev/null | node -e '
   });' "$SERVICE")"
 if [ -z "$target" ]; then
   echo "This folder is not linked to the game's Railway project (with a \"production\" environment and a \"$SERVICE\" service)."
-  echo "Run: npx @railway/cli link   (pick ancient-realms, production, $SERVICE), then npm run deploy again."
+  echo "Run: npx @railway/cli link   (pick onchainTRAVIAN, production, $SERVICE), then npm run deploy again."
   exit 1
 fi
 read -r project environment <<<"$target"
