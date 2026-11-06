@@ -285,7 +285,7 @@ def edit(raw: pathlib.Path, shots: pathlib.Path, out_path: pathlib.Path) -> None
     from PIL import Image, ImageFilter
     tmp = out_path.with_suffix('.video.mp4')
     enc = subprocess.Popen([_ffmpeg(), '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS),
-                            '-i', '-', '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', str(tmp)],
+                            '-i', '-', '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-maxrate', '5M', '-bufsize', '10M', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', str(tmp)],
                            stdin=subprocess.PIPE)
     vig = _vignette()
     title_font = _font(CINZEL, 150)

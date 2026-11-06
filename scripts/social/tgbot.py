@@ -163,7 +163,8 @@ def send_post(chat: int, p: dict) -> None:
     if p['files'] and not missing:
         for i, f in enumerate(p['files']):
             cap = head if len(p['files']) == 1 else f'{head} - media {i + 1} of {len(p["files"])}'
-            api('sendDocument', {'chat_id': chat, 'caption': cap}, {'document': f}, timeout=120)
+            # this PC's uplink can be slow: allow about 25 KB/s for big videos
+            api('sendDocument', {'chat_id': chat, 'caption': cap}, {'document': f}, timeout=max(120, f.stat().st_size // 25_000))
     elif p['files']:
         say(chat, f'<b>{html.escape(head)}</b>\n⚠️ media not made yet: {html.escape(", ".join(missing))}')
     elif p['poll']:
