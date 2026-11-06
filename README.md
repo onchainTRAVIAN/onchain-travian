@@ -8,13 +8,13 @@
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict">
   <img src="https://img.shields.io/badge/Solidity-0.8.24-363636?logo=solidity" alt="Solidity 0.8.24">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-proprietary-b8860b" alt="License: proprietary"></a>
-  <a href="https://onchaintravian.up.railway.app"><img src="https://img.shields.io/badge/play-live%20world-71D000" alt="Play the live world"></a>
+  <a href="https://travian.forum"><img src="https://img.shields.io/badge/play-live%20world-71D000" alt="Play the live world"></a>
 </p>
 
 <p align="center"><b>The classic browser strategy game - rebuilt, with its own coin.</b><br>
 Classic Travian 3.6 rules, hand-painted art, phones and PC, and an onchain economy on Robinhood Chain.</p>
 
-<p align="center"><a href="https://onchaintravian.up.railway.app"><b>▶ Play now</b></a> · <a href="#features">Features</a> · <a href="#quick-start">Quick start</a> · <a href="#architecture">Architecture</a> · <a href="CHANGELOG.md">Changelog</a></p>
+<p align="center"><a href="https://travian.forum"><b>▶ Play now</b></a> · <a href="#features">Features</a> · <a href="#quick-start">Quick start</a> · <a href="#architecture">Architecture</a> · <a href="CHANGELOG.md">Changelog</a></p>
 
 ---
 

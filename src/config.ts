@@ -5,7 +5,7 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   /**
-   * The address players use, e.g. https://onchaintravian.com. When set, other hosts (the *.up.railway.app name, www.)
+   * The address players use (live: https://travian.forum). When set, other hosts (the *.up.railway.app name, www.)
    * redirect here, wallet sign-in messages name this domain, and link previews use it.
    */
   PUBLIC_URL: z
