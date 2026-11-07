@@ -122,6 +122,59 @@ async def main() -> None:
             await go(pg, '/village')
             await pg.screenshot(path=f'{OUT}/37-beta.png', clip={'x': 60, 'y': 0, 'width': 980, 'height': 646})
 
+        # ---- posts 38 to 66 (2026-11-07) ----
+        if want('38-wallet'):  # logged out: the front page on a desktop, then a phone without a wallet after tapping Connect wallet
+            hide = "document.querySelector('#content .stats')?.remove()"  # the staged world's player counts aren't the live world's
+            anon = await b.new_page(viewport={'width': 1100, 'height': 900}, device_scale_factor=2)
+            await go(anon, '/')
+            await anon.evaluate(hide)
+            await content(anon, '38-wallet')
+            await anon.close()
+            ph = await b.new_page(**p.devices['iPhone 13'])  # a phone user agent, so wallet.js offers the wallet apps
+            await go(ph, '/')
+            await ph.evaluate(hide)
+            await ph.click('[data-action="login"]')
+            await ph.wait_for_timeout(600)
+            box = await ph.evaluate("""() => { const a = document.querySelector('#content .hero').getBoundingClientRect();
+              const c = document.querySelector('#content section.connect').getBoundingClientRect();
+              return {x: 0, y: a.top + scrollY - 8, width: innerWidth, height: c.bottom - a.top + 16}; }""")
+            await ph.screenshot(path=f'{OUT}/38-wallet-phone.png', clip=box, full_page=True)
+            await ph.close()
+
+        if want('43-production'):  # wood with the forest lake oasis, crop with what eats it
+            await go(pg, '/production')
+            secs = pg.locator('#content section.spanel')
+            await secs.nth(0).screenshot(path=f'{OUT}/43-production-wood.png')
+            await secs.nth(3).screenshot(path=f'{OUT}/43-production-crop.png')
+
+        if want('52-merchants'):
+            await go(pg, '/slot/31')
+            await content(pg, '52-merchants', 470)
+
+        if want('53-farmlists'):
+            await go(pg, '/troops/farmlist')
+            await pg.locator('section#list').screenshot(path=f'{OUT}/53-farmlists.png')
+
+        if want('58-capital'):
+            await go(pg, '/fields')
+            await content(pg, '58-capital', 520)
+
+        if want('61-alliance'):
+            await go(pg, '/alliance')
+            await content(pg, '61-alliance', 662)
+
+        if want('62-upgrades'):  # the Legionnaire's card and its upgrade table at levels 0, 5, 10, 15 and 20 (training block hidden)
+            await go(pg, '/unit/romans/1')
+            await pg.evaluate("""() => {
+              for (const h of document.querySelectorAll('#content h2')) if (h.textContent.trim().startsWith('Training')) {
+                h.style.display = 'none'; if (h.nextElementSibling) h.nextElementSibling.style.display = 'none'; }
+              document.querySelectorAll('table.upgtb tbody tr').forEach((tr, i) => { if (i % 5) tr.style.display = 'none'; }); }""")
+            await content(pg, '62-upgrades')
+
+        if want('64-profile'):
+            await go(pg, '/player/1')
+            await content(pg, '64-profile', 402)
+
         if want('18-tests'):
             gh = await b.new_page(viewport={'width': 1280, 'height': 900}, device_scale_factor=2, color_scheme='light')
             await gh.goto('https://github.com/onchainTRAVIAN/onchain-travian/actions')

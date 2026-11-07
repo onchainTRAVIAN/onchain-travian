@@ -43,6 +43,23 @@ POSTS: dict[str, dict] = {
     '34-maths': {'title': 'Same fight, same numbers', 'bg': 'p10-natars', 'shots': ['13-report.png', '34-sim.png'], 'crop2': (0.535, 1.0)},
     '36-versions': {'title': 'Three tries at the troops', 'bg': 'what-council', 'shots': ['36-versions.png']},
     '37-beta': {'title': 'Open beta, speed x100', 'bg': 'p35-fast', 'shots': ['37-beta.png']},
+    # posts 38 to 66 (2026-11-07): shots from shots.py, line-ups and the code card from composites.py
+    '38-wallet': {'title': 'Your wallet is your account', 'bg': 'p39-protection', 'shots': ['38-wallet.png', '38-wallet-phone.png']},
+    '42-natars': {'title': 'The Natar army', 'bg': 'p10-natars', 'shots': ['42-natars.png']},
+    '43-production': {'title': 'Where your production comes from', 'bg': 'what-empire', 'shots': ['43-production-crop.png']},
+    '46-animals': {'title': 'The oasis animals', 'bg': 'p25-oases', 'shots': ['46-animals.png']},
+    '48-types': {'title': 'Village types', 'bg': 'p47-settlers', 'shots': ['48-types.png']},
+    '50-romans': {'title': 'Romans', 'bg': 'p28-conquest', 'shots': ['50-romans.png']},
+    '52-merchants': {'title': 'Merchants', 'bg': 'what-journey', 'shots': ['52-merchants.png']},
+    '53-farmlists': {'title': 'Farm lists', 'bg': 'p35-fast', 'shots': ['53-farmlists.png'], 'crop': (0, 0.555)},
+    '55-teutons': {'title': 'Teutons', 'bg': 'p56-alarm', 'shots': ['55-teutons.png']},
+    '57-buildings': {'title': 'One building per tribe', 'bg': 'what-council', 'shots': ['57-buildings.png']},
+    '58-capital': {'title': 'The capital', 'bg': 'what-hero', 'shots': ['58-capital.png']},
+    '59-gauls': {'title': 'Gauls', 'bg': 'p33-traps', 'shots': ['59-gauls.png']},
+    '61-alliance': {'title': 'Alliances', 'bg': 'p23-treaties', 'shots': ['61-alliance.png']},
+    '62-upgrades': {'title': 'Blacksmith and Armoury', 'bg': 'p45-festival', 'shots': ['62-upgrades.png']},
+    '64-profile': {'title': 'Player profiles', 'bg': 'what-hero', 'shots': ['64-profile.png']},
+    '65-catchup': {'title': 'While you are away', 'bg': 'p66-backups', 'shots': ['65-catchup.png']},
 }
 
 

@@ -2,6 +2,8 @@
 
 source ~/scraping-env/bin/activate && python scripts/social/composites.py <out_dir> [old_art_dir] [name ...]
 
+Unit sheets (posts 42, 46, 50, 55, 59) need UNITS_JSON = unit stats from `npx tsx scripts/social/units.ts <out.json>` (name, type, attack, defInf,
+defCav, speed, carry per tribe).
 old_art_dir holds earlier troop versions pulled from git (post 36):
   git show 0374c7a^:src/web/public/img/units/big/romans-1.webp > <old>/romans-1-painted.webp
   git show e458324^:src/web/public/img/units/big/romans-1.png  > <old>/romans-1-oldschool.png
@@ -31,6 +33,8 @@ body { margin: 0; background: #f3e7c9; font: 15px Verdana, sans-serif; color: #4
 .portrait { position: relative; width: 180px; height: 225px; }
 .portrait img { position: absolute; left: 0; top: 0; width: 180px; }
 .portrait .fig { top: 8px; height: 210px; }
+.st { margin-top: 3px; font-size: 13px; line-height: 1.4; color: #7a6440; }
+.legend { text-align: center; font-size: 15px; color: #7a6440; margin-bottom: 10px; }
 """
 
 
@@ -102,6 +106,74 @@ def tribes() -> str:
     return f'<div class="row" style="align-items:flex-start">{sep.join(cols)}</div>'
 
 
+def _units() -> dict:
+    """Unit stats dumped from src/game/rules/units.ts (path in UNITS_JSON), so the pictures carry the game's own numbers."""
+    import json
+    import os
+    return json.loads(pathlib.Path(os.environ['UNITS_JSON']).read_text())
+
+
+def unit_sheet(tribe: str, stats: str = 'full') -> str:
+    """Ten units of a tribe in two rows of five, with name and (full) attack, defence, speed, carry or (def) defence only."""
+    us = _units()[tribe]
+    rows = []
+    for r in range(2):
+        cells = []
+        for i in range(r * 5, r * 5 + 5):
+            u = us[i]
+            if stats == 'full':
+                carry = f' · Carry {u["carry"]}' if u['carry'] and u['type'] != 'settler' else ''
+                st = f'<div class="st">Attack {u["attack"]} · Defence {u["defInf"]} / {u["defCav"]}<br>Speed {u["speed"]}{carry}</div>'
+            elif stats == 'def':
+                st = f'<div class="st">Defence {u["defInf"]} / {u["defCav"]}</div>'
+            else:
+                st = ''
+            cells.append(f'<div class="cell" style="width:228px"><img src="{IMG}/units/big/{tribe}-{i + 1}.svg" width="170" height="198" '
+                         f'style="object-fit:contain"><div class="cap"><b>{u["name"]}</b></div>{st}</div>')
+        rows.append('<div class="row" style="align-items:flex-start">' + ''.join(cells) + '</div>')
+    legend = '<div class="legend">Defence against infantry / against cavalry</div>' if stats != 'none' else ''
+    return legend + ''.join(rows)
+
+
+def field_types() -> str:
+    """Post 48: the three classic layouts of the 18 resource fields."""
+    kinds = (('4-4-4-6', '4-4-4-6', 'balanced, every new player starts here'), ('3-3-3-9', '9-cropper', '3-3-3-9'), ('1-1-1-15', '15-cropper', '1-1-1-15'))
+    return '<div class="row" style="gap:34px">' + ''.join(
+        f'<div class="cell"><img src="{IMG}/scene/dorf1-{f}.svg" width="420" height="370"><div style="font:bold 26px Georgia,serif;margin-top:6px">{t}</div>'
+        f'<div class="cap">{c}</div></div>' for f, t, c in kinds) + '</div>'
+
+
+def tribe_buildings() -> str:
+    """Post 57: each tribe's own building at level 20."""
+    bs = (('horsetrough', 'Horse Drinking Trough', 'Romans'), ('brewery', 'Brewery', 'Teutons'), ('trapper', 'Trapper', 'Gauls'))
+    return '<div class="row" style="gap:60px">' + ''.join(
+        f'<div class="cell"><img src="{IMG}/buildings/{b}-5.svg" width="330" height="290" style="object-fit:cover;object-position:bottom">'
+        f'<div style="font:bold 26px Georgia,serif">{n}</div>'
+        f'<div class="cap">{t}</div></div>' for b, n, t in bs) + '</div>'
+
+
+def catchup_code() -> str:
+    """Post 65: the start of the real catchUp function (src/game/engine/state.ts) up to its loop over the economy cuts, in a dark editor."""
+    import html
+    import re
+    src = (REPO / 'src/game/engine/state.ts').read_text()
+    start = src.index('export function catchUp(')
+    code = src[start:src.index('\n}\n', start) + 2]
+    lines = code.splitlines()
+    end = next(i for i, l in enumerate(lines) if l.strip() == 'at = end;') + 1  # through the loop over the economy cuts
+    code = '\n'.join(lines[:end + 1] + ['    ...'])
+    kw = r'\b(export|function|const|let|for|of|if|return|undefined)\b'
+    out = []
+    for line in html.escape(code, quote=False).splitlines():
+        line = re.sub(r'(\d[\d_]*)', r'<span style="color:#79c0ff">\1</span>', line)
+        line = re.sub(kw, r'<span style="color:#ff7b72">\1</span>', line)
+        line = re.sub(r'\b(catchUp|economyCuts|catchUpTraining|economyOf|accrue|starve|stockOf|loadVillage)\b', r'<span style="color:#d2a8ff">\1</span>', line)
+        out.append(line)
+    return ('<div style="background:#0d1117;border-radius:10px;width:1180px;padding:0 0 14px;font:19px/1.6 DejaVu Sans Mono,monospace;color:#c9d1d9">'
+            '<div style="padding:10px 16px;color:#8b949e;border-bottom:1px solid #30363d">● ● ●&nbsp;&nbsp; src/game/engine/state.ts</div>'
+            f'<pre style="margin:14px 22px;white-space:pre">{chr(10).join(out)}</pre></div>')
+
+
 TEST_PICKS = ('combat.test.ts > classic T3.6 combat > catapult targets follow', 'combat.test.ts > classic T3.6 combat > rams lower the wall',
               'simulator.test.ts > combat simulator > gives the same result', 'simulator.test.ts > combat simulator vs real traps',
               'classic.test.ts > T3.6 reference numbers > woodcutter level 10', 'classic.test.ts > T3.6 reference numbers > cropland level 3',
@@ -124,7 +196,10 @@ def tests() -> str:
             f'<pre style="margin:14px 22px;white-space:pre-wrap">$ npm test\n\n{body}\n   ...\n\n{total}</pre></div>')
 
 
-SHEETS = {'02-tribes': tribes, '06-troops': troops, '07-hero': heroes, '12-villages': villages, '21-walls': walls, '22-stages': stages, '36-versions': versions, '18-tests': tests}
+SHEETS = {'42-natars': lambda: unit_sheet('natars'), '46-animals': lambda: unit_sheet('nature', 'def'), '48-types': field_types,
+          '50-romans': lambda: unit_sheet('romans'), '55-teutons': lambda: unit_sheet('teutons'), '59-gauls': lambda: unit_sheet('gauls'),
+          '57-buildings': tribe_buildings, '65-catchup': catchup_code,
+          '02-tribes': tribes, '06-troops': troops, '07-hero': heroes, '12-villages': villages, '21-walls': walls, '22-stages': stages, '36-versions': versions, '18-tests': tests}
 
 
 async def main() -> None:
@@ -132,7 +207,8 @@ async def main() -> None:
         b = await p.chromium.launch()
         pg = await b.new_page(viewport={'width': 1800, 'height': 1000}, device_scale_factor=2)
         for name, fn in SHEETS.items():
-            if ONLY and name not in ONLY or (name == '36-versions' and not OLD) or (name == '18-tests' and 'TEST_LOG' not in __import__('os').environ):
+            env = __import__('os').environ
+            if ONLY and name not in ONLY or (name == '36-versions' and not OLD) or (name == '18-tests' and 'TEST_LOG' not in env) or (name[:2] in ('42', '46', '50', '55', '59') and 'UNITS_JSON' not in env):
                 continue
             html = f'<!doctype html><meta charset="utf-8"><style>{CSS}</style><div class="sheet">{fn()}</div>'
             f = OUT / f'_{name}.html'

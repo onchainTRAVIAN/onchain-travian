@@ -11,7 +11,7 @@
  */
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { clock } from '../../src/clock.js';
 import { config } from '../../src/config.js';
 
@@ -41,6 +41,7 @@ const { releaseArtifacts, releaseWonders } = await import('../../src/game/action
 const { saveRaider, runRaiderNow, defaultAllowed, setRaiderEnabled } = await import('../../src/game/actions/raider.js');
 const { startAutoTrain, processAutoTrains } = await import('../../src/game/actions/autotrain.js');
 const { processOasisRaiders } = await import('../../src/game/actions/raider.js');
+const { createFarmList, addFarmEntry, addNearbyOases, raidFarmList } = await import('../../src/game/actions/goldclub.js');
 
 type Tribe = 'romans' | 'teutons' | 'gauls';
 ensureWorld(db);
@@ -192,6 +193,20 @@ for (let day = 0; day < 7; day++) {
 const h = db.select().from(heroes).where(eq(heroes.userId, demo.userId)).get()!;
 db.update(heroes).set({ name: 'Gaius', level: Math.max(h.level, 23), xp: Math.max(h.xp, 13_150), strength: 45, defPoints: 10, offBonus: 25, defBonus: 10, regen: 25, health: 82 }).where(eq(heroes.id, h.id)).run();
 
+// ---- a farm list whose raids come back before the screenshots (post 53) ----
+const farm = createFarmList(db, demo.userId, V, 'Northmen', clock.now());
+const farmTargets = ['Sigurd', 'Gunnar', 'Ivar', 'Hrolf', 'Halfdan', 'Eirik', 'Brunhild', 'Wulfric', 'Gisela', 'Odoacer'];
+for (const [i, n] of farmTargets.entries()) {
+  const t = db.select({ x: villages.x, y: villages.y }).from(villages).where(eq(villages.id, byName(n).villageId)).get()!;
+  addFarmEntry(db, demo.userId, farm, t.x, t.y, units([0, 0, 0, 0, 40, 0]));
+  // mostly quiet farms, two with some defence and one stacked village: green, yellow and red results
+  setTroopsAt(db, byName(n).villageId, byName(n).villageId, units(i === 1 ? [600, 900] : i % 4 === 3 ? [60, 25] : [8, 2]));
+}
+addNearbyOases(db, demo.userId, farm, 6, units([0, 0, 0, 0, 30, 0]), 0, clock.now());
+rich(V);
+setTroopsAt(db, V, V, units([1400, 700, 1600, 140, 900, 320, 60, 40, 3, 0]));
+raidFarmList(db, demo.userId, farm, clock.now());
+
 // ---- endgame and markets ----
 releaseArtifacts(db, clock.now());
 releaseWonders(db, clock.now());
@@ -215,6 +230,19 @@ for (const [n, u, price] of [['Marcus', [200, 0, 150], 240], ['Octavia', [0, 0, 
   }
 }
 pass(hours(70));
+
+// ---- the capital: fields above level 10 (post 58) and a forest lake oasis (Production page, post 43) ----
+const capitalFields = [15, 14, 16, 13, 15, 14, 16, 15, 14, 13, 15, 16, 14, 15, 13, 16, 17, 18];
+capitalFields.forEach((lvl, i) => db.update(slots).set({ level: lvl }).where(and(eq(slots.villageId, V), eq(slots.slot, i + 1))).run());
+const at = db.select({ x: villages.x, y: villages.y }).from(villages).where(eq(villages.id, V)).get()!;
+const lake = db.select().from(tiles).where(and(eq(tiles.kind, 'oasis'), eq(tiles.oasis, 'wood_crop'), isNull(tiles.villageId))).all()
+  .sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y))[0];
+if (lake) {
+  db.update(tiles).set({ villageId: V, animals: JSON.stringify(emptyUnits()), oasisLoyalty: 100, oasisLoyaltyAt: clock.now() })
+    .where(and(eq(tiles.x, lake.x), eq(tiles.y, lake.y))).run();
+}
+rich(V);
+refreshPopulation(db, V);
 
 // ---- live automation the screenshots show ----
 clock.reset();

@@ -422,3 +422,326 @@ Production, building, training and marching are all 100 times faster than on a c
 Joining is free during the beta: you sign in with a wallet like MetaMask, pick a name and a tribe, and start with one village. The world will start over for the full launch, so now is a good time to learn it and find bugs. If something looks wrong, reply here and we'll fix it.
 ```
 Reply under it: `You can play here: https://travian.forum`
+
+## Day 14
+
+### 38. Your wallet is your account - ready
+Media: picture, the front page with Connect wallet on a desktop, next to a phone without a wallet that offers the wallet apps
+File: branding/social/img/38-wallet.jpg
+```
+You don't need a password or an email to play. Your wallet is your account.
+
+Press Connect wallet and sign a short message. Signing only proves the wallet is yours: it costs no gas and sends nothing. The first time, you pick a name and a tribe and get your village. After that the same wallet logs you straight in.
+
+It works with MetaMask, Rabby, Coinbase Wallet, OKX, Trust and other EVM wallets. On a phone without a wallet, the front page lists MetaMask, Trust Wallet, Coinbase Wallet, OKX Wallet and Phantom: tap yours and the game opens inside that app.
+```
+Reply under it: `You can play here: https://travian.forum`
+
+### 39. Beginner protection - ready
+Media: painting, a new hamlet under a faint golden dome while raiders wait on a ridge
+File: branding/social/img/39-protection.jpg
+```
+New players get 24 hours of beginner protection. Nobody can attack, raid or scout your villages during that time.
+
+The catch is that it ends the moment you attack, raid or scout another player. Raiding oases, sending reinforcements, trading and founding villages don't end it, so the first day is a good time to raid oases with your hero and grow.
+
+Before it runs out, build a cranny and some defence, and don't sit on full storage.
+```
+
+### 40. When do you play - ready
+Poll: Morning / Afternoon / Evening / Late night (24 h)
+```
+Attacks don't wait for you to log in. When do you usually play?
+```
+
+## Day 15
+
+### 41. Scouting - ready
+Media: painting, two hooded scouts in the grass at night counting the soldiers of a village below
+File: branding/social/img/41-scouts.jpg
+```
+How scouting works.
+
+You send only scouts. Each of yours has 35 scouting strength and each defending scout 20, upgrades raise both, and the defender's wall helps their scouts. Only scouts fight scouts, defending scouts never die, and the mission fails only if all of yours die.
+
+If one gets back, you see the resources, the troops, the hero, the wall level and how much the cranny hides. The defender only gets a report if they have scouts at home. Every scout report also has a Simulate link that loads what you saw into the combat simulator.
+```
+
+### 42. The Natar army - ready
+Media: picture, the ten Natar units drawn in the comic style, with attack, defence and speed
+File: branding/social/img/42-natars.jpg
+```
+The Natars got their own drawings too: ten units in purple and gold, from the Pikeman to the War Elephant and the Natarian Emperor.
+
+You meet them at their strongholds. A village holding a small artifact is guarded by 1,500 Pikemen, 800 Thorned Warriors, 1,000 Guardsmen, 300 Axeriders and 300 Natarian Knights. Large artifacts have twice that, unique ones four times, and World Wonder villages three times.
+```
+
+### 43. Where your production comes from - ready
+Media: screenshot, the crop part of the Production page: fields by level, an oasis bonus, and what eats the crop
+File: branding/social/img/43-production.jpg
+```
+Click any resource in the top bar and you get the Production page.
+
+It lists your fields grouped by level with what each group makes per hour, then every bonus on top of that: oases, the Sawmill, Brickyard, Iron Foundry, Grain Mill and Bakery, and Gold boosts with their end time. For crop it also shows what eats it: buildings, troops at home and on the move, and the hero.
+
+Handy when the number in the top bar doesn't add up.
+```
+
+## Day 16
+
+### 44. Your first day - ready
+Media: painting, the first morning of a new village: ploughing, a clay pit, woodcutters, a granary going up and recruits training
+File: branding/social/img/44-firstday.jpg
+```
+A plan for your first day, taken from the game guide.
+
+Start with all fields at level 2, then Warehouse and Granary to 3. Add a Rally Point, a Cranny at level 5 or more and Main Building 3, then take the fields to 4 or 5. Next come Barracks, a small raiding group and an Embassy so you can join an alliance. After that Main Building 5, a Marketplace, an Academy and a Residence at level 10 for your first settlers, plus a Grain Mill and a Hero's Mansion for a hero to raid oases with.
+
+Get the Cranny to 10 before your protection ends. At x100 the limit is storage, not time, so raise the Warehouse and Granary along with your fields.
+```
+Reply under it: `You can play here: https://travian.forum`
+
+### 45. Culture points and celebrations - ready
+Media: painting, a night festival with lanterns and a bonfire on the square of a Roman town
+File: branding/social/img/45-festival.jpg
+```
+Every building and field level produces culture points each day, and you need them for every new village: 2,000 for your second, 8,000 for the third and 20,000 for the fourth. Culture points are never spent, only counted.
+
+The Town Hall speeds this up with celebrations. A small one gives you your daily culture production, up to 500 points. A great one gives up to 2,000 and also helps with conquest: each chief sent from that village lowers loyalty by 5 more, and enemy chiefs attacking it lower it by 5 less.
+
+On this world a small celebration takes about 14 minutes at Town Hall level 1.
+```
+
+### 46. The oasis animals - ready
+Media: picture, the ten oasis animals from rat to elephant with their defence values
+File: branding/social/img/46-animals.jpg
+```
+Ten kinds of animals guard the free oases, from rats to elephants. They never attack, they only defend, and each oasis type has its own mix: forests have boars, wolves and bears, lakes have snakes, crocodiles and now and then an elephant.
+
+Animals grow back on real time, not world speed: about 350 defence power a day, until an oasis holds 8,000. A cleared oasis is safe to raid for a while. One that nobody touches keeps getting stronger.
+```
+
+## Day 17
+
+### 47. Your second village - ready
+Media: painting, three settlers with an ox cart marking out a new village in an empty river valley
+File: branding/social/img/47-settlers.jpg
+```
+How to found your second village.
+
+Build a Residence or a Palace to level 10, which gives you a free expansion slot, and collect 2,000 culture points. Train 3 settlers there, pick an empty field on the map and send exactly those 3 settlers, nothing else.
+
+The new village starts with 800 of each resource and a level 1 Main Building, so send it resources early. If someone settles the spot first, your settlers walk home. On this world a settler takes about 1.5 to 2 minutes to train at Residence level 10.
+```
+
+### 48. Village types - ready
+Media: picture, the three field layouts side by side: 4-4-4-6, 9-cropper and 15-cropper
+File: branding/social/img/48-types.jpg
+```
+Every spot on the map has a fixed mix of 18 resource fields. Everyone starts on a 4-4-4-6: four woodcutters, four clay pits, four iron mines and six croplands.
+
+9-croppers (3-3-3-9) and 15-croppers (1-1-1-15) have far more crop. Only your capital can raise its fields above level 10, so the guide's advice is a cropper with crop oases within 3 fields for the capital that will feed your army.
+```
+
+### 49. Second village poll - ready
+Poll: 15-cropper / 9-cropper / Right next door / Wherever is free (24 h)
+```
+Where does your second village go?
+```
+
+## Day 18
+
+### 50. Romans - ready
+Media: picture, the ten Roman units with attack, defence, speed and carry
+File: branding/social/img/50-romans.jpg
+```
+A few notes for Roman players.
+
+Romans can upgrade a field and a building at the same time, so keep both busy. Legionnaires raid and defend early on, later Imperians attack and Praetorians defend. Equites Imperatoris carry 100 and move 14 fields an hour, which makes them very good raiders.
+
+The City Wall gives +81% defence at level 20, the most of the three walls. The Horse Drinking Trough cuts cavalry crop upkeep from level 10, and Senators lower loyalty by 20 to 30% per attack, more than any other chief.
+```
+
+### 51. When the crop runs out - ready
+Media: painting, hungry legionaries and a quartermaster with an empty sack outside an empty granary
+File: branding/social/img/51-starvation.jpg
+```
+What happens when your crop runs out.
+
+Nothing, as long as there's crop in the granary. Once it's empty and your net crop is still below zero, troops start to starve until what they eat fits what you produce. Reinforcements from other villages go first, then your own army, and within each army the units that eat the most die first, so catapults go before infantry.
+
+Crop upkeep isn't sped up on this world, so a big army needs real farmland or crop oases behind it. The owner of the starved troops gets a report.
+```
+
+### 52. Merchants - ready
+Media: screenshot, the Marketplace with its tabs and the send form
+File: branding/social/img/52-merchants.jpg
+```
+Merchants differ by tribe. A Roman merchant carries 500 resources, a Teuton 1,000 and a Gaul 750. Gauls are the fastest at 24 fields an hour, Romans do 16 and Teutons 12, and on this world it all runs 100 times faster.
+
+Each Marketplace level gives you 10 merchants here, and every Trade Office level adds 10% to what they carry. You can save up to 30 destinations and trade with other players at a ratio between 1:2 and 2:1. With the Gold Club, trade routes ship goods between your own villages up to three times a day.
+```
+
+## Day 19
+
+### 53. Farm lists - ready
+Media: screenshot, a farm list with the result and loot of each target's last raid
+File: branding/social/img/53-farmlists.jpg
+```
+Farm lists are part of the Gold Club. You save up to 100 targets per list, villages or oases, each with its own troops, and raid them all with one click or automatically every 15, 30, 60 or 120 minutes.
+
+Every target shows how its last raid went (won without losses, won with losses, or lost) and how much it brought back. One button adds every free oasis within up to 35 fields, another removes the oases holding less than a set amount.
+
+The normal rules still apply: troops have to be at home, and protected players are skipped.
+```
+
+### 54. Evasion - ready
+Media: painting, a capital's army riding out of the back gate while an enemy army reaches the front
+File: branding/social/img/54-evasion.jpg
+```
+Evasion, another Gold Club option, is for an army you can't afford to lose.
+
+Turn it on in your capital, and when an attack or a raid arrives, the capital's own troops at home leave just before it lands and come back about a minute later on this world. They don't fight, so the attacker may still win against what's left and take loot.
+
+Only the capital can evade, and only its own troops. Reinforcements and the hero stay where they are.
+```
+
+### 55. Teutons - ready
+Media: picture, the ten Teuton units with attack, defence, speed and carry
+File: branding/social/img/55-teutons.jpg
+```
+Some notes for Teuton players.
+
+Clubswingers are the cheapest unit in the game: 9 seconds each at Barracks level 1 on this world, and they carry 60. Raid early and often. Enemy crannies hide only 80% of the usual amount from Teutons, Paladins carry 110 and defend well against infantry, and Spearmen are cheap defence against cavalry.
+
+The Earth Wall gives the smallest bonus of the three walls but is the hardest to ram. The Brewery adds up to 10% attack, but while you have one your chiefs work at half strength. Teuton merchants carry 1,000.
+```
+
+## Day 20
+
+### 56. Incoming attack - ready
+Media: painting, a watchman blowing a horn on a tower as a line of torches comes up the valley at night
+File: branding/social/img/56-alarm.jpg
+```
+You log in and there's a red incoming attack on your village. What can you do?
+
+You see who sent it and when it lands, not what's coming, so scout the sender. Spend your resources on buildings or troops so there's little to take. Train defenders if there's time, or ask your alliance to reinforce you. If you can't hold, send your army away, for example as reinforcement to your other village, or use evasion in the capital.
+
+Protection or a treaty made after the attack was sent won't stop it. That's the classic rule and we kept it.
+```
+
+### 57. One building per tribe - ready
+Media: picture, the Horse Drinking Trough, the Brewery and the Trapper at level 20
+File: branding/social/img/57-buildings.jpg
+```
+Each tribe has one building nobody else can build.
+
+Romans have the Horse Drinking Trough. Their cavalry trains 1% faster per level, and at levels 10, 15 and 20 the three horsemen each eat one crop less.
+
+Teutons have the Brewery in their capital, up to +10% attack for all their troops at level 10. While it stands their chiefs persuade at half strength, so it usually comes down before a conquest.
+
+Gauls have the Trapper. Each trap catches one attacker before the fight, and the prisoners keep eating their owner's crop.
+```
+
+### 58. The capital - ready
+Media: screenshot, a capital with its resource fields at levels 13 to 18
+File: branding/social/img/58-capital.jpg
+```
+Your first village is your capital, and it plays by its own rules.
+
+Only the capital can take its resource fields past level 10, all the way to 20. It can't be conquered and is never razed, even at 0 population, though catapults can still damage its buildings. The Stonemason's Lodge, the Brewery and evasion only work there, while the Great Barracks and Great Stable can't be built there.
+
+You can move it by building a Palace in another village, but the old capital loses its Stonemason's Lodge and Brewery, and its fields above 10 drop back to 10.
+```
+
+## Day 21
+
+### 59. Gauls - ready
+Media: picture, the ten Gaul units with attack, defence, speed and carry
+File: branding/social/img/59-gauls.jpg
+```
+Some notes for Gaul players.
+
+The Phalanx is cheap defence against both infantry and cavalry, and a Trapper built early catches attackers before the fight. Your cranny hides twice as much, so it reaches the 35% maximum at level 5.
+
+Theutates Thunders move 19 fields an hour and carry 75, the best long range raiders in the game. Druidriders are fast defenders against infantry, and Haeduans attack and also defend well against cavalry. Gaul merchants are the fastest at 24 fields an hour.
+```
+
+### 60. Razing a village - ready
+Media: painting, catapults on a ridge knocking down a burning village at sunset
+File: branding/social/img/60-razing.jpg
+```
+A village can be wiped off the map. If catapults bring its population to 0, it's razed: reinforcements and visiting heroes walk home, its oases become free, and the land is empty again.
+
+Some villages can't be destroyed: a capital, a player's last village, a village holding an artifact and a World Wonder village. If the owner's hero was at home when it fell, the hero dies and its home moves to the capital.
+```
+
+### 61. Alliances - ready
+Media: screenshot, an alliance page with members, roles and treaties
+File: branding/social/img/61-alliance.jpg
+```
+To join an alliance you need an Embassy and an invitation. To found one you need Embassy level 3 and 280 Gold.
+
+The size depends on the leader's Embassy: 3 members per level, so a level 20 Embassy leads 60 players. Officers can invite and remove members, edit the description and handle diplomacy, and only the leader changes roles or hands over the lead. If the leader leaves, the oldest officer takes over.
+
+Members also get their own channel in the chat, next to the world chat.
+```
+
+## Day 22
+
+### 62. Blacksmith and Armoury - ready
+Media: screenshot, the Legionnaire's page with its values at upgrade levels 0, 5, 10, 15 and 20
+File: branding/social/img/62-upgrades.jpg
+```
+The Blacksmith raises a unit's attack and the Armoury its defence, up to level 20, and a unit can't be upgraded past the building's level.
+
+A Legionnaire starts at 40 attack. At Blacksmith level 10 it has 46, at level 20 about 52. Rams and catapults upgraded in the Blacksmith also destroy more. Upgrades count per village, so troops fight with the levels of the village they come from.
+
+Each troop's page in the game lists its values and the cost of every level from 0 to 20.
+```
+
+### 63. Common mistakes - ready
+Media: painting, a storehouse bursting with grain, logs and bricks while raiders load their carts and the chief dozes in a hammock
+File: branding/social/img/63-mistakes.jpg
+```
+The most common beginner mistakes, from our game guide:
+
+Letting storage fill up. Production stops there, and raiders love you for it.
+Ending your own protection early by scouting or raiding a player.
+Sending the hero alone into a fight it can lose.
+Raiding an oasis with the hero and expecting to capture it. That takes a normal attack.
+Keeping a big army on negative crop with an empty granary.
+Keeping a Teuton Brewery while trying to conquer.
+Spending Gold to finish long jobs early. It costs 1 Gold per minute here.
+```
+
+### 64. Player profiles - ready
+Media: screenshot, a player profile with tribe, alliance, rank, stats and medals
+File: branding/social/img/64-profile.jpg
+```
+Player profiles show the avatar, tribe, alliance, rank, medals, an About text and the list of villages. You can upload your own picture, which is cut to a 128 by 128 square, and write up to 500 characters about yourself.
+
+One thing a profile doesn't show is when you were last online. Online status and last activity are private, so nobody can tell from your profile that you're asleep.
+```
+
+## Day 23
+
+### 65. While you are away - ready
+Media: picture, the start of the catchUp function from the game's source code
+File: branding/social/img/65-catchup.jpg
+```
+A note on how the game works under the hood.
+
+Your village isn't updated every second while you're away. When you open a page, or an attack or a delivery reaches your village, the server works out everything that happened since the last update: production, full storage, finished training and starving troops.
+
+It splits that time wherever something changed, like a bonus starting or ending or a batch of troops finishing, and runs each stretch with the economy of that moment. So a production boost that ran out in the middle of the night counts exactly up to the moment it ended.
+```
+
+### 66. Backups - ready
+Media: painting, scribes copying a world map onto scrolls in a candle-lit archive
+File: branding/social/img/66-backups.jpg
+```
+The whole beta world lives in a single SQLite database file. Every 6 hours the game saves a compressed copy and keeps the newest 8, so we can go back up to two days if something breaks.
+
+Old battle reports are cleared after 14 days, and each player keeps at most their newest 1,000. That keeps the database small and the pages quick.
+```
